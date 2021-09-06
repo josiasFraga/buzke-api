@@ -143,6 +143,8 @@ class AgendamentosController extends AppController {
         $dados = json_decode($this->request->data['dados']);
         //$dados = json_decode(json_encode($this->request->data['dados']));
 
+        $this->log($dados,'debug');
+
         if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
@@ -151,13 +153,16 @@ class AgendamentosController extends AppController {
             throw new BadRequestException('Dados da empresa não informada!', 401);
         }
 
-        if ( !isset($dados->data) || $dados->data == "" ) {
+        if ( !isset($dados->day) || $dados->day == "" ) {
             throw new BadRequestException('Data não informada!', 401);
         }
 
-        if ( !isset($dados->horario) || $dados->horario == "" ) {
-            throw new BadRequestException('Data não informada!', 401);
+        if ( !isset($dados->horaSelecionada) || $dados->horaSelecionada == "" ) {
+            throw new BadRequestException('Hora não informada!', 401);
         }
+
+        $data_selecionada = $dados->day->dateString;
+        $horario_selecionado = $dados->horaSelecionada->horario;
 
         $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
         if ( !$dados_usuario ) {
@@ -169,7 +174,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('ClienteHorarioAtendimentoExcessao');
 
         //verfica se o cliente abrirá no dia
-        $verificaFechamento = $this->ClienteHorarioAtendimentoExcessao->verificaExcessao($dados->cliente_id, $dados->data, 'F');
+        $verificaFechamento = $this->ClienteHorarioAtendimentoExcessao->verificaExcessao($dados->cliente_id, $data_selecionada, 'F');
 
         if ( count($verificaFechamento) > 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'A empresa não atenderá no dia e horário escolhido!'))));
@@ -187,33 +192,32 @@ class AgendamentosController extends AppController {
         //debug($dados_usuario_como_cliente); die();
 
         //verifica se o usuário já não possui um agendamento pro mesmo dia e horário que está tentando
-        $verificaAgendamento = $this->Agendamento->verificaAgendamento($dados_usuario_como_cliente['ClienteCliente']['id'], null, $dados->data, $dados->horario);
+        $verificaAgendamento = $this->Agendamento->verificaAgendamento($dados_usuario_como_cliente['ClienteCliente']['id'], null, $data_selecionada, $horario_selecionado);
         if ( $verificaAgendamento !== false && count($verificaAgendamento) > 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você já tem um agendamento neste horário!'))));
         }
         
         //busca o nº de agendamentos que o cliente tem neste dia e horário
-        $n_agendamentos_cliente = $this->Agendamento->nAgendamentosCliente($dados->cliente_id, $dados->data, $dados->horario);
+        $n_agendamentos_cliente = $this->Agendamento->nAgendamentosCliente($dados->cliente_id, $data_selecionada, $horario_selecionado);
     
         $this->loadModel('ClienteHorarioAtendimento');
 
         //conta quantas vagas existem para o dia e horário escolhidos
-        $vagas_restantes = $this->ClienteHorarioAtendimento->contaVagaRestantesHorario($dados->cliente_id, $dados->data, $dados->horario, $n_agendamentos_cliente);
+        $vagas_restantes = $this->ClienteHorarioAtendimento->contaVagaRestantesHorario($dados->cliente_id, $data_selecionada, $horario_selecionado, $n_agendamentos_cliente);
 
         if ( !$vagas_restantes ) {
 
             //verifica se abrirá com excessão
-            $verificaAbertura = $this->ClienteHorarioAtendimentoExcessao->verificaExcessao($dados->cliente_id, $dados->data, 'A');
+            $verificaAbertura = $this->ClienteHorarioAtendimentoExcessao->verificaExcessao($dados->cliente_id, $data_selecionada, 'A');
 
             if ( count($verificaAbertura) == 0 ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'A empresa não atenderá no dia e horário escolhido!'))));
             }
 
             //verifica quantas vagas existem no horário
-            if ( strtotime($verificaAbertura['ClienteHorarioAtendimentoExcessao']['abertura']) <= strtotime($dados->horario) && strtotime($verificaAbertura['ClienteHorarioAtendimentoExcessao']['fechamento']) >= strtotime($dados->horario) ) {
+            if ( strtotime($verificaAbertura['ClienteHorarioAtendimentoExcessao']['abertura']) <= strtotime($horario_selecionado) && strtotime($verificaAbertura['ClienteHorarioAtendimentoExcessao']['fechamento']) >= strtotime($horario_selecionado) ) {
                 $vagas_restantes = ($verificaAbertura['ClienteHorarioAtendimentoExcessao']['vagas_por_horario'] - $n_agendamentos_cliente);
             }
-
   
         }
 
@@ -224,8 +228,12 @@ class AgendamentosController extends AppController {
         $dados_salvar = [
             'cliente_cliente_id' => $dados_usuario_como_cliente['ClienteCliente']['id'],
             'cliente_id' => $dados->cliente_id,
-            'horario' => $dados->data.' '.$dados->horario,
+            'horario' => $data_selecionada.' '.$horario_selecionado,
         ];
+
+        if ( isset($dados->domicilio) && $dados->domicilio == 1 ) {
+            $dados_salvar = array_merge($dados_salvar, ['domicilio' => 'Y']);
+        }
 
         $this->Agendamento->create();
         $this->Agendamento->set($dados_salvar);

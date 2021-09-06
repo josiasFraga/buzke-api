@@ -16,6 +16,7 @@ class ClienteHorarioAtendimento extends AppModel {
         if ( $horario_atendimento == null || count($horario_atendimento) == 0 ) {
             return false;
         }
+        
 
         foreach( $horario_atendimento as $key => $hr ){
             $horario_abertura = substr($hr[$model_horario]['abertura'], 0, 5);
@@ -29,11 +30,11 @@ class ClienteHorarioAtendimento extends AppModel {
                 return false;
             }
 
-            $horarios[0] = ['horario' => $hr[$model_horario]['abertura'], 'vagas' => $max_vagas_horario];
+            $horarios[0] = ['horario' => $hr[$model_horario]['abertura'], 'vagas' => $max_vagas_horario, 'domicilio' => $hr[$model_horario]['a_domicilio']];
 
             while ( strtotime($this->addMinutes2Time($ultimo_hoario_gerado, $intervalo_horarios_min)) < strtotime($horario_fechamento) ) {
                 $nextTime = $this->addMinutes2Time($ultimo_hoario_gerado, $intervalo_horarios_min);
-                $horarios[] = ['horario' => $nextTime, 'vagas' => $max_vagas_horario];
+                $horarios[] = ['horario' => $nextTime, 'vagas' => $max_vagas_horario, 'domicilio' => $hr[$model_horario]['a_domicilio']];
                 $ultimo_hoario_gerado = $nextTime;
             }
 
