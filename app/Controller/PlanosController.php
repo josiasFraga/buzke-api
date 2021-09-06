@@ -1,0 +1,88 @@
+<?php
+
+class PlanosController extends AppController {
+
+    public function buscaPlanosDisponiveis() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $subcategorias = [];
+        foreach($dados as $key_dado => $dado) {
+
+            if ( strpos($key_dado, 'item_') !== false ) {
+                list($discart, $subcateogria_id) = explode('item_', $key_dado);
+                $subcategorias[] = $subcateogria_id;
+            }
+
+        }
+
+        if ( count($subcategorias) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Selecione ao menos uma subcategoria antes de clicar em próximo.'))));
+        }
+
+        $this->loadModel('Plano');
+    
+        $conditions = [
+            'Plano.ativo' => 'Y',   
+        ];
+        
+        
+
+        if ($dados['categoria'] != 4) {
+
+            $conditions = array_merge($conditions,[
+                ['not' => [
+                    ['Plano.id' => 3]
+                ]]
+            ]);
+
+            if ($dados['categoria'] != 3) {
+                $conditions = array_merge($conditions,[
+                    ['not' => [
+                        ['Plano.id' => 2]
+                    ]]
+                ]);
+            }
+        }
+
+
+        $planos = $this->Plano->find('all',[
+            'order' => [
+                'Plano.valor'
+            ],
+            'link' => [],
+            'conditions' => $conditions,
+        ]);
+
+        if ( count($planos) > 0 ) {
+            foreach( $planos as $key => $plano ){
+                $planos[$key]['Plano']['valor_br'] = number_format($planos[$key]['Plano']['valor'],2,',','.');
+
+            }
+        }
+        
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $planos))));
+
+    }
+}
