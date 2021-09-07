@@ -110,11 +110,27 @@ class ClientesController extends AppController {
         }
 
         $token = $dados['token'];
-
         $dados_token = $this->verificaValidadeToken($token);
 
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $conditions = [
+            'Cliente.ativo' => 'Y',
+            'not' => [
+                'Categoria.id' => null
+            ]
+        ];
+
+        if ( isset($dados['address']) && $dados['address'] != '' ) {
+            $this->loadModel('Localidade');
+            $dados_localidade = $this->Localidade->findByGoogleAddress($dados['address']);
+
+            $conditions = array_merge($conditions, [
+                'Cliente.cidade_id' => $dados_localidade['Localidade']['loc_nu_sequencial'],
+                'Cliente.estado' => $dados_localidade['Localidade']['ufe_sg'],
+            ]);
         }
 
         $this->loadModel('Cliente');
@@ -126,12 +142,7 @@ class ClientesController extends AppController {
             'link' => [
                 'ClienteSubcategoria' => ['Subcategoria' => ['Categoria']]
             ],
-            'conditions' => [
-                'Cliente.ativo' => 'Y',
-                'not' => [
-                    'Categoria.id' => null
-                ]
-            ],
+            'conditions' => $conditions,
             'group' => [
                 'Categoria.id'
             ]

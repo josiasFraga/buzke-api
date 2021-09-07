@@ -72,6 +72,7 @@ class AppController extends Controller {
         if ( $usuario_email == null ) {
             $dados_token = $this->Token->find('first',array(
                 'fields' => array(
+                    'Token.id',
                     'Token.token',
                     'Token.data_validade',
                 ),

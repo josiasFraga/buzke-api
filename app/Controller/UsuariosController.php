@@ -346,6 +346,47 @@ class UsuariosController extends AppController {
         }
     }
 
+    public function save_location() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+
+        if (!isset($dados->token) || $dados->token == '') {
+            throw new BadRequestException('Nome não informado', 400);
+        }
+
+        $token = $dados->token;
+        $dados_token = $this->verificaValidadeToken($token);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $dados_address = json_decode($dados->dados_address);
+
+        $dados_salvar = [
+            'token_id' => $dados_token['Token']['id'],
+            'location_data' => $dados->dados_address,
+            'description' => $dados_address->description
+        ];
+
+        $this->loadModel('UsuarioLocalizacao');
+
+
+        $this->UsuarioLocalizacao->set($dados_salvar);
+        if ($this->UsuarioLocalizacao->save($dados_salvar)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cadastrado com sucesso!'))));
+        } else {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
+        }
+    }
+
     public function cadastrarEmpresa() {
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];

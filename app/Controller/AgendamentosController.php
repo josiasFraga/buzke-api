@@ -140,10 +140,13 @@ class AgendamentosController extends AppController {
 
     public function cadastrar(){
         $this->layout = 'ajax';
-        $dados = json_decode($this->request->data['dados']);
-        //$dados = json_decode(json_encode($this->request->data['dados']));
+    
+        $dados = json_decode(json_encode($this->request->data['dados']));
 
-        $this->log($dados,'debug');
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), true);
+        }
 
         if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
             throw new BadRequestException('Dados de usuário não informado!', 401);

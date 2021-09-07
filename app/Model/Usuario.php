@@ -13,6 +13,9 @@ class Usuario extends AppModel {
 		),
         'UsuarioResetSenha' => [
 			'foreignKey' => 'usuario_id'
+        ],
+        'UsuarioLocalizacao' => [
+			'foreignKey' => 'usuario_id'
         ]
     );
 
