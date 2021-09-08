@@ -167,9 +167,9 @@ class UsuariosController extends AppController {
         $dados_token = $this->Token->save($dados_salvar);
         if ($dados_token) {
             if ( $usuario['Usuario']['img'] == '' || $usuario['Usuario']['img'] == null ) {
-                $usuario['Usuario']['img'] = $this->images_painel_path."usuarios/default.png";
+                $usuario['Usuario']['img'] = $this->images_path."usuarios/default.png";
             } else if ( !strpos($usuario['Usuario']['img'], 'facebook') ) {
-                $usuario['Usuario']['img'] = $this->images_painel_path."usuarios/".$usuario['Usuario']['img'];
+                $usuario['Usuario']['img'] = $this->images_path."usuarios/".$usuario['Usuario']['img'];
             }
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => array_merge($usuario, $dados_token, ['cadastro_horarios_ok' => $cadastro_horarios_ok, 'cadastro_categorias_ok' => $cadastro_categorias_ok])))));
         } else {

@@ -82,7 +82,8 @@ class ClienteHorarioAtendimento extends AppModel {
             'conditions' => [
                 'ClienteHorarioAtendimento.cliente_id' => $cliente_id,
                 'ClienteHorarioAtendimento.horario_dia_semana' => date('w',strtotime($data)),
-
+                'ClienteHorarioAtendimento.abertura <=' => $hora,
+                'ClienteHorarioAtendimento.fechamento >=' => $hora,
             ],
             'link' => []
         ]);
@@ -90,9 +91,8 @@ class ClienteHorarioAtendimento extends AppModel {
         if ( count($dados_vagas) == 0 )
             return false;
 
-        if ( strtotime($dados_vagas['ClienteHorarioAtendimento']['abertura']) <= strtotime($hora) && strtotime($dados_vagas['ClienteHorarioAtendimento']['fechamento']) >= strtotime($hora) ) {
-            return ($dados_vagas['ClienteHorarioAtendimento']['vagas_por_horario'] - $n_agendamentos);
-        }
+        return ($dados_vagas['ClienteHorarioAtendimento']['vagas_por_horario'] - $n_agendamentos);
+
 
     }
 }

@@ -140,13 +140,14 @@ class AgendamentosController extends AppController {
 
     public function cadastrar(){
         $this->layout = 'ajax';
-    
         $dados = json_decode(json_encode($this->request->data['dados']));
 
         if ( gettype($dados) == 'string' ) {
             $dados = json_decode($dados);
             $dados = json_decode(json_encode($dados), true);
         }
+
+        $dados = json_decode(json_encode($dados), FALSE);
 
         if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
@@ -179,6 +180,7 @@ class AgendamentosController extends AppController {
         //verfica se o cliente abrirá no dia
         $verificaFechamento = $this->ClienteHorarioAtendimentoExcessao->verificaExcessao($dados->cliente_id, $data_selecionada, 'F');
 
+    
         if ( count($verificaFechamento) > 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'A empresa não atenderá no dia e horário escolhido!'))));
         }
@@ -208,13 +210,19 @@ class AgendamentosController extends AppController {
         //conta quantas vagas existem para o dia e horário escolhidos
         $vagas_restantes = $this->ClienteHorarioAtendimento->contaVagaRestantesHorario($dados->cliente_id, $data_selecionada, $horario_selecionado, $n_agendamentos_cliente);
 
+        $this->log($dados->cliente_id,'debug');
+        $this->log($data_selecionada,'debug');
+        $this->log($horario_selecionado,'debug');
+        $this->log($n_agendamentos_cliente,'debug');
+        $this->log($dados,'debug');
+
         if ( !$vagas_restantes ) {
 
             //verifica se abrirá com excessão
             $verificaAbertura = $this->ClienteHorarioAtendimentoExcessao->verificaExcessao($dados->cliente_id, $data_selecionada, 'A');
 
             if ( count($verificaAbertura) == 0 ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'A empresa não atenderá no dia e horário escolhido!'))));
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'A empresa não atenderá no dia e horário escolhido! 1'))));
             }
 
             //verifica quantas vagas existem no horário
