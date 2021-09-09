@@ -129,16 +129,15 @@ class AgendamentosController extends AppController {
             'fields' => [
                 'Agendamento.id',
                 'Agendamento.horario',
+                'Agendamento.duracao',
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
+                'ClienteCliente.img'
             ],
             'link' => ['ClienteCliente'],
             'order' => ['Agendamento.horario']
         ]);
-        
-        foreach($agendamentos as $key => $agend) {
-
-        }
+    
 
         $dados_retornar = [];
         $dados_retornar = $this->formataAgendamentos($agendamentos, $data, $type);
@@ -185,7 +184,18 @@ class AgendamentosController extends AppController {
             foreach( $agendamentos as $key => $agend) {
                 $hora = date('H:i',strtotime($agend['Agendamento']['horario']));
                 $data = date('Y-m-d',strtotime($agend['Agendamento']['horario']));
-                $arr_dados = ['name' => $hora, 'height' => 50, 'usuario' => $agend['ClienteCliente']['nome'], 'id' => $agend['Agendamento']['id']];
+                $duracao = $agend['Agendamento']['duracao'];
+
+                if ( $duracao != '') {
+                    $timeBase = new DateTime($agend['Agendamento']['horario']);
+                    list($hours,$minutes,$seconds) = explode(':',$duracao);
+                    $timeToAdd = new DateInterval('PT'.$hours.'H'.$minutes.'M'.$seconds.'S'); 
+                    $timeBase->add($timeToAdd);
+                    $duracao = $timeBase->format('H:i');
+                }
+
+
+                $arr_dados = ['name' => $hora, 'height' => 75, 'usuario' => $agend['ClienteCliente']['nome'], 'id' => $agend['Agendamento']['id'], 'termino' => $duracao, 'img' => $this->images_path.'clientes_clientes/'.$agend['ClienteCliente']['img']];
                 if ( $data != $last_data ) {
                     $count++;
                     $arr_retornar[$data][] = $arr_dados;
