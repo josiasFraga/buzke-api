@@ -596,4 +596,68 @@ class ClientesController extends AppController {
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $clientes))));
 
     }
+
+    public function clientes_list() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $conditions = [
+            'ClienteCliente.cliente_id' => $dados_token['Usuario']['cliente_id']
+        ];
+
+        /*if ( isset($dados['searchText']) && $dados['searchText'] != '' ) {
+            $searchText = $dados['searchText'];
+            $conditions = array_merge($conditions, [
+                'or' => [
+                    ['ClienteCliente.nome LIKE' => "%".$searchText."%"],
+                    ['ClienteCliente.endereco LIKE' => "%".$searchText."%"],
+                    ['ClienteCliente.telefone LIKE' => "%".$searchText."%"],
+                    ['ClienteCliente.email LIKE' => "%".$searchText."%"]
+                ]
+            ]);
+        }*/
+
+        $this->loadModel('ClienteCliente');
+        $clientes = $this->ClienteCliente->find('all',[
+            'conditions' => $conditions,
+            'fields' => [
+                'ClienteCliente.id',
+                'ClienteCliente.nome',
+                'ClienteCliente.telefone',
+            ],
+            'link' => [],
+            //'contain' => ['Localidade', 'Uf', 'Agendamento' => ['conditions' => ['Agendamento.cliente_id' => $dados_token['Usuario']['cliente_id']]], 'Usuario', 'ClienteClienteDadosPadel', 'ClienteClientePadelCategoria'],
+            'group' => ['ClienteCliente.id']
+        ]);
+        
+        $clientes_retornar = [];
+        if  ( count($clientes) > 0 ) {
+            foreach($clientes as $key => $cliente){
+                $clientes_retornar[] = ['label' => $cliente['ClienteCliente']['nome']." - ".$cliente['ClienteCliente']['telefone'], 'value' => $cliente['ClienteCliente']['id']];
+            }
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $clientes_retornar))));
+
+    }
 }

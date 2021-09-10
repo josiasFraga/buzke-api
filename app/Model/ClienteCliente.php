@@ -55,7 +55,6 @@ class ClienteCliente extends AppModel {
         return $name;
     }
 
-
     public function buscaDadosUsuarioComoCliente($usuario_id = null, $cliente_id = null) {
 
 		if ( $usuario_id == null || $cliente_id == null )
@@ -100,6 +99,22 @@ class ClienteCliente extends AppModel {
 			$dados_cliente = $this->save($dados_cliente);
 
 		}
+
+		return $dados_cliente;
+    }
+
+    public function buscaDadosClienteCliente($cliente_cliente_id = null, $cliente_id = null) {
+
+		if ( $cliente_cliente_id == null || $cliente_id == null )
+			return false;
+
+		$dados_cliente = $this->find('first',[
+			'conditions' => [
+				'ClienteCliente.id' => $cliente_cliente_id,
+				'ClienteCliente.cliente_id' => $cliente_id,
+			],
+			'link' => []
+		]);
 
 		return $dados_cliente;
     }

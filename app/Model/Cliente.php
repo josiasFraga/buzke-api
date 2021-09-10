@@ -59,6 +59,22 @@ class Cliente extends AppModel {
         return true;
     }
 
+	public function findEmpresaNomeById($cliente_id) {
+
+		$dados_empresa = $this->find('first',[
+			'fields' => ['Cliente.nome'],
+			'conditions' => [
+				'Cliente.id' => $cliente_id,
+			],
+			'link' => []
+		]);
+
+		if ( count($dados_empresa) == 0 )
+			return '';
+		
+		return $dados_empresa['Cliente']['nome'];
+	}
+
 
 
 }
