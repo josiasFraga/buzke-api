@@ -89,6 +89,7 @@ class AppController extends Controller {
                     'Usuario.nome',
                     'Usuario.telefone',
                     'Usuario.email',
+                    'Usuario.img',
                     'Usuario.nivel_id',
                     'Usuario.cliente_id',
                     'Token.token',
