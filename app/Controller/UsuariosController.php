@@ -630,11 +630,12 @@ class UsuariosController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        $this->loadModel('Usuario');
-        $dados = $this->Usuario->findById($dados_usuario['Usuario']['id']);
-        unset($dados['Usuario']['senha']);
+        $this->loadModel('UsuarioDadosPadel');
+        $dados = $this->UsuarioDadosPadel->findByUserId($dados_usuario['Usuario']['id']);
+        $this->loadModel('UsuarioPadelCategoria');
+        $categorias = $this->UsuarioPadelCategoria->findByUserId($dados_usuario['Usuario']['id']);
 
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados, 'categorias' => $categorias))));
 
     }
 

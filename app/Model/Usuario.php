@@ -16,6 +16,12 @@ class Usuario extends AppModel {
         ],
         'UsuarioLocalizacao' => [
 			'foreignKey' => 'usuario_id'
+        ],
+        'UsuarioDadosPadel' => [
+			'foreignKey' => 'usuario_id'
+        ],
+        'UsuarioPadelCategoria' => [
+			'foreignKey' => 'usuario_id'
         ]
     );
 
