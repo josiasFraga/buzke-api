@@ -376,6 +376,13 @@ class UsuariosController extends AppController {
             'description' => $dados_address->description
         ];
 
+        if ($dados_token['Token']['usuario_id'] != null) {
+            $dados_salvar = array_merge($dados_salvar,[
+                'usuario_id' => $dados_token['Token']['usuario_id']
+            ]);
+
+        }
+
         $this->loadModel('UsuarioLocalizacao');
 
 
@@ -591,6 +598,33 @@ class UsuariosController extends AppController {
         $usuario_phone = $dados['phone'];
 
         $dados_usuario = $this->verificaValidadeToken($usuario_token, $usuario_phone);
+
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Usuario');
+        $dados = $this->Usuario->findById($dados_usuario['Usuario']['id']);
+        unset($dados['Usuario']['senha']);
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
+
+    }
+
+    public function dados_padelista() {
+        $this->layout = 'ajax';
+        
+        $dados = $this->request->query;
+
+        
+        if ((!isset($dados['token']) || $dados['token'] == "") ||  (!isset($dados['email']) || $dados['email'] == "")) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_usuario = $this->verificaValidadeToken($token, $email);
 
         if ( !$dados_usuario ) {
             throw new BadRequestException('Usuário não logado!', 401);

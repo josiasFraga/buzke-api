@@ -75,6 +75,7 @@ class AppController extends Controller {
                     'Token.id',
                     'Token.token',
                     'Token.data_validade',
+                    'Token.usuario_id',
                 ),
                 'conditions' => array(
                     'Token.token' => $usuario_token,

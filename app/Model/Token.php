@@ -10,6 +10,12 @@ class Token extends AppModel {
 		)
 	);
 
+	public $hasMany = array(
+		'UsuarioLocalizacao' => array(
+			'foreignKey' => 'token_id'
+		)
+	);
+
 	public function getIdsNotificationsUsuario($usuario_id = null) {
 
 		if ( $usuario_id == null )

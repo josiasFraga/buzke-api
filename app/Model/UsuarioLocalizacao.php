@@ -10,6 +10,9 @@ class UsuarioLocalizacao extends AppModel {
     public $belongsTo = array(
 		'Usuario' => array(
 			'foreignKey' => 'usuario_id'
+        ),
+		'Token' => array(
+			'foreignKey' => 'token_id'
         )
     );
 
