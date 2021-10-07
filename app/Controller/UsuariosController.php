@@ -119,7 +119,7 @@ class UsuariosController extends AppController {
 
         unset($usuario['Usuario']['senha']);
 
-        if ( isset($usuario['Cliente']) && count($usuario['Cliente'] > 0) ) {
+        if ( isset($usuario['Cliente']) && count($usuario['Cliente']) > 0 ) {
             $usuario['Cliente']['is_paddle_court'] = $business_is_paddle_court;
         }
 
