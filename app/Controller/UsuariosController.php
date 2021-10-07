@@ -671,11 +671,11 @@ class UsuariosController extends AppController {
         $this->layout = 'ajax';
         $dados = json_decode($this->request->data['dados']);
         
-
-        if ((!isset($dados->token) || $dados->token == "") ||  (!isset($dados->phone) || $dados->phone == "")) {
+        if ((!isset($dados->token) || $dados->token == "") ||  (!isset($dados->email) || $dados->email == "")) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
-        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->phone);
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
         if ( !$dados_usuario ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
@@ -687,7 +687,7 @@ class UsuariosController extends AppController {
         $dados_salvar = array(
             'Usuario' => array(
                 'id' => $dados_usuario['Usuario']['id'], 
-                'senha' => AuthComponent::password($dados->password), 
+                'senha' => $dados->password, 
             )
         );
 
