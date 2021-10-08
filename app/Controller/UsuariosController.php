@@ -639,6 +639,119 @@ class UsuariosController extends AppController {
 
     }
 
+    public function altera_dados_padelista() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+        if ((!isset($dados->token) || $dados->token == "") ||  (!isset($dados->email) || $dados->email == "")) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if (!isset($dados->sexo) || $dados->sexo == '') {
+            throw new BadRequestException('Sexo não informado', 400);
+        }
+
+        if (!isset($dados->lado) || $dados->lado == '') {
+            throw new BadRequestException('Lado de jogo não informado', 400);
+        }
+
+        $categorias = [];
+        foreach($dados as $key_dado => $dado) {
+    
+            if ( strpos($key_dado, 'item_') !== false && $dado == 1 ) {
+                list($discart, $categoria_id) = explode('item_', $key_dado);
+                $categorias[] = $categoria_id;
+            }
+        }
+
+
+        if ( count($categorias) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Selecione ao menos uma categoria antes de clicar em "Atualizar Dados"'))));
+        }
+
+
+        $this->loadModel('UsuarioDadosPadel');
+		$dataSource = $this->UsuarioDadosPadel->getDataSource();
+		$dataSource->begin();
+
+        $dados_padel = $this->UsuarioDadosPadel->findByUserId($dados_usuario['Usuario']['id']);
+        $dados_salvar = [];
+        if ( count($dados_padel) > 0 ) {
+            $dados_salvar = array_merge(
+                $dados_salvar,
+                [
+                    'id' => $dados_padel['UsuarioDadosPadel']['id']
+                ]
+            );
+        }
+
+        
+        $dados_salvar = array_merge(
+            $dados_salvar,
+            [
+                'lado' => $dados->lado,
+                'usuario_id' => $dados_usuario['Usuario']['id']
+            ]
+        );
+
+        $save_padelist_data = $this->UsuarioDadosPadel->save($dados_salvar);
+
+        $this->loadModel('UsuarioPadelCategoria');
+		$dataSourcePadelCategoria = $this->UsuarioPadelCategoria->getDataSource();
+		$dataSourcePadelCategoria->begin();
+
+        $daodos_categorias = $this->UsuarioPadelCategoria->findByUserId($dados_usuario['Usuario']['id']);
+        $dados_salvar_categorias = [];
+        if ( count($daodos_categorias) > 0 ) {
+           $this->UsuarioPadelCategoria->deleteAll(['UsuarioPadelCategoria.usuario_id' => $dados_usuario['Usuario']['id']]);
+        }
+
+        foreach( $categorias as $key => $cat) {
+            $dados_salvar_categorias = array_merge(
+                $dados_salvar_categorias,
+                [[
+                    'categoria_id' => $cat,
+                    'usuario_id' => $dados_usuario['Usuario']['id']
+                ]]
+            );
+        }
+    
+        $save_padelist_categories = $this->UsuarioPadelCategoria->saveMany($dados_salvar_categorias);
+
+		$dataSourceUsuario = $this->Usuario->getDataSource();
+		$dataSourceUsuario->begin();
+
+        $usuario_atualizado = $this->Usuario->save(
+            [
+                'id' => $dados_usuario['Usuario']['id'],
+                'sexo' => $dados->sexo,
+            ]
+        );
+
+
+        if ($usuario_atualizado && $save_padelist_categories && $save_padelist_data ) {
+            $dataSource->commit();
+            $dataSourcePadelCategoria->commit();
+            $dataSourceUsuario->commit();
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cadastro alterado!', 'padelist_data' => $save_padelist_data, 'padel_categories' => $save_padelist_categories, 'updated_user_sex' => $dados->sexo))));
+        } else {
+            $dataSource->rollback();
+            $dataSourcePadelCategoria->rollback();
+            $dataSourceUsuario->rollback();
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
+        }
+    }
+
     public function usuario_alterar() {
         $this->layout = 'ajax';
         $dados = $this->request->input('json_decode');
