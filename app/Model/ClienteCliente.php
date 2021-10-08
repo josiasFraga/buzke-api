@@ -57,51 +57,45 @@ class ClienteCliente extends AppModel {
 
     public function buscaDadosUsuarioComoCliente($usuario_id = null, $cliente_id = null) {
 
-		if ( $usuario_id == null || $cliente_id == null )
-			return false;
+		if ( $usuario_id == null )
+			return [];
+
+		$conditions = [
+			'ClienteCliente.usuario_id' => $usuario_id,
+			'ClienteCliente.cliente_id' => null,
+		];
+
+		if ( $cliente_id != null ) {
+			$conditions = array_merge([
+				'ClienteCliente.cliente_id' => $cliente_id,
+			]);
+		}
 
 		$dados_cliente = $this->find('first',[
-			'conditions' => [
-				'ClienteCliente.usuario_id' => $usuario_id,
-				'ClienteCliente.cliente_id' => $cliente_id,
-			],
+			'conditions' => $conditions,
 			'link' => []
 		]);
 
-		if ( count($dados_cliente) == 0 ) {
-
-			$dados_cliente = $this->find('first',[
-				'conditions' => [
-					'ClienteCliente.usuario_id' => $usuario_id,
-					'ISNULL(ClienteCliente.cliente_id)',
-				],
-				'link' => []
-			]);
-
-		}
-
-		if ( count($dados_cliente) == 0 ) {
-
-			$dados_cliente = $this->find('first',[
-				'conditions' => [
-					'ClienteCliente.usuario_id' => $usuario_id,
-				],
-				'link' => []
-			]);
-
-			
-			if ( count($dados_cliente) == 0 ) {
-				return false;
-			}
-
-			$dados_cliente['ClienteCliente']['cliente_id'] = $cliente_id;
-
-			$dados_cliente = $this->save($dados_cliente);
-
-		}
-
+		
 		return $dados_cliente;
     }
+
+	public function criaDadosComoCliente($usuario_id = null, $cliente_id = null) {
+		if ( $usuario_id == null || $cliente_id == null)
+			return [];
+
+		$dados = $this->buscaDadosUsuarioComoCliente($usuario_id);
+
+		if ( count($dados) == 0 ){
+			return [];
+		}
+
+		$dados['ClienteCliente']['cliente_id'] = $cliente_id;
+		unset($dados['ClienteCliente']['id']);
+
+		$dados_retornar = $this->save($dados);
+		
+	}
 
     public function buscaDadosClienteCliente($cliente_cliente_id = null, $cliente_id = null) {
 

@@ -274,7 +274,11 @@ class AgendamentosController extends AppController {
             $dados_usuario_como_cliente = $this->ClienteCliente->buscaDadosUsuarioComoCliente($dados_usuario['Usuario']['id'], $dados->cliente_id);
     
             if ( !$dados_usuario_como_cliente || count($dados_usuario_como_cliente) == 0) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Lamentamos. Não conseguimos encontrar seus dados! ;('))));
+                $dados_usuario_como_cliente = $this->ClienteCliente->criaDadosComoCliente($dados_usuario['Usuario']['id'], $dados->cliente_id);
+                if ( !$dados_usuario_como_cliente || count($dados_usuario_como_cliente) == 0) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Lamentamos. Não conseguimos encontrar seus dados! ;('))));
+                }
+
             }
             $cliente_cliente_id = $dados_usuario_como_cliente['ClienteCliente']['id'];
     

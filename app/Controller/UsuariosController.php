@@ -309,12 +309,19 @@ class UsuariosController extends AppController {
             );
         } else {
 
-            $arr_cadastros_atualizar = [];
+            $arr_cadastros_atualizar = [
+                [
+                    'nome' => $nome, 
+                    'email' => $email, 
+                    'telefone' => $telefone, 
+                    //'cpf' => $cpf, 
+                ]                
+            ];
             foreach( $dados_cliente_cliente as $key => $d_cliente ){
                 unset($d_cliente['ClienteCliente']['img']);
                 unset($d_cliente['ClienteCliente']['usuario_id']);
-                $arr_cadastros_atualizar[$key] = $d_cliente['ClienteCliente'];
-                $arr_cadastros_atualizar[$key]['nome'] = $nome;
+                $arr_cadastros_atualizar[$key+1] = $d_cliente['ClienteCliente'];
+                $arr_cadastros_atualizar[$key+1]['nome'] = $nome;
             }
             $dados_salvar = array(
                 'Usuario' => array(
@@ -634,6 +641,13 @@ class UsuariosController extends AppController {
         $dados = $this->UsuarioDadosPadel->findByUserId($dados_usuario['Usuario']['id']);
         $this->loadModel('UsuarioPadelCategoria');
         $categorias = $this->UsuarioPadelCategoria->findByUserId($dados_usuario['Usuario']['id']);
+        $this->loadModel('ClienteCliente');
+        $dados_como_cliente = $this->ClienteCliente->buscaDadosUsuarioComoCliente($dados_usuario['Usuario']['id']);
+        //debug($dados_como_cliente); die();
+
+        if ( count($dados) > 0 ) {
+            $dados['UsuarioDadosPadel']['sexo'] = $dados_como_cliente['ClienteCliente']['sexo'];
+        }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados, 'categorias' => $categorias))));
 
@@ -677,6 +691,10 @@ class UsuariosController extends AppController {
 
         if ( count($categorias) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Selecione ao menos uma categoria antes de clicar em "Atualizar Dados"'))));
+        }
+
+        if ( count($categorias) > 2 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Selecione no máximo 2 categorias'))));
         }
 
 
@@ -728,26 +746,34 @@ class UsuariosController extends AppController {
     
         $save_padelist_categories = $this->UsuarioPadelCategoria->saveMany($dados_salvar_categorias);
 
-		$dataSourceUsuario = $this->Usuario->getDataSource();
-		$dataSourceUsuario->begin();
+        
+        $this->loadModel('ClienteCliente');
+        $dados_como_cliente = $this->ClienteCliente->buscaDadosUsuarioComoCliente($dados_usuario['Usuario']['id']);
+        unset($dados_como_cliente['ClienteCliente']['img']);
+        $dados_como_cliente['ClienteCliente']['sexo'] = $dados->sexo;
+        
+		$dataSourceClienteCliente = $this->ClienteCliente->getDataSource();
+		$dataSourceClienteCliente->begin();
 
-        $usuario_atualizado = $this->Usuario->save(
+        $usuario_cliente_cliente = $this->ClienteCliente->save(
             [
-                'id' => $dados_usuario['Usuario']['id'],
+                'id' => $dados_como_cliente['ClienteCliente']['id'],
                 'sexo' => $dados->sexo,
             ]
         );
 
 
-        if ($usuario_atualizado && $save_padelist_categories && $save_padelist_data ) {
+        if ($usuario_cliente_cliente && $save_padelist_categories && $save_padelist_data ) {
             $dataSource->commit();
             $dataSourcePadelCategoria->commit();
-            $dataSourceUsuario->commit();
+            $dataSourceClienteCliente->commit();
+            
+
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cadastro alterado!', 'padelist_data' => $save_padelist_data, 'padel_categories' => $save_padelist_categories, 'updated_user_sex' => $dados->sexo))));
         } else {
             $dataSource->rollback();
             $dataSourcePadelCategoria->rollback();
-            $dataSourceUsuario->rollback();
+            $dataSourceClienteCliente->rollback();
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
         }
     }
