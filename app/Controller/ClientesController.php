@@ -508,6 +508,56 @@ class ClientesController extends AppController {
 
     }
 
+    public function horarios_atendimento() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dado_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dado_usuario['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+
+        $this->loadModel('Cliente');
+        $dados_cliente = $this->Cliente->find('first',[
+            'conditions' => [
+                'Cliente.id' => $dado_usuario['Usuario']['cliente_id']
+            ],
+            'link' => []
+        ]);
+
+
+        $this->loadModel('ClienteHorarioAtendimento');
+        $horarios_atendimento = $this->ClienteHorarioAtendimento->find('all',[
+            'conditions' => [
+                'ClienteHorarioAtendimento.cliente_id' => $dado_usuario['Usuario']['cliente_id']
+            ],
+            'order' => [
+                'ClienteHorarioAtendimento.horario_dia_semana'
+            ],
+            'link' => []
+        ]);
+
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_atendimento))));
+
+    }
+
     public function clientes() {
 
         $this->layout = 'ajax';
