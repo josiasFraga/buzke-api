@@ -353,12 +353,15 @@ class ClientesController extends AppController {
         foreach( $dados_turnos as $dia_semana_abrev => $turnos) {
             $dia_semana_n = array_search($dia_semana_abrev, $this->dias_semana_abrev);
             foreach($turnos as $key_turno => $turno) {
+                if ( !isset($turno['abertura']) || $turno['abertura'] == "" || !isset($turno['fechamento']) || $turno['fechamento'] == "" || !isset($turno['vagas']) || $turno['vagas'] == "" || !isset($turno['intervalo']) || $turno['intervalo'] == "") {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deixou um campo obrigatório em branco em lagum turno de '.$dia_semana_abrev.'!'))));
+                }
                 $turnos_salvar[$index]['horario_dia_semana'] = $dia_semana_n;
                 $turnos_salvar[$index]['abertura'] = $turno['abertura'];
                 $turnos_salvar[$index]['fechamento'] = $turno['fechamento'];
                 $turnos_salvar[$index]['vagas_por_horario'] = $turno['vagas'];
                 $turnos_salvar[$index]['intervalo_horarios'] = $turno['intervalo'];
-                if ( isset($turno['domicilio']) ) {
+                if ( isset($turno['domicilio']) && $turno['domicilio'] ) {
                     $turnos_salvar[$index]['a_domicilio'] = 1;
                 }
                 $index++;
@@ -555,6 +558,75 @@ class ClientesController extends AppController {
 
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_atendimento))));
+
+    }
+
+    public function altera_horarios_atendimento() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+
+
+        if ((!isset($dados->token) || $dados->token == "") ||  (!isset($dados->email) || $dados->email == "")) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $dados_turnos = [];
+        foreach($dados as $key_dado => $dado) {
+
+            if ( strpos($key_dado, 'turnos_') !== false ) {
+                list($discart, $dia_semana_abrev) = explode('turnos_', $key_dado);
+                $dados_turnos[$dia_semana_abrev] = $dado;
+            }
+
+        }
+
+        if ( count($dados_turnos) == 0) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve adicionar ao menos um turno antes de clicar em salvar!'))));
+        }
+
+        
+        $dados_turnos = json_decode(json_encode($dados_turnos), true);
+
+
+        $turnos_salvar = [];
+        $index = 0;
+        foreach( $dados_turnos as $dia_semana_abrev => $turnos) {
+            $dia_semana_n = array_search($dia_semana_abrev, $this->dias_semana_abrev);
+            foreach($turnos as $key_turno => $turno) {
+                if ( !isset($turno['abertura']) || $turno['abertura'] == "" || !isset($turno['fechamento']) || $turno['fechamento'] == "" || !isset($turno['vagas']) || $turno['vagas'] == "" || !isset($turno['intervalo']) || $turno['intervalo'] == "") {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deixou um campo obrigatório em branco em lagum turno de '.$dia_semana_abrev.'!'))));
+                }
+                $turnos_salvar[$index]['horario_dia_semana'] = $dia_semana_n;
+                $turnos_salvar[$index]['cliente_id'] = $dados_usuario['Usuario']['cliente_id'];
+                $turnos_salvar[$index]['abertura'] = $turno['abertura'];
+                $turnos_salvar[$index]['fechamento'] = $turno['fechamento'];
+                $turnos_salvar[$index]['vagas_por_horario'] = $turno['vagas'];
+                $turnos_salvar[$index]['intervalo_horarios'] = $turno['intervalo'];
+                if ( isset($turno['domicilio']) && $turno['domicilio']) {
+                    $turnos_salvar[$index]['a_domicilio'] = 1;
+                }
+                $index++;
+            }
+        }
+
+        $this->LoadModel('ClienteHorarioAtendimento');
+        $this->ClienteHorarioAtendimento->deleteAll(['ClienteHorarioAtendimento.cliente_id' => $dados_usuario['Usuario']['cliente_id']]);
+        if ( !$this->ClienteHorarioAtendimento->saveMany($turnos_salvar) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao atualizar seus horários de atendimento. Por favor, tente novamente mais tarde!'))));
+        }
+    
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Seus dados de atendimento foram atualizados com sucesso!'))));
 
     }
 
