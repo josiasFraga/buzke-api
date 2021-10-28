@@ -337,6 +337,7 @@ class AgendamentosController extends AppController {
         $dados_salvar = [
             'cliente_cliente_id' => $cliente_cliente_id,
             'cliente_id' => $dados->cliente_id,
+            'servico_id' => $dados->servico,
             'horario' => $data_selecionada.' '.$horario_selecionado,
         ];
 

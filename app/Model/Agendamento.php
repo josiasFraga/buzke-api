@@ -10,7 +10,10 @@ class Agendamento extends AppModel {
         ),
 		'ClienteCliente' => array(
 			'foreignKey' => 'cliente_cliente_id'
-        )
+        ),
+		'ClienteServico' => array(
+			'foreignKey' => 'servico_id'
+        ),
     );
 
     public function verificaHorarios($horarios = [], $cliente_id = null, $data = null) {
@@ -27,19 +30,28 @@ class Agendamento extends AppModel {
 
         foreach( $horarios as $key => $horario ){
 
-            $n_agendamentos_marcados = $this->find('count',[
+            $agendamentos_marcados = $this->find('all',[
+                'fields' => [
+                    'Agendamento.id',
+                    'ClienteServico.*'
+                ],
                 'conditions' => [
                     'Agendamento.cliente_id' => $cliente_id,
                     'Agendamento.horario' => $data.' '.$horario['horario'],
                     'Agendamento.cancelado' => 'N'
+                ],
+                'Link' => [
+                    'ClienteServico'
                 ]
             ]);
 
+            $n_agendamentos_marcados = count($agendamentos_marcados);
 
             if ( $n_agendamentos_marcados >= $horario['vagas'] ) {
                 $horarios[$key]['enabled'] = false;
             } else {
                 $horarios[$key]['enabled'] = true;
+                $horarios[$key]['agendamentos_marcados'] = $agendamentos_marcados;
 
             }
 

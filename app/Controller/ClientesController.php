@@ -486,7 +486,7 @@ class ClientesController extends AppController {
             'conditions' => [
                 'Cliente.id' => $dados['cliente_id']
             ],
-            'link' => []
+            'contain' => ['ClienteSubcategoria']
         ]);
 
         $this->loadModel('ClienteHorarioAtendimento');
@@ -519,10 +519,26 @@ class ClientesController extends AppController {
             $model_horario = 'ClienteHorarioAtendimento';
         }
 
+        //busca uma lista de horários de atendimento conforme os turnos informados pelo estabelecimento
         $lista_horarios_atendimento = $this->ClienteHorarioAtendimento->generateListHorarios($horarios_atendimento, $model_horario);
 
+        //verifica na listagem de horário se resta alguma vaga disponível, se não tiver ele desabilita o horário
         $this->loadModel('Agendamento');
         $horarios_verificados = $this->Agendamento->verificaHorarios($lista_horarios_atendimento, $dados['cliente_id'], $data);
+
+        $this->loadModel('ClienteSubcategoria');
+        $paddle_court = $this->ClienteSubcategoria->checkIsPaddleCourt($dados_cliente);
+
+        if ($paddle_court) {
+            
+            //busca as quadras disponíveis para os horários
+            $this->loadModel('ClienteServico');
+            $horarios_verificados = $this->ClienteServico->modaArrayServicosIndisponiveis($horarios_verificados, $dados['cliente_id']);
+
+        }
+
+
+
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_verificados))));
 
     }
@@ -666,25 +682,25 @@ class ClientesController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        if ( $dado_usuario['Usuario']['nivel_id'] != 2 ) {
+
+        if ( $dado_usuario['Usuario']['nivel_id'] != 2 && !isset($dados['cliente_id']) ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-
-        $this->loadModel('Cliente');
-        $dados_cliente = $this->Cliente->find('first',[
-            'conditions' => [
-                'Cliente.id' => $dado_usuario['Usuario']['cliente_id']
-            ],
-            'link' => []
-        ]);
+        if ( isset($dados['cliente_id']) && $dados['cliente_id'] != '' ) {
+            $conditions = [
+                'ClienteServico.cliente_id' => $dados['cliente_id']
+            ];
+        } else {
+            $conditions = [
+                'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id']
+            ];
+        }
 
 
         $this->loadModel('ClienteServico');
         $servicos = $this->ClienteServico->find('all',[
-            'conditions' => [
-                'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id']
-            ],
+            'conditions' => $conditions,
             'order' => [
                 'ClienteServico.nome'
             ],
