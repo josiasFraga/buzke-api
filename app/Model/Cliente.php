@@ -20,6 +20,9 @@ class Cliente extends AppModel {
 		'Agendamento' => array(
 			'foreignKey' => 'cliente_id'
 		),
+		'ClienteServico' => array(
+			'foreignKey' => 'cliente_id'
+		),
     );
 
     public $belongsTo = array(
