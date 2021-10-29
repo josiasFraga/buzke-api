@@ -50,5 +50,49 @@ class ClienteHorarioAtendimentoExcessao extends AppModel {
 
     }
 
+    public function checkStatus($agendamentos = []) {
+
+        if ( count($agendamentos) == 0 ) {
+            return [];
+        }
+
+        $excessoes = $this->find('all',[
+            'conditions' => [
+                'ClienteHorarioAtendimentoExcessao.cliente_id' => $agendamentos[0]['Agendamento']['cliente_id'],
+                'ClienteHorarioAtendimentoExcessao.data >=' => date('Y-m-d')
+            ],
+            'link' => []
+        ]);
+
+        if ( count($excessoes) == 0 ) {
+            return $agendamentos;
+        } 
+
+        foreach($agendamentos as $key => $agendamento) {
+            list($data,$hora) = explode(' ',$agendamento['Agendamento']['horario']);
+
+            foreach( $excessoes as $key_excessao => $excessao) {
+
+                if ( $excessao['ClienteHorarioAtendimentoExcessao']['data'] == $data && $excessao['ClienteHorarioAtendimentoExcessao']['type'] == 'F' ){
+                    $agendamentos[$key]['Agendamento']['status'] = 'cancelled';
+                    $agendamentos[$key]['Agendamento']['motive'] = 'A empresa não abrirá nesse dia';
+                }
+
+                if ( $excessao['ClienteHorarioAtendimentoExcessao']['data'] == $data && $excessao['ClienteHorarioAtendimentoExcessao']['type'] == 'A' ){
+                    if ( $excessao['ClienteHorarioAtendimentoExcessao']['abertura'] <= $hora && $excessao['ClienteHorarioAtendimentoExcessao']['fechamento'] <= $hora) {
+                        $agendamentos[$key]['Agendamento']['status'] = 'confirmed';
+                        $agendamentos[$key]['Agendamento']['motive'] = 'A empresa abrirá excepcionalmente nesse dia';
+                    }
+                }
+
+            }
+
+
+        }
+
+        return $agendamentos;
+
+    }
+
 	
 }

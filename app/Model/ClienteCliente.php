@@ -143,4 +143,29 @@ class ClienteCliente extends AppModel {
 		]);
 	}
 
+    public function buscaTodosDadosUsuarioComoCliente($usuario_id = null, $only_ids = false) {
+
+		if ( $usuario_id == null )
+			return [];
+
+		if ( !$only_ids ) {
+			$dados_cliente = $this->find('all',[
+				'conditions' => [
+					'ClienteCliente.usuario_id' => $usuario_id,
+				],
+				'link' => []
+			]);
+		} else {
+			$dados_cliente = $this->find('list',[
+				'fields' => ['ClienteCliente.id', 'ClienteCliente.id'],
+				'conditions' => [
+					'ClienteCliente.usuario_id' => $usuario_id,
+				],
+				'link' => []
+			]);
+		}
+
+		return $dados_cliente;
+    }
+
 }

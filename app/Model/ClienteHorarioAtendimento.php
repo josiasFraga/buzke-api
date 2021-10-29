@@ -95,4 +95,44 @@ class ClienteHorarioAtendimento extends AppModel {
 
 
     }
+
+    public function checkStatus($agendamentos = []) {
+
+        if ( count($agendamentos) == 0 ) {
+            return [];
+        }
+
+        foreach($agendamentos as $key => $agendamento) {
+
+            if ( isset($agendamento['Agendamento']['status']) ) {
+                continue;
+            }
+
+            list($data,$hora) = explode(' ',$agendamento['Agendamento']['horario']);
+
+            $dados_horario_atendimento = $this->find('first',[
+                'conditions' => [
+                    'ClienteHorarioAtendimento.cliente_id' => $agendamento['Agendamento']['cliente_id'],
+                    'ClienteHorarioAtendimento.horario_dia_semana' => date('w',strtotime($data)),
+                    'ClienteHorarioAtendimento.abertura <=' => $hora,
+                    'ClienteHorarioAtendimento.fechamento >=' => $hora,
+                ],
+                'link' => []
+            ]);
+
+            if ( count($dados_horario_atendimento) > 0 ) {
+                $agendamentos[$key]['Agendamento']['status'] = 'confirmed';
+                $agendamentos[$key]['Agendamento']['motive'] = '';
+            } else {
+                $agendamentos[$key]['Agendamento']['status'] = 'cancelled';
+                $agendamentos[$key]['Agendamento']['motive'] = 'A empresa não atende mais nesse período nesse dia da semana';
+
+            }
+
+
+        }
+
+        return $agendamentos;
+
+    }
 }
