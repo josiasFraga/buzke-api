@@ -131,7 +131,7 @@ class Agendamento extends AppModel {
             'order' => [
                 'Agendamento.horario'
             ],
-            'link' => ['Cliente', 'ClienteServico']
+            'link' => ['Cliente' => ['Localidade'], 'ClienteServico']
         ]);
 
         $fixo_semanal = $this->buscaAgendamentoUsuarioFixoSemanal($cliente_cliente_ids);
@@ -165,7 +165,7 @@ class Agendamento extends AppModel {
             'order' => [
                 'Agendamento.horario'
             ],
-            'link' => ['Cliente', 'ClienteServico']
+            'link' => ['Cliente' => ['Localidade'], 'ClienteServico']
         ]);
 
     }
@@ -184,7 +184,7 @@ class Agendamento extends AppModel {
             'order' => [
                 'Agendamento.horario'
             ],
-            'link' => ['Cliente', 'ClienteServico']
+            'link' => ['Cliente' => ['Localidade'], 'ClienteServico']
         ]);
 
     }
