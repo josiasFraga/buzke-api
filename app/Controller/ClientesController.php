@@ -209,6 +209,10 @@ class ClientesController extends AppController {
             if (!isset($dados->cpf) || $dados->cpf == '') {
                 throw new BadRequestException('CPF não informado', 400);
             }
+            
+            if ( !$this->validar_cpf($dados->cpf) ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'CPF inválido!'))));
+            }
 
             $ja_existe = ($this->Cliente->find('count', array('conditions' => array('Cliente.cpf' => $dados->cpf))) > 0);
 
@@ -223,6 +227,10 @@ class ClientesController extends AppController {
         else if ( $dados->tipo == "J" ) {
             if (!isset($dados->cnpj) || $dados->cnpj == '') {
                 throw new BadRequestException('CNPJ não informado', 400);
+            }
+            
+            if ( !$this->validar_cnpj($dados->cnpj) ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'CNPJ inválido!'))));
             }
 
             $ja_existe = ($this->Cliente->find('count', array('conditions' => array('Cliente.cnpj' => $dados->cnpj))) > 0);
@@ -316,6 +324,10 @@ class ClientesController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
+        if ( $dados_token['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
         $subcategorias = [];
         $dados_turnos = [];
         foreach($dados as $key_dado => $dado) {
@@ -348,6 +360,8 @@ class ClientesController extends AppController {
             if ( count($dados_servicos) == 0 ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você deve adicionar pelo menos uma quadra antes de clicar em salvar!'))));
             }
+        } else {
+            $dados_servicos = [];
         }
 
         $subcategorias_salvar = [];
@@ -378,14 +392,27 @@ class ClientesController extends AppController {
             }
         }
 
+
         $dados_salvar = [
             'Cliente' => [
                 'plano_id' => $dados->plano,
                 'id' => $dados_token['Usuario']['cliente_id'],
             ],
+            'ClienteConfiguracao' => [
+                'horario_fixo' => (isset($dados->agendamentos_fixos) && ($dados->agendamentos_fixos == 1 || $dados->agendamentos_fixos) ? 'Y' : 'N'),
+                'fixo_tipo' => (!isset($dados->agendamento_fixo_tipo) || $dados->agendamento_fixo_tipo == '' ? 'Nenhum' : $dados->agendamento_fixo_tipo),
+            ],
             'ClienteSubcategoria' => $subcategorias_salvar,
-            'ClienteHorarioAtendimento' => $turnos_salvar
+            'ClienteHorarioAtendimento' => $turnos_salvar,
         ];
+
+    
+        if (isset($this->request->params['form']['logo']) && $this->request->params['form']['logo'] != '' && $this->request->params['form']['logo']['error'] == 0) {
+            $dados_salvar['Cliente'] = array_merge($dados_salvar['Cliente'],
+            [
+                'logo' => $this->request->params['form']['logo']
+            ]);
+        }
 
         
         if ( isset($dados_servicos) && count($dados_servicos) > 0 ) {
@@ -394,7 +421,7 @@ class ClientesController extends AppController {
             ]);
         }
 
-        $this->loadModel('Cliente');       
+        $this->loadModel('Cliente');
 
         $this->Cliente->set($dados_salvar);
         if ($this->Cliente->saveAssociated($dados_salvar)) {
@@ -920,5 +947,209 @@ class ClientesController extends AppController {
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $clientes_retornar))));
 
+    }
+
+    public function dados() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dado_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dado_usuario['Usuario']['nivel_id'] != 2 && !isset($dados['cliente_id']) ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }       
+
+        $this->loadModel('Cliente');
+        $dados = $this->Cliente->find('first',[
+            'fields' => ['*'],
+            'conditions' => ['Cliente.id' =>  $dado_usuario['Usuario']['cliente_id']],
+            'link' => [
+                'ClienteConfiguracao'
+            ]
+        ]);
+
+        if ( count($dados) > 0 ) {
+            $dados['Cliente']['logo'] = $this->images_path.'clientes/'.$dados['Cliente']['logo'];
+        }
+
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
+
+    }
+
+    public function muda_dados() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+
+        if (!isset($dados->token) || $dados->token == '') {
+            throw new BadRequestException('Token não informado', 400);
+        }
+
+        if (!isset($dados->email) || $dados->email == '') {
+            throw new BadRequestException('Email não informado', 400);
+        }
+
+        if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
+        }
+
+        if (!isset($dados->tipo_cadastro) || $dados->tipo_cadastro == '' || ($dados->tipo_cadastro != 'F' && $dados->tipo_cadastro != 'J')) {
+            throw new BadRequestException('Tipo de cadastro não informado', 400);
+        }
+
+        if (!isset($dados->nomeProfissional) || $dados->nomeProfissional == '') {
+            throw new BadRequestException('Nome business não informado', 400);
+        }
+
+        if (!isset($dados->cep) || $dados->cep == '') {
+            throw new BadRequestException('CEP não informado', 400);
+        }
+
+        if (!isset($dados->bairro) || $dados->bairro == '') {
+            throw new BadRequestException('Bairro não informado', 400);
+        }
+
+        if (!isset($dados->endereco ) || $dados->endereco  == '') {
+            throw new BadRequestException('Endereço não informado', 400);
+        }
+
+        if (!isset($dados->n ) || $dados->n  == '' || !is_numeric($dados->n) ) {
+            throw new BadRequestException('Número não informado', 400);
+        }
+
+        if (!isset($dados->telefone) || $dados->telefone == '') {
+            throw new BadRequestException('Telefone não informado', 400);
+        }
+
+        if (!isset($dados->uf) || $dados->uf == '') {
+            throw new BadRequestException('UF não informada', 400);
+        }
+
+        if (!isset($dados->localidade ) || $dados->localidade  == '') {
+            throw new BadRequestException('Localidade não informada', 400);
+        }
+        
+        $token = $dados->token;
+        $email = $dados->email;
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Uf');
+        $dadosUf = $this->Uf->find('first',[
+            'conditions' => [
+                'Uf.ufe_sg' => $dados->uf
+            ]
+        ]);
+
+        if (count($dadosUf) == 0) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do Estado não encontrados.'))));
+        }
+
+        $this->loadModel('Localidade');
+        $dadosLocalidade = $this->Localidade->find('first',[
+            'conditions' => [
+                'Localidade.loc_no' => $dados->localidade
+            ]
+        ]);
+    
+        if (count($dadosLocalidade) == 0) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados da cidade não encontrados.'))));
+        }
+
+        $this->loadModel('Cliente');
+
+        $cpf = null;
+        $cnpj = null;
+
+        if ($dados->tipo_cadastro == 'F') {
+            $cpf = $dados->cpf;
+            if ( !$this->validar_cpf($cpf) ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'CPF inválido!'))));
+            }
+            if ( count($this->Cliente->findByCpf($cpf,$dados_token['Usuario']['cliente_id'])) > 0 ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Já existe um parceiro com este CPF!'))));
+            }
+        }
+
+        if ($dados->tipo_cadastro == 'J') {
+            $cnpj = $dados->cnpj;
+            if ( !$this->validar_cnpj($cnpj) ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'CNPJ inválido!'))));
+            }
+            if ( count($this->Cliente->findByCnpj($cnpj,$dados_token['Usuario']['cliente_id'])) > 0 ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Já existe um parceiro com este CNPJ!'))));
+            }
+        }
+
+        $dados_salvar = [
+            'Cliente' => [
+                'id' => $dados_token['Usuario']['cliente_id'],
+                'cpf' => $cpf,
+                'cpnj' => $cnpj,
+                'nome' => $dados->nomeProfissional,
+                'telefone' => $dados->telefone,
+                'cep' => $dados->cep,
+                'endereco' => $dados->endereco,
+                'endereco_n' => $dados->n,
+                'tipo' => $dados->tipo_cadastro,
+                'cidade_id' => $dadosLocalidade['Localidade']['loc_nu_sequencial'],
+                'estado' => $dados->uf,
+            ],
+            'ClienteConfiguracao' => [
+                //'id' => $dados->configuracoes_id,
+                'horario_fixo' => (isset($dados->agendamentos_fixos) && ($dados->agendamentos_fixos == 1 || $dados->agendamentos_fixos) ? 'Y' : 'N'),
+                'fixo_tipo' => (!isset($dados->agendamento_fixo_tipo) || $dados->agendamento_fixo_tipo == '' ? 'Nenhum' : $dados->agendamento_fixo_tipo),
+            ],
+        ];
+
+        if (isset($this->request->params['form']['logo']) && $this->request->params['form']['logo'] != '' && $this->request->params['form']['logo']['error'] == 0) {
+            $dados_salvar['Cliente'] = array_merge($dados_salvar['Cliente'],
+            [
+                'logo' => $this->request->params['form']['logo']
+            ]);
+        }
+
+        if (isset($dados->configuracoes_id) && $dados->configuracoes_id != '') {
+            $dados_salvar['ClienteConfiguracao'] = array_merge($dados_salvar['ClienteConfiguracao'],
+            [
+                'id' => $dados->configuracoes_id
+            ]);
+        }
+
+        $this->Cliente->set($dados_salvar);
+        if ($this->Cliente->saveAssociated($dados_salvar)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Atualizado com sucesso!'))));
+        } else {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
+        }
     }
 }

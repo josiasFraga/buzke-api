@@ -25,6 +25,12 @@ class Cliente extends AppModel {
 		),
     );
 
+    public $hasOne = array(
+		'ClienteConfiguracao' => array(
+			'foreignKey' => 'cliente_id'
+		),
+    );
+
     public $belongsTo = array(
 		'Localidade' => array(
 			'foreignKey' => 'cidade_id'
@@ -38,7 +44,7 @@ class Cliente extends AppModel {
 
     public $actsAs = array(
 		'Upload.Upload' => array(
-			'img' => array(
+			'logo' => array(
 				'path' => "{ROOT}{DS}webroot{DS}img{DS}clientes", // {ONDE ARQ ESTA}{ENTRA}webroot{ENTRA}img{ENTRA}lotes
 				'thumbnailSizes' => array(
                     'thumb' => '512x512',
@@ -76,6 +82,48 @@ class Cliente extends AppModel {
 			return '';
 		
 		return $dados_empresa['Cliente']['nome'];
+	}
+
+	public function findByCpf($cpf, $not_cliente_id = null) {
+
+		$conidtions = [
+			'Cliente.cpf' => $cpf,
+		];
+
+		if ( $not_cliente_id != null ) {
+			$conidtions = array_merge($conidtions,[
+				'not' => [
+					'Cliente.id' => $not_cliente_id
+				]
+			]);
+		}
+
+		return $this->find('first',[
+			'fields' => ['Cliente.nome'],
+			'conditions' => $conidtions,
+			'link' => []
+		]);
+	}
+
+	public function findByCnpj($cnpj, $not_cliente_id = null) {
+
+		$conidtions = [
+			'Cliente.cnpj' => $cnpj,
+		];
+
+		if ( $not_cliente_id != null ) {
+			$conidtions = array_merge($conidtions,[
+				'not' => [
+					'Cliente.id' => $not_cliente_id
+				]
+			]);
+		}
+
+		return $this->find('first',[
+			'fields' => ['Cliente.nome'],
+			'conditions' => $conidtions,
+			'link' => []
+		]);
 	}
 
 
