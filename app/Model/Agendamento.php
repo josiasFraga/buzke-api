@@ -189,36 +189,162 @@ class Agendamento extends AppModel {
 
     }
 
-    public function montaArrayHorariosFixoSemanal($agendamentos = [], $limitDate = null) {
+    public function buscaAgendamentoEmpresa($cliente_id, $type, $data, $year_week) {
+
+        
+        if ( $type == 1) {
+            $conditions = [
+                'Agendamento.cliente_id' => $cliente_id,
+                'MONTH(Agendamento.horario)' => date('m',strtotime($data)),
+                'Agendamento.dia_semana' => null,
+                'Agendamento.dia_mes' => null,
+                'not' => [
+                    'Agendamento.cancelado' => 'Y'
+                ]
+            ];
+        }
+        else if ( $type == 2) {
+            $conditions = [
+                'Agendamento.cliente_id' => $cliente_id,
+                'Agendamento.dia_semana' => null,
+                'Agendamento.dia_mes' => null,
+                'YEARWEEK(Agendamento.horario, 4)' => $year_week,
+                'not' => [
+                    'Agendamento.cancelado' => 'Y'
+                ]
+            ];
+        }
+
+
+        $agendamentos_basicos = $this->find('all',[
+            'conditions' => $conditions,
+            'fields' => [
+                'Agendamento.id',
+                'Agendamento.horario',
+                'Agendamento.duracao',
+                'ClienteCliente.id',
+                'ClienteCliente.nome',
+                'ClienteCliente.img',
+                'ClienteServico.nome',
+                'Agendamento.cliente_id'
+            ],
+            'link' => ['ClienteCliente', 'ClienteServico'],
+            'order' => ['Agendamento.horario']
+        ]);
+
+        $fixo_semanal = $this->buscaAgendamentoEmpresaFixoSemanal($cliente_id);
+        if ( count($fixo_semanal) > 0 ) {
+            $data_selecionada = $data;
+            $inicio_mes = date('Y-m-01',strtotime($data_selecionada));
+            $limitDate = strtotime($inicio_mes." + 1 months");
+            $fixo_semanal = $this->montaArrayHorariosFixoSemanal($fixo_semanal, $limitDate, $inicio_mes);
+        }
+
+        $fixo_mensal = $this->buscaAgendamentoEmpresaFixoMensal($cliente_id); 
+        if ( count($fixo_mensal) > 0 ) {
+            $data_selecionada = $data;
+            $inicio_mes = date('Y-m-01',strtotime($data_selecionada));
+            $limitDate = strtotime(date("Y-m-t", strtotime($data_selecionada)));            
+            $fixo_mensal = $this->montaArrayHorariosFixoMensal($fixo_mensal, $limitDate, $inicio_mes);
+        }
+        return array_merge($agendamentos_basicos, $fixo_semanal, $fixo_mensal);
+    }
+    
+    public function buscaAgendamentoEmpresaFixoSemanal($cliente_id) {
+
+        return $this->find('all',[
+            'fields' => [
+                'Agendamento.id',
+                'Agendamento.dia_semana',
+                'Agendamento.horario',
+                'Agendamento.duracao',
+                'ClienteCliente.id',
+                'ClienteCliente.nome',
+                'ClienteCliente.img',
+                'ClienteServico.nome',
+                'Agendamento.cliente_id'
+            ],
+            'conditions' => [
+                'Agendamento.cliente_id' => $cliente_id,
+                'Agendamento.cancelado' => "N",
+                'not' => [
+                    'Agendamento.dia_semana' => null,
+                ]
+            ],
+            'order' => [
+                'Agendamento.horario'
+            ],
+            'link' => ['ClienteCliente', 'ClienteServico']
+        ]);
+
+    }
+
+    public function buscaAgendamentoEmpresaFixoMensal($cliente_id) {
+
+        return $this->find('all',[
+            'fields' => [
+                'Agendamento.id',
+                'Agendamento.dia_mes',
+                'Agendamento.horario',
+                'Agendamento.duracao',
+                'ClienteCliente.id',
+                'ClienteCliente.nome',
+                'ClienteCliente.img',
+                'ClienteServico.nome',
+                'Agendamento.cliente_id'
+            ],
+            'conditions' => [
+                'Agendamento.cliente_id' => $cliente_id,
+                'Agendamento.cancelado' => "N",
+                'not' => [
+                    'Agendamento.dia_mes' => null,
+                ]
+            ],
+            'order' => [
+                'Agendamento.horario'
+            ],
+            'link' => ['ClienteCliente', 'ClienteServico']
+        ]);
+
+    }
+
+    public function montaArrayHorariosFixoSemanal($agendamentos = [], $limitDate = null, $start_limit = null) {
         
         if ( count($agendamentos) == 0 || $limitDate == null ) {
             return [];
         }
-        $hoje = date('Y-m-d');
 
+        if ( $start_limit == null ) {
+            $start_limit = date('Y-m-d');
+        }
+        
         $dados_retornar = [];
         foreach( $agendamentos as $key => $age ) {
             $dia_semana = $age['Agendamento']['dia_semana'];
             list($data,$hora) = explode(' ',$age['Agendamento']['horario']);
+            if ( $data > $start_limit) {
+                $start_limit = $data;
+            }
 
-            for($i = strtotime($this->weekDayNames[$dia_semana], strtotime($hoje)); $i <= $limitDate; $i = strtotime('+1 week', $i)) {
-                
+            for($i = strtotime($this->weekDayNames[$dia_semana], strtotime($start_limit)); $i <= $limitDate; $i = strtotime('+1 week', $i)) {
                 $age['Agendamento']['horario'] = date('Y-m-d', $i).' '.$hora;
                 $dados_retornar[] = $age;
             }
-            
 
         }
 
         return $dados_retornar;
     }
 
-    public function montaArrayHorariosFixoMensal($agendamentos = [], $limitDate = null) {
+    public function montaArrayHorariosFixoMensal($agendamentos = [], $limitDate = null, $start_limit = null) {
         
         if ( count($agendamentos) == 0 || $limitDate == null ) {
             return [];
         }
-        $hoje = date('Y-m-d');
+
+        if ( $start_limit == null ) {
+            $start_limit = date('Y-m-d');
+        }
 
         $dados_retornar = [];
         foreach( $agendamentos as $key => $age ) {
@@ -226,12 +352,15 @@ class Agendamento extends AppModel {
             $dia_mes = $age['Agendamento']['dia_mes'];
             list($data,$hora) = explode(' ',$age['Agendamento']['horario']);
             list($ano,$mes,$dia) = explode('-',$data);
+            if ( $data > $start_limit) {
+                $start_limit = $data;
+            }
 
-            $months_of_difference = $this->calcMountPeriodDifference($hoje,date('Y-m-d',$limitDate));
+            $months_of_difference = $this->calcMountPeriodDifference($start_limit,date('Y-m-d',$limitDate));
             $mes_checar = $mes;
             $ano_checar = $ano;
    
-            for($i = 1; $i <= $months_of_difference; $i++) {
+            for($i = 1; $i < $months_of_difference; $i++) {
 
                 if (checkdate($mes_checar, $dia, $ano_checar)){
                     $age['Agendamento']['horario'] = $ano_checar.'-'.($mes_checar < 10 ? "0".$mes_checar : $mes_checar).'-'.$dia.' '.$hora;

@@ -17,7 +17,6 @@ class ClienteHorarioAtendimento extends AppModel {
             return false;
         }
         
-
         foreach( $horario_atendimento as $key => $hr ){
             $horario_abertura = substr($hr[$model_horario]['abertura'], 0, 5);
             $horario_fechamento = substr($hr[$model_horario]['fechamento'], 0, 5);
@@ -25,16 +24,27 @@ class ClienteHorarioAtendimento extends AppModel {
             $intervalo_horarios_min = $this->time2minutes($intervalo_horarios.":00");
             $ultimo_hoario_gerado = $horario_abertura.":00";
             $max_vagas_horario = $hr[$model_horario]['vagas_por_horario'];
+            $duracao_horario = $hr[$model_horario]['intervalo_horarios'];
 
             if ( strtotime($horario_abertura) >= strtotime($horario_fechamento) ) {
                 return false;
             }
 
-            $horarios[0] = ['horario' => $hr[$model_horario]['abertura'], 'vagas' => $max_vagas_horario, 'domicilio' => $hr[$model_horario]['a_domicilio']];
+            $horarios[0] = [
+                'horario' => $hr[$model_horario]['abertura'], 
+                'vagas' => $max_vagas_horario, 
+                'domicilio' => $hr[$model_horario]['a_domicilio'], 
+                'duracao' => $duracao_horario
+            ];
 
             while ( strtotime($this->addMinutes2Time($ultimo_hoario_gerado, $intervalo_horarios_min)) < strtotime($horario_fechamento) ) {
                 $nextTime = $this->addMinutes2Time($ultimo_hoario_gerado, $intervalo_horarios_min);
-                $horarios[] = ['horario' => $nextTime, 'vagas' => $max_vagas_horario, 'domicilio' => $hr[$model_horario]['a_domicilio']];
+                $horarios[] = [
+                    'horario' => $nextTime, 
+                    'vagas' => $max_vagas_horario, 
+                    'domicilio' => $hr[$model_horario]['a_domicilio'], 
+                    'duracao' => $duracao_horario
+                ];
                 $ultimo_hoario_gerado = $nextTime;
             }
 
