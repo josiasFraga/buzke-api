@@ -11,6 +11,9 @@ class ClienteCliente extends AppModel {
 		'Agendamento' => array(
 			'foreignKey' => 'cliente_cliente_id'
 		),
+		'AgendamentoFixoCancelado' => array(
+			'foreignKey' => 'cliente_cliente_id'
+		),
     );
 
     public $hasOne = array(

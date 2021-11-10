@@ -18,6 +18,12 @@ class Agendamento extends AppModel {
         ),
     );
 
+    public $hasMany = array(
+		'AgendamentoFixoCancelado' => array(
+			'foreignKey' => 'agendamento_id'
+        ),
+    );
+
     public function verificaHorarios($horarios = [], $cliente_id = null, $data = null) {
 
         if ( count($horarios) == 0) {
