@@ -534,7 +534,7 @@ class AgendamentosController extends AppController {
                 $this->loadModel('AgendamentoFixoCancelado');
                 $dados_salvar = [
                     'agendamento_id' => $dados_agendamento['Aagendamento']['id'],
-                    'cliente_cliente_id' => $dados_agendamento['Usuario']['id'],
+                    'cliente_cliente_id' => $dados_agendamento['ClienteCliente']['id'],
                     'horario' => $dados_agendamento['Agendamento']['horario'],
                     'cancelado_por' => $cancelado_por,
                 ];
