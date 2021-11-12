@@ -126,7 +126,19 @@ class AgendamentosController extends AppController {
         }
 
         $this->loadModel('ClienteCliente');
-        $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
+     
+        if ( $dados_token['Usuario']['cliente_id'] != '' && $dados_token['Usuario']['cliente_id'] != null ) {
+
+            if ( !isset($dados['cliente_cliente_id']) || $dados['cliente_cliente_id'] == "" ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
+            }
+
+            $meus_ids_de_cliente = [$dados['cliente_cliente_id']];
+
+
+        } else {            
+            $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
+        }
 
         $this->loadModel('Agendamento');
         $this->loadModel('ClienteHorarioAtendimento');
