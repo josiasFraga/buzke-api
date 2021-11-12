@@ -971,12 +971,19 @@ class ClientesController extends AppController {
 
         if ( $dado_usuario['Usuario']['nivel_id'] != 2 && !isset($dados['cliente_id']) ) {
             throw new BadRequestException('Usuário não logado!', 401);
-        }       
+        }
+        
+        $cliente_id = null;
+        if ($dado_usuario['Usuario']['cliente_id'] != '') {
+            $cliente_id = $dado_usuario['Usuario']['cliente_id'];
+        } else {
+            $cliente_id = $dados['cliente_id'];
+        }
 
         $this->loadModel('Cliente');
         $dados = $this->Cliente->find('first',[
             'fields' => ['*'],
-            'conditions' => ['Cliente.id' =>  $dado_usuario['Usuario']['cliente_id']],
+            'conditions' => ['Cliente.id' =>  $cliente_id],
             'link' => [
                 'ClienteConfiguracao'
             ]

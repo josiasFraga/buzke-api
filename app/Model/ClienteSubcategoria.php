@@ -32,4 +32,20 @@ class ClienteSubcategoria extends AppModel {
 
     }
 
+    public function getArrIdsByBusinessId($cliente_id = null) {
+
+      if($cliente_id == null) {
+        return [];
+      }
+
+      return $this->find('list',[
+        'fields' => ['ClienteSubcategoria.id','ClienteSubcategoria.id'],
+        'conditions' => [
+          'ClienteSubcategoria.cliente_id' => $cliente_id
+        ],
+        'link' => []
+      ]);
+
+    }
+
 }

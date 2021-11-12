@@ -12,6 +12,20 @@ class ClienteConfiguracao extends AppModel {
     
     public $validate = array();
 
+    public function findByBusinessId($cliente_id = null) {
+
+      if($cliente_id == null) {
+        return false;
+      }
+
+      return $this->find('first',[
+        'conditions' => [
+          'ClienteConfiguracao.cliente_id' => $cliente_id
+        ]
+      ]);
+
+    }
+
 
 
 }

@@ -109,17 +109,37 @@ class Agendamento extends AppModel {
         if ( $hora == null ) {
             return false;
         }
-        
-        $conditions = [
-            'Agendamento.cliente_id' => $cliente_id,
-            'Agendamento.horario' => $data.' '.$hora,
-            'Agendamento.cancelado' => 'N'
-        ];
 
+        $dia_semana = date('w',strtotime($data));
+        $dia_mes = (int)date('d',strtotime($data));
 
-        return $this->find('count',[
-            'conditions' => $conditions
+        $n_agendamentos_normais = $this->find('count',[
+            'conditions' => [
+                'Agendamento.cliente_id' => $cliente_id,
+                'Agendamento.horario' => $data.' '.$hora,
+                'Agendamento.cancelado' => 'N'
+            ]
         ]);
+
+        $n_agendamentos_fixos_semanais = $this->find('count',[
+            'conditions' => [
+                'Agendamento.cliente_id' => $cliente_id,
+                'TIME(Agendamento.horario)' => $hora,
+                'Agendamento.cancelado' => 'N',
+                'Agendamento.dia_semana' => $dia_semana
+            ]
+        ]);
+
+        $n_agendamentos_fixos_mensais = $this->find('count',[
+            'conditions' => [
+                'Agendamento.cliente_id' => $cliente_id,
+                'TIME(Agendamento.horario)' => $hora,
+                'Agendamento.cancelado' => 'N',
+                'Agendamento.dia_mes' => $dia_mes
+            ]
+        ]);
+
+        return $n_agendamentos_normais+$n_agendamentos_fixos_semanais+$n_agendamentos_fixos_mensais;
 
     }
 
@@ -228,6 +248,8 @@ class Agendamento extends AppModel {
                 'Agendamento.id',
                 'Agendamento.horario',
                 'Agendamento.duracao',
+                'Agendamento.dia_semana',
+                'Agendamento.dia_mes',
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
                 'ClienteCliente.img',
@@ -264,6 +286,8 @@ class Agendamento extends AppModel {
                 'Agendamento.dia_semana',
                 'Agendamento.horario',
                 'Agendamento.duracao',
+                'Agendamento.dia_semana',
+                'Agendamento.dia_mes',
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
                 'ClienteCliente.img',
@@ -293,6 +317,8 @@ class Agendamento extends AppModel {
                 'Agendamento.dia_mes',
                 'Agendamento.horario',
                 'Agendamento.duracao',
+                'Agendamento.dia_semana',
+                'Agendamento.dia_mes',
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
                 'ClienteCliente.img',

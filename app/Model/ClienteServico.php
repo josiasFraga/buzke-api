@@ -50,7 +50,60 @@ class ClienteServico extends AppModel {
         return true;
     }
 
+    public function checkServiceIsAvaliableOnDateTime($cliente_id = null, $servico = null, $data_selecionada = null, $hora_selecionada = null) {
 
+        if ( $cliente_id == null ) {
+            return false;
+        }
+
+        if ( $servico == null ) {
+            return false;
+        }
+
+        if ( $data_selecionada == null ) {
+            return false;
+        }
+
+        if ( $horario_selecionado == null ) {
+            return false;
+        }
+
+        $dia_semana = date('w',strtotime($data_selecionada.' '.$hora_selecionada));
+        $dia_mes = (int)date('d',strtotime($data_selecionada.' '.$hora_selecionada));
+
+        $dados_gendamento = $this->find('first',[
+            'conditions' => [
+                'ClienteServico.cliente_id' => $cliente_id,
+                'ClienteServico.id' => $servico,
+                'Agendamento.cancelado' => 'N',
+                'or' => [
+                    [
+                        'Agendamento.horario' => $data_selecionada.' '.$hora_selecionada,
+                        'Agendamento.dia_semana' => null,
+                        'Agendamento.dia_mes' => null,
+                    ],
+                    [
+                        'Agendamento.horario >=' => $data_selecionada.' '.$hora_selecionada,
+                        'or' => [
+                            'Agendamento.dia_semana' => $dia_semana,
+                            'Agendamento.dia_mes' => $dia_mes
+                        ]
+
+                    ]
+                ]
+            ],
+            'link' => [
+                'Agendamento'
+            ]
+        ]);
+
+        if ( count($dados_gendamento) == 1 ) {
+            return false;
+        }
+    
+        return true;
+        
+    }
 
 
 

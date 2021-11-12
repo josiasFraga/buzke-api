@@ -7,7 +7,6 @@ class AgendamentosController extends AppController {
     public function beforeFilter() {
         parent::beforeFilter();
         header("Access-Control-Allow-Origin: *");
-
     }
 
     public function index() {
@@ -132,9 +131,11 @@ class AgendamentosController extends AppController {
         $this->loadModel('Agendamento');
         $this->loadModel('ClienteHorarioAtendimento');
         $this->loadModel('ClienteHorarioAtendimentoExcessao');
+        $this->loadModel('AgendamentoFixoCancelado');
         $agendamentos = $this->Agendamento->buscaAgendamentoUsuario($meus_ids_de_cliente);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
+        $agendamentos = $this->AgendamentoFixoCancelado->checkStatus($agendamentos);
 
         if ( count($agendamentos) > 0 ) {
             usort($agendamentos, function($a, $b) {
@@ -190,9 +191,11 @@ class AgendamentosController extends AppController {
         $this->loadModel('Agendamento');
         $this->loadModel('ClienteHorarioAtendimento');
         $this->loadModel('ClienteHorarioAtendimentoExcessao');
+        $this->loadModel('AgendamentoFixoCancelado');
         $agendamentos = $this->Agendamento->buscaAgendamentoEmpresa($dados_token['Usuario']['cliente_id'],$type,$data,$year_week);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
+        $agendamentos = $this->AgendamentoFixoCancelado->checkStatus($agendamentos);
 
         if ( count($agendamentos) > 0 ) {
             usort($agendamentos, function($a, $b) {
@@ -331,6 +334,11 @@ class AgendamentosController extends AppController {
         }
         
         $this->loadModel('ClienteCliente');
+        $this->loadModel('Agendamento');
+        $this->loadModel('ClienteHorarioAtendimentoExcessao');
+        $this->loadModel('AgendamentoFixoCancelado');
+        $this->loadModel('ClienteSubcategoria');
+        $this->loadModel('ClienteConfiguracao');
 
         //verifico quem está tentando salvar o agendamento, se é uma empresa ou um usuário
         if ( $dados_usuario['Usuario']['cliente_id'] != '' && $dados_usuario['Usuario']['cliente_id'] != null ) {
@@ -365,9 +373,6 @@ class AgendamentosController extends AppController {
     
         }
 
-        $this->loadModel('Agendamento');
-        $this->loadModel('ClienteHorarioAtendimentoExcessao');
-
         //verfica se o cliente abrirá no dia
         $verificaFechamento = $this->ClienteHorarioAtendimentoExcessao->verificaExcessao($dados->cliente_id, $data_selecionada, 'F');
 
@@ -380,9 +385,14 @@ class AgendamentosController extends AppController {
         if ( $verificaAgendamento !== false && count($verificaAgendamento) > 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você já tem um agendamento neste horário!'))));
         }
-        
+
         //busca o nº de agendamentos que o cliente tem neste dia e horário
         $n_agendamentos_cliente = $this->Agendamento->nAgendamentosCliente($dados->cliente_id, $data_selecionada, $horario_selecionado);
+
+        //busca o nº de agendamentos fixos cancelados que o cliente tem neste dia e horário
+        $n_agendamentos_cancelados_cliente = $this->AgendamentoFixoCancelado->nAgendamentosFixosCanceladosCliente($dados->cliente_id, $data_selecionada, $horario_selecionado);
+
+        $n_agendamentos_cliente = $n_agendamentos_cliente-$n_agendamentos_cancelados_cliente;
     
         $this->loadModel('ClienteHorarioAtendimento');
 
@@ -415,13 +425,58 @@ class AgendamentosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Lamentamos. Não existe mais vagas para esse horário! ;('))));
         }
 
+        $agendamento_dia_semana = null;
+        $agendamento_dia_mes = null;
+
+        //verifica se o usuário/empresa está tentando salvar um agendamento fixo
+        if ( isset($dados->fixo) && $dados->fixo == true ) {
+            $cliente_condiguracoes = $this->ClienteConfiguracao->findByBusinessId($dados->cliente_id);
+            if ( $cliente_condiguracoes == null ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Lamentamos. Ocorreu um erro ao buscar as configurações da empresa selecionada! ;('))));
+            }
+            
+            if ( count($cliente_condiguracoes) == 0 || $cliente_condiguracoes['ClienteConfiguracao']['horario_fixo'] != 'Y' || $cliente_condiguracoes['ClienteConfiguracao']['fixo_tipo'] == 'Nenhum' ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Infelizmente a empresa selecioanda não aceita agendamentos fixos'))));
+            }
+
+            if ( $cliente_condiguracoes['ClienteConfiguracao']['fixo_tipo'] == 'Semanal' ) {
+                $agendamento_dia_semana = date('w',strtotime($data_selecionada.' '.$horario_selecionado));
+
+            }
+            else if ( $cliente_condiguracoes['ClienteConfiguracao']['fixo_tipo'] == 'Mensal' ) {
+                $agendamento_dia_mes = (int)date('d',strtotime($data_selecionada.' '.$horario_selecionado));
+
+            }
+        }
+
+        //verifica se a empresa é uma quadra de padel, se for, verifica se o usuário selecionou a quadra, se selecionou verifica se a quadra está livre
+        $arr_subcategorias_cliente = $this->ClienteSubcategoria->getArrIdsByBusinessId($dados->cliente_id);
+        if (in_array($this->quadra_de_padel_subcategoria, $arr_subcategorias_cliente)) {
+            if ( !isset($dados->servico) || $dados->servico == '' ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Selecione a quadra que deseja jogar'))));
+            }
+
+            $checkServiceIsAvaliableOnDateTime = $this->ClienteServico->checkServiceIsAvaliableOnDateTime($dados->cliente_id, $dados->servico, $data_selecionada, $horario_selecionado);
+
+            if ( !$checkServiceIsAvaliableOnDateTime ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Infelizmente a quadra está ocupada'))));
+            }
+
+            
+        }
+
+        if ( !isset($dados->servico) || $dados->servico == '' ) {
+            $dados->servico = null;
+        }
 
         $dados_salvar = [
             'cliente_cliente_id' => $cliente_cliente_id,
             'cliente_id' => $dados->cliente_id,
             'servico_id' => $dados->servico,
             'horario' => $data_selecionada.' '.$horario_selecionado,
-            'duracao' => $duracao
+            'duracao' => $duracao,
+            'dia_semana' => $agendamento_dia_semana,
+            'dia_mes' => $agendamento_dia_mes
         ];
 
         if ( isset($dados->domicilio) && $dados->domicilio == 1 ) {
@@ -432,7 +487,6 @@ class AgendamentosController extends AppController {
         $this->Agendamento->set($dados_salvar);
         $dados_agendamento_salvo = $this->Agendamento->save($dados_salvar);
         if ( !$dados_agendamento_salvo ) {
-
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cadastrar seu agendamento!'))));
         }
 
@@ -481,6 +535,10 @@ class AgendamentosController extends AppController {
             throw new BadRequestException('Tipo não informado!', 401);
         }
 
+        if ( !isset($dados->horario) || $dados->horario == "" ) {
+            throw new BadRequestException('Horário não informado!', 401);
+        }
+
         $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
 
         if ( !$dados_usuario ) {
@@ -511,7 +569,8 @@ class AgendamentosController extends AppController {
                 'Agendamento.id', 
                 'Agendamento.horario', 
                 'Agendamento.dia_semana', 
-                'Agendamento.dia_mes', 
+                'Agendamento.dia_mes',  
+                'Agendamento.horario', 
                 'ClienteCliente.*',
                 'Cliente.id',
                 'Cliente.nome',
@@ -533,9 +592,9 @@ class AgendamentosController extends AppController {
             if ( $dados->tipo == 1 ) {
                 $this->loadModel('AgendamentoFixoCancelado');
                 $dados_salvar = [
-                    'agendamento_id' => $dados_agendamento['Aagendamento']['id'],
+                    'agendamento_id' => $dados_agendamento['Agendamento']['id'],
                     'cliente_cliente_id' => $dados_agendamento['ClienteCliente']['id'],
-                    'horario' => $dados_agendamento['Agendamento']['horario'],
+                    'horario' => $dados->horario,
                     'cancelado_por' => $cancelado_por,
                 ];
 
