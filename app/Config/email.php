@@ -60,6 +60,20 @@ class EmailConfig {
 		'headerCharset' => 'utf-8',
 	);
 
+	public $smtp_aplicativo = array(
+		'transport' => 'Smtp',
+		'from' => array('aplicativo@buzke.com.br' => 'Buzke'),
+		'host' => 'buzke.com.br',
+		'port' => 587,
+		'timeout' => 60,
+		'username' => 'aplicativo@buzke.com.br',
+		'password' => 'zap3537shop11',
+		'client' => null,
+		'log' => false,
+		'charset' => 'utf-8',
+		'headerCharset' => 'utf-8',
+	);
+
 	public $fast = array(
 		'from' => 'you@localhost',
 		'sender' => null,
