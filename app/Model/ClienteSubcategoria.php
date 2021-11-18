@@ -15,20 +15,25 @@ class ClienteSubcategoria extends AppModel {
     
     public $validate = array();
 
-    public function checkIsPaddleCourt($dados_cliente = []) {
-      
-      if ( !isset($dados_cliente['ClienteSubcategoria']) || count($dados_cliente['ClienteSubcategoria']) == 0 ) {
+    public function checkIsCourt($cliente_id=null) {
+  
+      if ($cliente_id == null){
         return false;
       }
 
-      $paddle_court = false;
-      foreach( $dados_cliente['ClienteSubcategoria'] as $subcategoria){
-        if ( $subcategoria['subcategoria_id'] == 7 ) {
-          $paddle_court = true;
-        }
-      }
+      $isCourt = false;
+      $check_subcategoria = $this->find('first',[
+        'conditions' => [
+          'ClienteSubcategoria.cliente_id' => $cliente_id,
+          'Subcategoria.mostrar_no_to_pro_jogo' => 'Y',
+        ],
+        'link' => ['Subcategoria']
+      ]);
 
-      return $paddle_court;
+      if (count($check_subcategoria) > 0)
+        $isCourt = true;
+
+      return $isCourt;
 
     }
 

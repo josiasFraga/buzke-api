@@ -26,8 +26,8 @@ class PlanosController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        $this->loadModel('Subcategoria');        
-        $ids_quadras_padel = $this->Subcategoria->buscaSubcategoriasQuadras(true);
+        $this->loadModel('Subcategoria');
+        $ids_quadras = $this->Subcategoria->buscaSubcategoriasQuadras(true);
 
         $isCourt = false;
         $subcategorias = [];
@@ -36,7 +36,7 @@ class PlanosController extends AppController {
             if ( strpos($key_dado, 'item_') !== false ) {
                 list($discart, $subcateogria_id) = explode('item_', $key_dado);
                 $subcategorias[] = $subcateogria_id;
-                if ( in_array($subcateogria_id, $ids_quadras_padel) )
+                if ( in_array($subcateogria_id, $ids_quadras) )
                     $isCourt = true;
             }
 

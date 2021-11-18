@@ -313,7 +313,6 @@ class ClientesController extends AppController {
         if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
         }
-
         
         $token = $dados->token;
         $email = $dados->email;
@@ -328,13 +327,19 @@ class ClientesController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
+        $this->loadModel('Subcategoria');
+
         $subcategorias = [];
         $dados_turnos = [];
+        $ids_quadras = $this->Subcategoria->buscaSubcategoriasQuadras(true);
+        $isCourt = false;
         foreach($dados as $key_dado => $dado) {
 
             if ( strpos($key_dado, 'item_') !== false ) {
                 list($discart, $subcategoria_id) = explode('item_', $key_dado);
                 $subcategorias[] = $subcategoria_id;
+                if ( in_array($subcategoria_id, $ids_quadras) )
+                    $isCourt = true;
             }
 
             if ( strpos($key_dado, 'turnos_') !== false ) {
@@ -356,7 +361,7 @@ class ClientesController extends AppController {
         $dados_turnos = json_decode(json_encode($dados_turnos), true);
         $dados_servicos = isset($dados->servicos) ? json_decode(json_encode($dados->servicos), true) : [];
 
-        if ( isset($dados->item_7) && $dados->item_7 ) {
+        if ( $isCourt ) {
             if ( count($dados_servicos) == 0 ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você deve adicionar pelo menos uma quadra antes de clicar em salvar!'))));
             }
@@ -513,7 +518,7 @@ class ClientesController extends AppController {
             'conditions' => [
                 'Cliente.id' => $dados['cliente_id']
             ],
-            'contain' => ['ClienteSubcategoria']
+            'contain' => []
         ]);
 
         $this->loadModel('ClienteHorarioAtendimento');
@@ -554,17 +559,13 @@ class ClientesController extends AppController {
         $horarios_verificados = $this->Agendamento->verificaHorarios($lista_horarios_atendimento, $dados['cliente_id'], $data);
 
         $this->loadModel('ClienteSubcategoria');
-        $paddle_court = $this->ClienteSubcategoria->checkIsPaddleCourt($dados_cliente);
+        $isCourt = $this->ClienteSubcategoria->checkIsCourt($dados['cliente_id']);
 
-        if ($paddle_court) {
-            
+        if ($isCourt) {
             //busca as quadras disponíveis para os horários
             $this->loadModel('ClienteServico');
             $horarios_verificados = $this->ClienteServico->modaArrayServicosIndisponiveis($horarios_verificados, $dados['cliente_id']);
-
         }
-
-
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_verificados))));
 
