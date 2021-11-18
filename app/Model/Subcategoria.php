@@ -8,6 +8,9 @@ class Subcategoria extends AppModel {
       'ClienteSubcategoria' => array(
         'foreignKey' => 'subcategoria_id'
       ),
+      'ToProJogoEsporte' => array(
+        'foreignKey' => 'subcategoria_id'
+      ),
     );
 
     public $belongsTo = array(

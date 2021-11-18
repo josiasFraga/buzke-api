@@ -14,6 +14,9 @@ class ClienteCliente extends AppModel {
 		'AgendamentoFixoCancelado' => array(
 			'foreignKey' => 'cliente_cliente_id'
 		),
+		'ToProJogo' => array(
+			'foreignKey' => 'cliente_cliente_id'
+		),
     );
 
     public $hasOne = array(
@@ -69,7 +72,7 @@ class ClienteCliente extends AppModel {
 		];
 
 		if ( $cliente_id != null ) {
-			$conditions = array_merge([
+			$conditions = array_merge($conditions, [
 				'ClienteCliente.cliente_id' => $cliente_id,
 			]);
 		}
@@ -163,6 +166,33 @@ class ClienteCliente extends AppModel {
 				'fields' => ['ClienteCliente.id', 'ClienteCliente.id'],
 				'conditions' => [
 					'ClienteCliente.usuario_id' => $usuario_id,
+				],
+				'link' => []
+			]);
+		}
+
+		return $dados_cliente;
+    }
+
+    public function buscaDadosSemVinculo($usuario_id = null, $only_ids = false) {
+
+		if ( $usuario_id == null )
+			return [];
+
+		if ( !$only_ids ) {
+			$dados_cliente = $this->find('all',[
+				'conditions' => [
+					'ClienteCliente.usuario_id' => $usuario_id,
+					'ClienteCliente.cliente_id' => null,
+				],
+				'link' => []
+			]);
+		} else {
+			$dados_cliente = $this->find('list',[
+				'fields' => ['ClienteCliente.id', 'ClienteCliente.id'],
+				'conditions' => [
+					'ClienteCliente.usuario_id' => $usuario_id,
+					'ClienteCliente.cliente_id' => null,
 				],
 				'link' => []
 			]);
