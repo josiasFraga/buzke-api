@@ -94,10 +94,11 @@ class UsuariosController extends AppController {
 
         $cadastro_categorias_ok = 'false';
         $business_is_court = false;
+        $business_is_paddle_court = false;
         if ( $usuario['Usuario']['nivel_id'] == 2 ) {
             $this->loadModel('ClienteSubcategoria');
             $subcategorias = $this->ClienteSubcategoria->find('all',[
-                'fields' => ['Subcategoria.id'],
+                'fields' => ['*'],
                 'conditions' => [
                     'ClienteSubcategoria.cliente_id' => $usuario['Usuario']['cliente_id'],
                     'ClienteSubcategoria.cliente_id' => $usuario['Usuario']['cliente_id']
@@ -105,15 +106,21 @@ class UsuariosController extends AppController {
                 'link' => ['Subcategoria']
             ]);
 
-            $business_is_court = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
+            if ( count($subcategorias) > 0 ) {
+                foreach($subcategorias as $key_subc => $subc) {
+                    if ($subc['Subcategoria']['categoria_id'] == 4){
+                        $business_is_paddle_court = true;
+                    }
+                }
+            }
+
+            $usuario['Cliente']['is_paddle_court'] = $business_is_court;
+            $usuario['Cliente']['is_court'] = $business_is_court ? true : $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
+
             $cadastro_categorias_ok = count($subcategorias) > 0;
         }
 
         unset($usuario['Usuario']['senha']);
-
-        if ( isset($usuario['Cliente']) && count($usuario['Cliente']) > 0 ) {
-            $usuario['Cliente']['is_court'] = $business_is_court;
-        }
 
         $this->loadModel('Token');
         $dados_salvar = [];

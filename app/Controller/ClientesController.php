@@ -606,6 +606,7 @@ class ClientesController extends AppController {
 
 
         $this->loadModel('ClienteHorarioAtendimento');
+        $this->loadModel('ClienteSubcategoria');
         $horarios_atendimento = $this->ClienteHorarioAtendimento->find('all',[
             'conditions' => [
                 'ClienteHorarioAtendimento.cliente_id' => $dado_usuario['Usuario']['cliente_id']
@@ -617,7 +618,7 @@ class ClientesController extends AppController {
         ]);
 
 
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_atendimento))));
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_atendimento, 'isCourt' => $this->ClienteSubcategoria->checkIsCourt($dado_usuario['Usuario']['cliente_id'])))));
 
     }
 
