@@ -209,6 +209,147 @@ class ToProJogoController extends AppController {
         }
     }
 
+    public function alterar() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+
+        if (!isset($dados->email) || $dados->email == '') {
+            throw new BadRequestException('E-mail não informado', 400);
+        }
+
+        if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
+        }
+
+        if (!isset($dados->id) || $dados->id == '') {
+            throw new BadRequestException('ID não informado', 400);
+        }
+
+        if (!isset($dados->token) || $dados->token == '') {
+            throw new BadRequestException('Token não informado', 400);
+        }
+
+        if (!isset($dados->tipo_cadastro) || $dados->tipo_cadastro == '') {
+            throw new BadRequestException('Tipo de cadastro não informado', 400);
+        }
+
+        if (!isset($dados->hora_de) || $dados->hora_de == '') {
+            throw new BadRequestException('Hora inicial não informada', 400);
+        }
+
+        if (!isset($dados->hora_ate) || $dados->hora_ate == '') {
+            throw new BadRequestException('Hora final não informada', 400);
+        }
+
+        $data_inicio = null;
+        $data_fim = null;
+        $dia_semana = null;
+        $dia_mes = null;
+        if ( $dados->tipo_cadastro == 'P' ) {
+            
+            if (!isset($dados->dia_de) || $dados->dia_de == '') {
+                throw new BadRequestException('Dia inicial não informado', 400);
+            }
+            if (!isset($dados->dia_ate) || $dados->dia_ate == '') {
+                throw new BadRequestException('Dia final não informado', 400);
+            }
+
+            $data_inicio = $dados->dia_de;
+            $data_fim = $dados->dia_ate;
+
+        } else if ($dados->tipo_cadastro == 'S') {
+
+            if (!isset($dados->dia_semana) || $dados->dia_semana == '') {
+                throw new BadRequestException('Dia da semana não informado', 400);
+            }
+            $dia_semana = $dados->dia_semana;
+
+        } else if ($dados->tipo_cadastro == 'M') {
+
+            if (!isset($dados->dia_mes) || $dados->dia_mes == '') {
+                throw new BadRequestException('Dia da semana não informado', 400);
+            }
+            $dia_mes = $dados->dia_mes;
+
+        } else {
+            throw new BadRequestException('Tipo de cadastro inválido', 400);
+        }
+
+        $dados_token = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('ClienteCliente');
+        $this->loadModel('ToProJogo');
+        $this->loadModel('ToProJogoEsporte');
+        
+        $meus_ids_de_cliente = $this->ClienteCliente->buscaDadosSemVinculo($dados_token['Usuario']['id'], false);
+
+        $dados_to_pro_jogo = $this->ToProJogo->find('first',[
+            'fields' => [
+                'ToProJogo.id', 
+            ],
+            'conditions' => [
+                'id' => $dados->id,
+                'cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id']
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_to_pro_jogo) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O Tô Pro Jogo que você está tentando alterar, não existe!'))));
+        }
+
+        $dados_salvar = array(
+            'ToProJogo' => array(
+                'id' => $dados->id, 
+                'data_inicio' => $data_inicio, 
+                'data_fim' => $data_fim, 
+                //'email' => $dados->email, 
+                'hora_inicio' => $dados->hora_de, 
+                'hora_fim' => $dados->hora_ate, 
+                'dia_semana' => $dia_semana, 
+                'dia_mes' => $dia_mes, 
+            ),
+            'ToProJogoEsporte' => []
+        );
+
+        $esportes = [];
+        foreach($dados as $key_dado => $dado) {
+            if ( strpos($key_dado, 'esporte_') !== false ) {
+                list($discart, $subcategoria_id) = explode('esporte_', $key_dado);
+                $esportes[] = $subcategoria_id;
+            }
+        }
+
+        if ( count($esportes) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Selecione ao menos um esporte antes de clicar em salvar!'))));
+        }
+
+        $this->ToProJogoEsporte->deleteAll(['ToProJogoEsporte.to_pro_jogo_id' => $dados->id], true);
+
+        foreach($esportes as $key => $esporte) {
+            $dados_salvar['ToProJogoEsporte'][] = [
+                'subcategoria_id' => $esporte
+            ];
+        }
+
+        $this->ToProJogo->set($dados_salvar);
+        if ($this->ToProJogo->saveAssociated($dados_salvar, ['deep' => true])) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Alterado com sucesso!'))));
+        } else {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
+        }
+    }
+
     private function subcategoriasToEsportesStr($subcategorias = []) {
         if ( count($subcategorias) == 0 ) {
             return '';
