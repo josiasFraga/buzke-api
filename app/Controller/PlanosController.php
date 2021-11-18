@@ -26,12 +26,18 @@ class PlanosController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
+        $this->loadModel('Subcategoria');        
+        $ids_quadras_padel = $this->Subcategoria->buscaSubcategoriasQuadras(true);
+
+        $isCourt = false;
         $subcategorias = [];
         foreach($dados as $key_dado => $dado) {
 
             if ( strpos($key_dado, 'item_') !== false ) {
                 list($discart, $subcateogria_id) = explode('item_', $key_dado);
                 $subcategorias[] = $subcateogria_id;
+                if ( in_array($subcateogria_id, $ids_quadras_padel) )
+                    $isCourt = true;
             }
 
         }
@@ -41,6 +47,7 @@ class PlanosController extends AppController {
         }
 
         $this->loadModel('Plano');
+
     
         $conditions = [
             'Plano.ativo' => 'Y',   
@@ -48,21 +55,14 @@ class PlanosController extends AppController {
         
         
 
-        if ($dados['categoria'] != 4) {
-
+        if ($isCourt) {
             $conditions = array_merge($conditions,[
-                ['not' => [
-                    ['Plano.id' => 3]
-                ]]
+                'Plano.id' => 2
             ]);
-
-            if ($dados['categoria'] != 3) {
-                $conditions = array_merge($conditions,[
-                    ['not' => [
-                        ['Plano.id' => 2]
-                    ]]
-                ]);
-            }
+        } else {
+            $conditions = array_merge($conditions,[
+                'Plano.id' => 1
+            ]);
         }
 
 
