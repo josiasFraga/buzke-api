@@ -15,6 +15,12 @@ class UsuarioLocalizacao extends AppModel {
 			'foreignKey' => 'token_id'
         )
     );
+
+    public $hasMany = array(
+		'ToProJogo' => array(
+			'foreignKey' => 'localizacao_id'
+        )
+    );
     
     public function findByUserIdAndData($usuario_id = null, $localizacao = []) {
         if ( $usuario_id == null || count($localizacao) == 0 ) {

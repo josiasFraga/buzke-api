@@ -273,4 +273,58 @@ class ToProJogoController extends AppController {
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $esportes))));
 
     }
+
+    public function excluir(){
+        $this->layout = 'ajax';
+        //$dados = json_decode($this->request->data['dados']);
+        $dados = $this->request->data['dados'];
+
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), true);
+        }
+
+        $dados = (object)$dados;
+
+        if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados->id) || $dados->id == "" ) {
+            throw new BadRequestException('ID não informado!', 401);
+        }
+
+        $dados_token = $this->verificaValidadeToken($dados->token, $dados->email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('ClienteCliente');
+        $meus_ids_de_cliente = $this->ClienteCliente->buscaDadosSemVinculo($dados_token['Usuario']['id'], false);
+
+        $this->loadModel('ToProJogo');
+
+        $dados_to_pro_jogo = $this->ToProJogo->find('first',[
+            'fields' => [
+                'ToProJogo.id', 
+            ],
+            'conditions' => [
+                'id' => $dados->id,
+                'cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id']
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_to_pro_jogo) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O Tô Pro Jogo que você está tentando exlcuir, não existe!'))));
+        }
+
+        if ( !$this->ToProJogo->delete($dados->id) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar excluir o Tô Pro Jogo. Por favor, tente mais tarde!'))));
+        }
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tô pro jogo excluído com sucesso!'))));
+
+    }
 }
