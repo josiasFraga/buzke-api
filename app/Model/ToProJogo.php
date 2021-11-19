@@ -28,4 +28,32 @@ class ToProJogo extends AppModel {
         }
         return true;
     }
+
+	public function findUsers($horario = null, $data = null) {
+		if ( $horario == null || $data == null) {
+			return [];
+		}
+
+		$dia_semana = date('w',strtotime($data));
+		$dia_mes = (int)date('d',strtotime($data));
+
+		return $this->find('all',[
+			'conditions' => [
+				'or' => [
+					[
+						'ToProJogo.data_inicio <=' => $data,
+						'ToProJogo.data_fim >=' => $data
+					],
+					
+					['ToProJogo.dia_semana' => $dia_semana],
+					['ToProJogo.dia_mes' => $dia_mes],
+
+				]
+			],
+			'group' => ['ToProJogo.cliente_cliente_id'],
+			'contain' => ['ClienteCliente' => ['Usuario']],
+			'order' => ['ClienteCliente.nome'],
+		]);
+
+	}
 }

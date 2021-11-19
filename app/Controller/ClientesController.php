@@ -983,6 +983,7 @@ class ClientesController extends AppController {
         }
 
         $this->loadModel('Cliente');
+        $this->loadModel('ClienteSubcategoria');
         $dados = $this->Cliente->find('first',[
             'fields' => ['*'],
             'conditions' => ['Cliente.id' =>  $cliente_id],
@@ -993,6 +994,7 @@ class ClientesController extends AppController {
 
         if ( count($dados) > 0 ) {
             $dados['Cliente']['logo'] = $this->images_path.'clientes/'.$dados['Cliente']['logo'];
+            $dados['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($dados['Cliente']['id']);
         }
 
 

@@ -468,4 +468,52 @@ class ToProJogoController extends AppController {
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tô pro jogo excluído com sucesso!'))));
 
     }
+
+    public function usuarios() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['horaSelecionada']) || $dados['horaSelecionada'] == "" ) {
+            throw new BadRequestException('Hora não informada!', 401);
+        }
+        if ( !isset($dados['day']) || $dados['day'] == "" ) {
+            throw new BadRequestException('Dia não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 3 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $hora_selecionada = json_decode($dados['horaSelecionada'], true);
+        $day = json_decode($dados['day'], true);
+
+        $this->loadModel('ToProJogo');
+        $usuarios = $this->ToProJogo->findUsers($hora_selecionada['horario'], $day['dateString']);
+
+        if ( count($usuarios) > 0 ) {
+
+            foreach($usuarios as $key => $usr) {
+                $usuarios[$key]['ClienteCliente']['Usuario']['img'] = $this->images_path.'usuarios/'.$usr['ClienteCliente']['Usuario']['img'];
+            }
+
+        }
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $usuarios))));
+
+    }
 }
