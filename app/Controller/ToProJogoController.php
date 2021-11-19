@@ -485,6 +485,9 @@ class ToProJogoController extends AppController {
         if ( !isset($dados['day']) || $dados['day'] == "" ) {
             throw new BadRequestException('Dia não informado!', 401);
         }
+        if ( !isset($dados['cliente_id']) || $dados['cliente_id'] == "" ) {
+            throw new BadRequestException('Id da empresa não informada!', 401);
+        }
 
         $token = $dados['token'];
         $email = $dados['email'];
@@ -499,16 +502,32 @@ class ToProJogoController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
+        $this->loadModel('Cliente');
+        $dados_cliente = $this->Cliente->find('first',[
+            'fields' => ['Cliente.id'],
+            'conditions' => [
+                'Cliente.id' => $dados['cliente_id']
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_cliente) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'error', 'msg' => 'Dados da empresa não encontrados'))));
+        }
+
+        $this->loadModel('ClienteSubcategoria');
+        $subcategorias = $this->ClienteSubcategoria->getArrIdsSubcategoriaByBusinessId($dados['cliente_id']);
+
         $hora_selecionada = json_decode($dados['horaSelecionada'], true);
         $day = json_decode($dados['day'], true);
 
         $this->loadModel('ToProJogo');
-        $usuarios = $this->ToProJogo->findUsers($hora_selecionada['horario'], $day['dateString']);
+        $usuarios = $this->ToProJogo->findUsers($hora_selecionada['horario'], $day['dateString'], $dados_token['Usuario']['id'], $subcategorias);
 
         if ( count($usuarios) > 0 ) {
 
             foreach($usuarios as $key => $usr) {
-                $usuarios[$key]['ClienteCliente']['Usuario']['img'] = $this->images_path.'usuarios/'.$usr['ClienteCliente']['Usuario']['img'];
+                $usuarios[$key]['Usuario']['img'] = $this->images_path.'usuarios/'.$usr['Usuario']['img'];
             }
 
         }
