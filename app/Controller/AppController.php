@@ -152,7 +152,7 @@ class AppController extends Controller {
 
     }
 
-	public function sendNotification( $arr_ids = array(), $agendamento_id = null, $titulo = "", $mensagem = "", $motivo = "agendamento" ){
+	public function sendNotification( $arr_ids = array(), $agendamento_id = null, $titulo = "", $mensagem = "", $motivo = "agendamento", $group = 'geral', $group_message = ''){
 	
 		if ( count($arr_ids) == 0 )
 			return false;
@@ -172,6 +172,12 @@ class AppController extends Controller {
 			"en" => $mensagem
         );
 
+        if ( $group_message == '' ) {
+            $group_message = (object)["en"=> '$[notif_count] Notificações'];
+        }
+
+        $group_message = (object)$group_message;
+
         $arr_ids_app = array();
 		foreach( $arr_ids as $id ) {
 			$arr_ids_app[] = $id;
@@ -181,8 +187,10 @@ class AppController extends Controller {
             'app_id' => "b3d28f66-5361-4036-96e7-209aea142529",
             'include_player_ids' => $arr_ids_app,
             'data' => array("agendamento_id" => $agendamento_id, 'motivo' => $motivo),
-            'small_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon.png',
-            'large_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon_large.png', 
+            //'small_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon.png',
+            //'large_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon_large.png',
+            'android_group' =>  $group,
+            'android_group_message' => $group_message,
             'headings' => $heading,
             'contents' => $content,
         );
@@ -204,6 +212,33 @@ class AppController extends Controller {
 		
 		return true;
     }
+
+    public function saveInviteAndSendNotification($clientes_clientes_ids, $dados_agendamento) {
+        $this->loadModel('Token');
+        $this->loadModel('ClienteCliente');
+        $this->loadModel('AgendamentoConvite');
+        $usuarios_ids = $this->ClienteCliente->getUsersIdsFromClienteCliente($clientes_clientes_ids);
+        $usuarios_ids = array_values($usuarios_ids);
+        $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuarios_ids);
+
+        $dados_salvar = [];
+        foreach($clientes_clientes_ids as $key => $cli_cli_id) {
+            $dados_salvar[] = [
+                'agendamento_id' => $dados_agendamento['id'],
+                'cliente_cliente_id' => $cli_cli_id,
+                'horario' => $dados_agendamento['horario'],
+            ];
+        }
+
+        $this->AgendamentoConvite->saveAll($dados_salvar);
+
+        if( count($notifications_ids) > 0 ) {
+            $this->log($notifications_ids,'debug');
+            $this->log($dados_agendamento,'debug');
+            $this->sendNotification($notifications_ids, $dados_agendamento['id'], "Convite de Partida Recebido", 'Você foi convidado para uma partida, clique na notificação para ver os detalhes.', "game_invite", 'novo_convite', ["en"=> '$[notif_count] Novos Convites Para Jogos']  );
+        }
+    }
+
     
     public function dateHourEnBr( $data , $r_data, $r_hora ){
 		if ($r_data && $r_hora) {

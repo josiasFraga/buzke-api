@@ -64,7 +64,7 @@ class ClienteServico extends AppModel {
             return false;
         }
 
-        if ( $horario_selecionado == null ) {
+        if ( $hora_selecionada == null ) {
             return false;
         }
 

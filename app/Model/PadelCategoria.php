@@ -8,6 +8,9 @@ class PadelCategoria extends AppModel {
       'ClienteClientePadelCategoria' => array(
         'foreignKey' => 'categoria_id'
       ),
+      'UsuarioPadelCategoria' => array(
+        'foreignKey' => 'categoria_id'
+      ),
     );
 
     public $validate = array();

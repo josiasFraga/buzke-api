@@ -525,14 +525,181 @@ class ToProJogoController extends AppController {
         $usuarios = $this->ToProJogo->findUsers($hora_selecionada['horario'], $day['dateString'], $dados_token['Usuario']['id'], $subcategorias);
 
         if ( count($usuarios) > 0 ) {
+            $this->loadModel('UsuarioPadelCategoria');
 
             foreach($usuarios as $key => $usr) {
                 $usuarios[$key]['Usuario']['img'] = $this->images_path.'usuarios/'.$usr['Usuario']['img'];
+                $usuarios[$key]['UsuarioDadosPadel']['_categorias'] = $this->padelCategoriasToStr($this->UsuarioPadelCategoria->findByUserId($usr['Usuario']['id']));
             }
 
         }
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $usuarios))));
+
+    }
+
+    private function padelCategoriasToStr ($categorias = []) {
+        if ($categorias == '' || !$categorias || $categorias == null || count($categorias) == 0 ) {
+            return '';
+        }
+
+        $categorias_arr = [];
+        foreach($categorias as $key => $categoria) {
+            $categorias_arr[] = $categoria['PadelCategoria']['titulo'];
+
+        }
+        return implode(', ',$categorias_arr);
+    }
+
+    public function meus_convites() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 3 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('ClienteCliente');
+        $this->loadModel('AgendamentoConvite');
+
+        $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
+        $meus_ids_de_cliente = array_values($meus_ids_de_cliente);
+  
+        $dados = $this->AgendamentoConvite->find('all',[
+            'fields' => [
+                'AgendamentoConvite.*',
+                'Agendamento.horario', 
+                'Usuario.id',
+                'Usuario.nome',
+                'Usuario.img',
+                'Agendamento.cliente_cliente_id',
+                'Cliente.nome'
+            ],
+            'order' => [
+                'AgendamentoConvite.horario'
+            ],
+            'link' => [
+                'Agendamento' => ['Cliente'],
+                'ClienteCliente' => [
+                    'Usuario'
+                ]
+            ],
+            'conditions' => [
+                'or' => [
+                    'AgendamentoConvite.cliente_cliente_id' => $meus_ids_de_cliente,
+                    'Agendamento.cliente_cliente_id' => $meus_ids_de_cliente
+                ],
+                'AgendamentoConvite.horario >=' => date('Y-m-d h:i:s')
+            ],
+        ]);
+
+        foreach($dados as $key => $tpj){
+            $usuario_dono_horario = in_array($tpj['Agendamento']['cliente_cliente_id'], $meus_ids_de_cliente);
+            $dados[$key]['Usuario']['img'] = $this->images_path.'usuarios/'.$tpj['Usuario']['img'];
+            $dados[$key]['UsuarioMarcante'] = $this->ClienteCliente->finUserData($dados[$key]['Agendamento']['cliente_cliente_id'], ['Usuario.nome', 'Usuario.img']);
+            $dados[$key]['UsuarioMarcante']['img'] = $this->images_path.'usuarios/'.$dados[$key]['UsuarioMarcante']['img'];
+            $dados[$key]['AgendamentoConvite']['_data_desc'] = date('Y-m-d') == date('Y-m-d',strtotime($tpj['AgendamentoConvite']['horario'])) ? 'Hoje' : date('d/m/Y',strtotime($tpj['AgendamentoConvite']['horario']));
+            $dados[$key]['AgendamentoConvite']['_hora_desc'] = date('H:i',strtotime($tpj['AgendamentoConvite']['horario']));
+            if ( $usuario_dono_horario ) {
+                $dados[$key]['AgendamentoConvite']['_tipo'] = [
+                    'id' => 1,
+                    'desc' => 'Enviado'
+                ];
+                if ( $tpj['AgendamentoConvite']['confirmado_usuario'] == 'R' ) {
+                    $dados[$key]['AgendamentoConvite']['_status'] = [
+                        'id' => 4,
+                        'desc' => 'Recusado por você'
+                    ];
+                }
+                else if ( $tpj['AgendamentoConvite']['confirmado_convidado'] == 'R' ) {
+                    $dados[$key]['AgendamentoConvite']['_status'] = [
+                        'id' => 6,
+                        'desc' => 'Recusado pelo convidado'
+                    ];
+                }
+            } else {
+                $dados[$key]['AgendamentoConvite']['_tipo'] = [
+                    'id' => 2,
+                    'desc' => 'Recebido'
+                ];
+                if ( $tpj['AgendamentoConvite']['confirmado_usuario'] == 'R' ) {
+                    $dados[$key]['AgendamentoConvite']['_status'] = [
+                        'id' => 5,
+                        'desc' => 'Recusado pelo dono do horário'
+                    ];
+                }
+                else if ( $tpj['AgendamentoConvite']['confirmado_convidado'] == 'R' ) {
+                    $dados[$key]['AgendamentoConvite']['_status'] = [
+                        'id' => 4,
+                        'desc' => 'Recusado por você'
+                    ];
+                }
+            }
+
+     
+            if ( $tpj['AgendamentoConvite']['horario_cancelado'] == 'Y' ) {
+                $dados[$key]['AgendamentoConvite']['_status'] = [
+                    'id' => 11,
+                    'desc' => 'Horário Cancelado'
+                ];
+            }
+
+            if (!isset($dados[$key]['AgendamentoConvite']['_status'])) {
+                if ( $usuario_dono_horario ) {
+                    if ( $tpj['AgendamentoConvite']['confirmado_usuario'] == 'N' ) {
+                        $dados[$key]['AgendamentoConvite']['_status'] = [
+                            'id' => 2,
+                            'desc' => 'Aguardando sua confirmação'
+                        ];
+                    } else if ( $tpj['AgendamentoConvite']['confirmado_convidado'] == 'N' ) {
+                        $dados[$key]['AgendamentoConvite']['_status'] = [
+                            'id' => 3,
+                            'desc' => 'Aguardando confirmação do convidado'
+                        ];
+                    } else {
+                        $dados[$key]['AgendamentoConvite']['_status'] = [
+                            'id' => 1,
+                            'desc' => 'Confirmado'
+                        ];
+                    }
+                } else {
+                    if ( $tpj['AgendamentoConvite']['confirmado_usuario'] == 'N' ) {
+                        $dados[$key]['AgendamentoConvite']['_status'] = [
+                            'id' => 2,
+                            'desc' => 'Aguardando confirmação do dono do horário'
+                        ];
+                    } else if ( $tpj['AgendamentoConvite']['confirmado_convidado'] == 'N' ) {
+                        $dados[$key]['AgendamentoConvite']['_status'] = [
+                            'id' => 3,
+                            'desc' => 'Aguardando sua confirmação'
+                        ];
+                    } else {
+                        $dados[$key]['AgendamentoConvite']['_status'] = [
+                            'id' => 1,
+                            'desc' => 'Confirmado'
+                        ];
+                    }
+                }
+            }
+        }
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
 
     }
 }

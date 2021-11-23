@@ -22,6 +22,9 @@ class Agendamento extends AppModel {
 		'AgendamentoFixoCancelado' => array(
 			'foreignKey' => 'agendamento_id'
         ),
+		'AgendamentoConvite' => array(
+			'foreignKey' => 'agendamento_id'
+        ),
     );
 
     public function verificaHorarios($horarios = [], $cliente_id = null, $data = null) {

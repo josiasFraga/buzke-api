@@ -17,6 +17,9 @@ class ClienteCliente extends AppModel {
 		'ToProJogo' => array(
 			'foreignKey' => 'cliente_cliente_id'
 		),
+		'AgendamentoConvite' => array(
+			'foreignKey' => 'cliente_cliente_id'
+		),
     );
 
     public $hasOne = array(
@@ -139,7 +142,6 @@ class ClienteCliente extends AppModel {
 		]);
 	}
 
-
 	public function buscaPorEmail($cliente_id, $email) {
 		return $this->find('first',[
 			'conditions' => [
@@ -200,5 +202,44 @@ class ClienteCliente extends AppModel {
 
 		return $dados_cliente;
     }
+
+	public function getUsersIdsFromClienteCliente($cliente_cliente_ids = []) {
+
+		if ( count($cliente_cliente_ids) == 0 ) {
+			return [];
+		}
+
+		return $this->find('list',[
+			'conditions' => [
+				'ClienteCliente.id' => $cliente_cliente_ids,
+				'not' => [
+					'ClienteCliente.usuario_id' => null
+				]
+			],
+			'fields' => ['ClienteCliente.usuario_id','ClienteCliente.usuario_id'],
+			'group' => ['ClienteCliente.usuario_id']
+		]);
+
+	}
+
+	public function finUserData($cliente_cliente_id = null, $fields = ['Usuario.nome']) {
+		if ($cliente_cliente_id == null) {
+			return [];
+		}
+
+		$dados_usuario =  $this->find('first',[
+			'fields' => $fields,
+			'conditions' => [
+				'ClienteCliente.id' => $cliente_cliente_id
+			],
+			'link' => ['Usuario']
+		]);
+
+		if ( count($dados_usuario) == 0 ) {
+			return [];
+		} else {
+			return $dados_usuario['Usuario'];
+		}
+	}
 
 }

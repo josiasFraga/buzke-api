@@ -21,10 +21,13 @@ class UsuarioPadelCategoria extends AppModel {
       }
 
       return $this->find('all',[
+        'fields' => ['*'],
         'conditions' => [
           'UsuarioPadelCategoria.usuario_id' => $user_id
         ],
-        'link' => []
+        'link' => [
+          'PadelCategoria'
+        ]
       ]);
 
     }

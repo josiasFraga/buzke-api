@@ -41,7 +41,7 @@ class ToProJogo extends AppModel {
 			'fields' => ['*'],
 			'conditions' => [
 				'ToProJogoEsporte.subcategoria_id' => array_values($subcategorias),
-				'not' => ['Usuario.id' => $usuario_id],
+				//'not' => ['Usuario.id' => $usuario_id],
 				'or' => [
 					[
 						'ToProJogo.data_inicio <=' => $data,
