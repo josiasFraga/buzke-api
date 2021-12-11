@@ -280,7 +280,7 @@ class AgendamentosController extends AppController {
 
                 $arr_dados = [
                     'name' => $hora, 
-                    'height' => 100, 
+                    'height' => $agend['Agendamento']['endereco'] == '' || $agend['Agendamento']['endereco'] == '' ? 100 : 130, 
                     'usuario' => $agend['ClienteCliente']['nome'], 
                     'id' => $agend['Agendamento']['id'], 
                     'termino' => $duracao,
@@ -289,6 +289,7 @@ class AgendamentosController extends AppController {
                     'status' => $agend['Agendamento']['status'], 
                     'motive' => $agend['Agendamento']['motive'], 
                     'horario' => $agend['Agendamento']['horario'], 
+                    'endereco' => $agend['Agendamento']['endereco'], 
                 ];
 
                 if ( $data != $last_data ) {
@@ -494,6 +495,10 @@ class AgendamentosController extends AppController {
 
         if ( isset($dados->domicilio) && $dados->domicilio == 1 ) {
             $dados_salvar = array_merge($dados_salvar, ['domicilio' => 'Y']);
+            if (!isset($dados->endereco) || $dados->endereco == '') {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Endereço de atendimento não informado.'))));
+            }
+            $dados_salvar = array_merge($dados_salvar, ['endereco' => $dados->endereco]);
         }
 
         $this->Agendamento->create();

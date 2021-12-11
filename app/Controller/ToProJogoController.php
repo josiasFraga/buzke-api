@@ -589,13 +589,20 @@ class ToProJogoController extends AppController {
                 'Usuario.nome',
                 'Usuario.img',
                 'Agendamento.cliente_cliente_id',
-                'Cliente.nome'
+                'Cliente.nome',
+                'Cliente.telefone',
+                'Cliente.endereco',
+                'Cliente.endereco_n',
+                'Cliente.bairro',
+                'Cliente.estado',
+                'Cliente.logo',
+                'Localidade.loc_no'
             ],
             'order' => [
                 'AgendamentoConvite.horario'
             ],
             'link' => [
-                'Agendamento' => ['Cliente'],
+                'Agendamento' => ['Cliente' => ['Localidade']],
                 'ClienteCliente' => [
                     'Usuario'
                 ]
@@ -613,6 +620,7 @@ class ToProJogoController extends AppController {
             $usuario_dono_horario = in_array($tpj['Agendamento']['cliente_cliente_id'], $meus_ids_de_cliente);
             $dados[$key]['Usuario']['img'] = $this->images_path.'usuarios/'.$tpj['Usuario']['img'];
             $dados[$key]['UsuarioMarcante'] = $this->ClienteCliente->finUserData($dados[$key]['Agendamento']['cliente_cliente_id'], ['Usuario.nome', 'Usuario.img']);
+            $dados[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$tpj['Cliente']['logo'];
             $dados[$key]['UsuarioMarcante']['img'] = $this->images_path.'usuarios/'.$dados[$key]['UsuarioMarcante']['img'];
             $dados[$key]['AgendamentoConvite']['_data_desc'] = date('Y-m-d') == date('Y-m-d',strtotime($tpj['AgendamentoConvite']['horario'])) ? 'Hoje' : date('d/m/Y',strtotime($tpj['AgendamentoConvite']['horario']));
             $dados[$key]['AgendamentoConvite']['_hora_desc'] = date('H:i',strtotime($tpj['AgendamentoConvite']['horario']));
@@ -662,15 +670,17 @@ class ToProJogoController extends AppController {
 
             if (!isset($dados[$key]['AgendamentoConvite']['_status'])) {
                 if ( $usuario_dono_horario ) {
-                    if ( $tpj['AgendamentoConvite']['confirmado_usuario'] == 'N' ) {
-                        $dados[$key]['AgendamentoConvite']['_status'] = [
-                            'id' => 2,
-                            'desc' => 'Aguardando sua confirmação'
-                        ];
-                    } else if ( $tpj['AgendamentoConvite']['confirmado_convidado'] == 'N' ) {
+
+                    if ( $tpj['AgendamentoConvite']['confirmado_convidado'] == 'N' ) {
                         $dados[$key]['AgendamentoConvite']['_status'] = [
                             'id' => 3,
                             'desc' => 'Aguardando confirmação do convidado'
+                        ];
+                    }
+                    else if ( $tpj['AgendamentoConvite']['confirmado_usuario'] == 'N' ) {
+                        $dados[$key]['AgendamentoConvite']['_status'] = [
+                            'id' => 2,
+                            'desc' => 'Aguardando sua confirmação'
                         ];
                     } else {
                         $dados[$key]['AgendamentoConvite']['_status'] = [
@@ -679,15 +689,16 @@ class ToProJogoController extends AppController {
                         ];
                     }
                 } else {
-                    if ( $tpj['AgendamentoConvite']['confirmado_usuario'] == 'N' ) {
-                        $dados[$key]['AgendamentoConvite']['_status'] = [
-                            'id' => 2,
-                            'desc' => 'Aguardando confirmação do dono do horário'
-                        ];
-                    } else if ( $tpj['AgendamentoConvite']['confirmado_convidado'] == 'N' ) {
+                    if ( $tpj['AgendamentoConvite']['confirmado_convidado'] == 'N' ) {
                         $dados[$key]['AgendamentoConvite']['_status'] = [
                             'id' => 3,
                             'desc' => 'Aguardando sua confirmação'
+                        ];
+                    }
+                    else if ( $tpj['AgendamentoConvite']['confirmado_usuario'] == 'N' ) {
+                        $dados[$key]['AgendamentoConvite']['_status'] = [
+                            'id' => 2,
+                            'desc' => 'Aguardando confirmação do dono do horário'
                         ];
                     } else {
                         $dados[$key]['AgendamentoConvite']['_status'] = [
@@ -701,5 +712,105 @@ class ToProJogoController extends AppController {
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
 
+    }
+
+    public function convite_acao() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+
+        if (!isset($dados->email) || $dados->email == '') {
+            throw new BadRequestException('E-mail não informado', 400);
+        }
+
+        if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
+        }
+
+        if (!isset($dados->id) || $dados->id == '') {
+            throw new BadRequestException('ID não informado', 400);
+        }
+
+        if (!isset($dados->token) || $dados->token == '') {
+            throw new BadRequestException('Token não informado', 400);
+        }
+
+        if (!isset($dados->acao) || $dados->acao == '' || !in_array($dados->acao, ['Y','R']) ) {
+            throw new BadRequestException('Ação não informada', 400);
+        }
+
+
+        $dados_token = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('ClienteCliente');
+        $this->loadModel('ToProJogo');
+        $this->loadModel('ToProJogoEsporte');
+        
+        $meus_ids_de_cliente = $this->ClienteCliente->buscaDadosSemVinculo($dados_token['Usuario']['id'], false);
+
+        $dados_to_pro_jogo = $this->ToProJogo->find('first',[
+            'fields' => [
+                'ToProJogo.id', 
+            ],
+            'conditions' => [
+                'id' => $dados->id,
+                'cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id']
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_to_pro_jogo) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O Tô Pro Jogo que você está tentando alterar, não existe!'))));
+        }
+
+        $dados_salvar = array(
+            'ToProJogo' => array(
+                'id' => $dados->id, 
+                'data_inicio' => $data_inicio, 
+                'data_fim' => $data_fim, 
+                //'email' => $dados->email, 
+                'hora_inicio' => $dados->hora_de, 
+                'hora_fim' => $dados->hora_ate, 
+                'dia_semana' => $dia_semana, 
+                'dia_mes' => $dia_mes, 
+            ),
+            'ToProJogoEsporte' => []
+        );
+
+        $esportes = [];
+        foreach($dados as $key_dado => $dado) {
+            if ( strpos($key_dado, 'esporte_') !== false ) {
+                list($discart, $subcategoria_id) = explode('esporte_', $key_dado);
+                $esportes[] = $subcategoria_id;
+            }
+        }
+
+        if ( count($esportes) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Selecione ao menos um esporte antes de clicar em salvar!'))));
+        }
+
+        $this->ToProJogoEsporte->deleteAll(['ToProJogoEsporte.to_pro_jogo_id' => $dados->id], true);
+
+        foreach($esportes as $key => $esporte) {
+            $dados_salvar['ToProJogoEsporte'][] = [
+                'subcategoria_id' => $esporte
+            ];
+        }
+
+        $this->ToProJogo->set($dados_salvar);
+        if ($this->ToProJogo->saveAssociated($dados_salvar, ['deep' => true])) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Alterado com sucesso!'))));
+        } else {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
+        }
     }
 }

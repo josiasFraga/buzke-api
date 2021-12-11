@@ -607,6 +607,7 @@ class ClientesController extends AppController {
 
         $this->loadModel('ClienteHorarioAtendimento');
         $this->loadModel('ClienteSubcategoria');
+        $this->loadModel('ClienteServico');
         $horarios_atendimento = $this->ClienteHorarioAtendimento->find('all',[
             'conditions' => [
                 'ClienteHorarioAtendimento.cliente_id' => $dado_usuario['Usuario']['cliente_id']
@@ -617,8 +618,10 @@ class ClientesController extends AppController {
             'link' => []
         ]);
 
+        $isCourt = $this->ClienteSubcategoria->checkIsCourt($dado_usuario['Usuario']['cliente_id']);
+        $nServicos = $this->ClienteServico->contaServicos($dado_usuario['Usuario']['cliente_id']);
 
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_atendimento, 'isCourt' => $this->ClienteSubcategoria->checkIsCourt($dado_usuario['Usuario']['cliente_id'])))));
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_atendimento, 'isCourt' => $isCourt, 'nServicos' => $nServicos))));
 
     }
 
@@ -782,7 +785,7 @@ class ClientesController extends AppController {
         
         $this->loadModel('ClienteServico');
 
-        $this->ClienteServico->deleteAll(['not' => ['ClienteServico.id' => $ids_setados]], true);
+        $this->ClienteServico->deleteAll(['ClienteServico.cliente_id' => $dados_usuario['Usuario']['cliente_id'], 'not' => ['ClienteServico.id' => $ids_setados]], true);
 
         if ( !$this->ClienteServico->saveMany($dados_servicos) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao atualizar seus horários de atendimento. Por favor, tente novamente mais tarde!'))));
@@ -934,6 +937,9 @@ class ClientesController extends AppController {
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
                 'ClienteCliente.telefone',
+                'ClienteCliente.endereco',
+                'ClienteCliente.endreceo_n',
+                'ClienteCliente.bairro',
             ],
             'link' => [],
             //'contain' => ['Localidade', 'Uf', 'Agendamento' => ['conditions' => ['Agendamento.cliente_id' => $dados_token['Usuario']['cliente_id']]], 'Usuario', 'ClienteClienteDadosPadel', 'ClienteClientePadelCategoria'],
@@ -942,8 +948,9 @@ class ClientesController extends AppController {
         
         $clientes_retornar = [];
         if  ( count($clientes) > 0 ) {
+            $count = 0;
             foreach($clientes as $key => $cliente){
-                $clientes_retornar[] = ['label' => $cliente['ClienteCliente']['nome']." - ".$cliente['ClienteCliente']['telefone'], 'value' => $cliente['ClienteCliente']['id']];
+                $clientes_retornar[] = ['label' => $cliente['ClienteCliente']['nome']." - ".$cliente['ClienteCliente']['telefone'], 'value' => $cliente['ClienteCliente']['id'], 'endereco' => $this->bdToStringAddres($cliente)];
             }
         }
 
@@ -1162,5 +1169,15 @@ class ClientesController extends AppController {
         } else {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
         }
+    }
+
+    private function bdToStringAddres($cliente_cliente) {
+
+        if ($cliente_cliente['ClienteCliente']['endereco'] != '') {
+            return $cliente_cliente['ClienteCliente']['endereco'].", ".$cliente_cliente['ClienteCliente']['endreceo_n'].", ".$cliente_cliente['ClienteCliente']['bairro'];
+        }
+
+        return "";
+
     }
 }

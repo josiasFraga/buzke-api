@@ -142,8 +142,6 @@ class ClientesClientesController extends AppController {
         $dados_salvar['ClienteCliente']['id'] = $dados->id;
         $dados_salvar['ClienteCliente']['cliente_id'] = $dados_usuario['Usuario']['cliente_id'];
         $dados_salvar['ClienteCliente']['nome'] = $dados->nome;
-
-        
         $dados_salvar['ClienteCliente']['sexo'] = isset($dados->sexo) && $dados->sexo != null ? $dados->sexo : null;
         $dados_salvar['ClienteCliente']['bairro'] = isset($dados->bairro) && $dados->bairro != null ? $dados->bairro : null;
         $dados_salvar['ClienteCliente']['cpf'] = isset($dados->cpf) && $dados->cpf != null ? $dados->cpf : null;

@@ -45,11 +45,21 @@ class ToProJogo extends AppModel {
 				'or' => [
 					[
 						'ToProJogo.data_inicio <=' => $data,
-						'ToProJogo.data_fim >=' => $data
+						'ToProJogo.data_fim >=' => $data,
+						'ToProJogo.hora_inicio <=' => $horario,
+						'ToProJogo.hora_fim >=' => $horario,
 					],
 					
-					['ToProJogo.dia_semana' => $dia_semana],
-					['ToProJogo.dia_mes' => $dia_mes],
+					[
+						'ToProJogo.dia_semana' => $dia_semana,
+						'ToProJogo.hora_inicio <=' => $horario,
+						'ToProJogo.hora_fim >=' => $horario,
+					],
+					[
+						'ToProJogo.dia_mes' => $dia_mes,
+						'ToProJogo.hora_inicio <=' => $horario,
+						'ToProJogo.hora_fim >=' => $horario,
+					],
 
 				]
 			],

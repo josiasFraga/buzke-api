@@ -43,6 +43,19 @@ class ClienteServico extends AppModel {
          
     }
 
+    public function contaServicos($cliente_id = null) {
+        
+        if ( $cliente_id == null )
+            return 0;
+
+        return $this->find('count',[
+            'conditions' => [
+                'ClienteServico.cliente_id' => $cliente_id
+            ]
+        ]);
+         
+    }
+
     public function beforeSave($options = array()) {
         if ( isset($this->data[$this->alias]['valor']) && $this->data[$this->alias]['valor'] != '') {
             $this->data[$this->alias]['valor'] = $this->currencyToFloat($this->data[$this->alias]['valor']);
