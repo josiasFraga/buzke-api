@@ -103,6 +103,7 @@ class ClienteCliente extends AppModel {
 		unset($dados['ClienteCliente']['id']);
 
 		$dados_retornar = $this->save($dados);
+		return $dados_retornar;
 		
 	}
 
