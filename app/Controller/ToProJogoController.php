@@ -616,6 +616,7 @@ class ToProJogoController extends AppController {
                 ],
                 'AgendamentoConvite.horario >=' => date('Y-m-d h:i:s')
             ],
+            'group' => ['AgendamentoConvite.id']
         ]);
 
         foreach($dados as $key => $tpj){
@@ -627,6 +628,7 @@ class ToProJogoController extends AppController {
             $dados[$key]['ClienteServico']['valor_br'] = number_format($tpj['ClienteServico']['valor'], 2, ',', '.');
             $dados[$key]['AgendamentoConvite']['_data_desc'] = date('Y-m-d') == date('Y-m-d',strtotime($tpj['AgendamentoConvite']['horario'])) ? 'Hoje' : date('d/m/Y',strtotime($tpj['AgendamentoConvite']['horario']));
             $dados[$key]['AgendamentoConvite']['_hora_desc'] = date('H:i',strtotime($tpj['AgendamentoConvite']['horario']));
+            $dados[$key]['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($dados[$key]['AgendamentoConvite']['agendamento_id'], $this->images_path.'/clientes_clientes/');
             if ( $usuario_dono_horario ) {
                 $dados[$key]['AgendamentoConvite']['_tipo'] = [
                     'id' => 1,
@@ -744,11 +746,11 @@ class ToProJogoController extends AppController {
             throw new BadRequestException('Token não informado', 400);
         }
 
-        if (!isset($dados->acao) || $dados->acao == '' || !in_array($dados->acao, ['1','2']) ) {//1 confirmar = Y, 2 recusar = R
+        if (!isset($dados->action) || $dados->action == '' || !in_array($dados->action, [1,2]) ) {//1 confirmar = Y, 2 recusar = R
             throw new BadRequestException('Ação não informada', 400);
         }
 
-        $this->log($dados,'debug');
+        $acao = $dados->action;
 
         $dados_token = $this->verificaValidadeToken($dados->token, $dados->email);
         if ( !$dados_token ) {
@@ -758,7 +760,7 @@ class ToProJogoController extends AppController {
         $this->loadModel('ClienteCliente');
         $this->loadModel('AgendamentoConvite');
         
-        $meus_ids_de_cliente = $this->ClienteCliente->buscaDadosSemVinculo($dados_token['Usuario']['id'], false);
+        $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
 
         $dados_convite = $this->AgendamentoConvite->find('first',[
             'fields' => [
@@ -767,11 +769,11 @@ class ToProJogoController extends AppController {
             'conditions' => [
                 'AgendamentoConvite.id' => $dados->invite_id,
                 'or' => [
-                    'ToProJogo.cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id'],
-                    'Agendamento.cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id']
+                    'AgendamentoConvite.cliente_cliente_id' => $meus_ids_de_cliente,
+                    'Agendamento.cliente_cliente_id' => $meus_ids_de_cliente
                 ]
             ],
-            'link' => ['ToProJogo' => 'Agendamento']
+            'link' => ['Agendamento']
         ]);
 
         if ( count($dados_convite) == 0 ) {
@@ -785,7 +787,7 @@ class ToProJogoController extends AppController {
 
         //verifica se foi o usuário que convidou ou foi o convidado
         $convidado = false;
-        if ( $dados_convite['AgendamentoConvite']['cliente_cliente_id'] == $meus_ids_de_cliente[0]['ClienteCliente']['id'] ) {
+        if ( in_array($dados_convite['AgendamentoConvite']['cliente_cliente_id'], $meus_ids_de_cliente) ) {
             $convidado = true;
         }
 
