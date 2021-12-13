@@ -34,6 +34,7 @@ class AgendamentosController extends AppController {
         }
 
         $this->loadModel('Agendamento');
+        $this->loadModel('ClienteSubcategoria');
 
         $conditions = [
             'Agendamento.id' => $agendamento_id,
@@ -54,9 +55,12 @@ class AgendamentosController extends AppController {
                 'ClienteCliente.img',
                 'ClienteCliente.endereco',
                 'ClienteCliente.endreceo_n',
-                'Localidade.loc_no'
+                'Localidade.loc_no',
+                'ClienteServico.id',
+                'ClienteServico.valor',
+                'ClienteServico.nome'
             ],
-            'link' => ['ClienteCliente' => ['Localidade'], 'Cliente']
+            'link' => ['ClienteCliente' => ['Localidade'], 'Cliente', 'ClienteServico']
         ]);
 
         if ( count($agendamento) > 0 ) {
@@ -94,6 +98,10 @@ class AgendamentosController extends AppController {
             $agendamento['ClienteCliente']['img'] = $this->images_path . 'clientes_clientes/' . $agendamento['ClienteCliente']['img'];
             $agendamento['Agendamento']['horario_str'] = date('d/m',strtotime($agendamento['Agendamento']['horario']))." às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
             $data_agendamento = date('Y-m-d',strtotime($agendamento['Agendamento']['horario']));
+            
+            $agendamento['ClienteServico']['valor_br'] = number_format($agendamento['ClienteServico']['valor'], 2, ',', '.');
+            $agendamento['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($agendamento['Cliente']['id']);
+
             if ( $data_agendamento == date('Y-m-d') ) {
                 $agendamento['Agendamento']['horario_str'] = "Hoje às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
             }
@@ -126,6 +134,8 @@ class AgendamentosController extends AppController {
         }
 
         $this->loadModel('ClienteCliente');
+
+        $cancelable = null;
      
         if ( $dados_token['Usuario']['cliente_id'] != '' && $dados_token['Usuario']['cliente_id'] != null ) {
 
@@ -134,7 +144,7 @@ class AgendamentosController extends AppController {
             }
 
             $meus_ids_de_cliente = [$dados['cliente_cliente_id']];
-
+            $cancelable = true;
 
         } else {            
             $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
@@ -144,6 +154,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('ClienteHorarioAtendimento');
         $this->loadModel('ClienteHorarioAtendimentoExcessao');
         $this->loadModel('AgendamentoFixoCancelado');
+        $this->loadModel('ClienteSubcategoria');
         $agendamentos = $this->Agendamento->buscaAgendamentoUsuario($meus_ids_de_cliente);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
@@ -159,12 +170,20 @@ class AgendamentosController extends AppController {
                 $agendamentos[$key]['Agendamento']['horario_str'] = date('d/m',strtotime($agendamento['Agendamento']['horario']))." às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
                 $agendamentos[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$agendamento['Cliente']['logo'];
                 $agendamentos[$key]['Agendamento']['data'] = date('d/m/Y',strtotime($agendamento['Agendamento']['horario']));
-                $agendamentos[$key]['Agendamento']['hora'] = date('H:i',strtotime($agendamento['Agendamento']['horario']));                
+                $agendamentos[$key]['Agendamento']['hora'] = date('H:i',strtotime($agendamento['Agendamento']['horario']));
                 $agendamentos[$key]['Agendamento']['tipo'] = 'padrao';
+                $agendamentos[$key]['ClienteServico']['valor_br'] = number_format($agendamentos[$key]['ClienteServico']['valor'], 2, ',', '.');
+                $agendamentos[$key]['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($agendamento['Cliente']['id']);
 
                 if ( $agendamento['Agendamento']['dia_semana'] != '' || $agendamento['Agendamento']['dia_mes'] != '' ) {
                     $agendamentos[$key]['Agendamento']['tipo'] = 'fixo';
                 }
+
+                if ($cancelable === null) {
+                    $cancelable_return = $this->checkIsCancelable($agendamento['Agendamento']['horario'], $agendamento['Cliente']['prazo_maximo_para_canelamento']);
+                }
+
+                $agendamentos[$key]['Agendamento']['cancelable'] = $cancelable_return;
             }
         }
         
@@ -305,6 +324,36 @@ class AgendamentosController extends AppController {
         
 
         return $arr_retornar;
+
+    }
+
+    private function checkIsCancelable($horario, $prazo_maximo) {
+        if ($prazo_maximo == null || $prazo_maximo == '') {
+            return true;
+        }
+
+        list($horas,$minutos,$segundos) = explode(':',$prazo_maximo);
+
+        $hs_in_unix = 0;
+        if ($horas > 0) {
+            $hs_in_unix = $horas * 60 * 60;
+        }
+
+        $min_in_unix = 0;
+        if ($minutos > 0) {
+            $min_in_unix = $minutos * 60;
+        }
+
+        $horario_unix = strtotime($horario);
+        $horario_maximo_unix = $horario_unix-$hs_in_unix-$min_in_unix;
+        $now_unix = strtotime(date('Y-m-d H:i:s'));
+        /*debug($horario);
+        debug(date('d/m/Y H:i',$horario_maximo_unix));
+        debug(date('d/m/Y H:i',$now_unix));
+        echo 'unix_max = '.$horario_maximo_unix.'<br>';
+        echo 'agora ='.$now_unix.'<br>';*/
+
+        return $horario_maximo_unix >= $now_unix;
 
     }
 

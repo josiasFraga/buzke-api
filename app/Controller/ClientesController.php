@@ -1002,8 +1002,9 @@ class ClientesController extends AppController {
         if ( count($dados) > 0 ) {
             $dados['Cliente']['logo'] = $this->images_path.'clientes/'.$dados['Cliente']['logo'];
             $dados['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($dados['Cliente']['id']);
+            if ( $dados['Cliente']['prazo_maximo_para_canelamento'] != null && $dados['Cliente']['prazo_maximo_para_canelamento'] != '' )
+                $dados['Cliente']['prazo_maximo_para_canelamento'] = substr($dados['Cliente']['prazo_maximo_para_canelamento'], 0, 5);
         }
-
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
 
@@ -1141,6 +1142,7 @@ class ClientesController extends AppController {
                 'tipo' => $dados->tipo_cadastro,
                 'cidade_id' => $dadosLocalidade['Localidade']['loc_nu_sequencial'],
                 'estado' => $dados->uf,
+                'prazo_maximo_para_canelamento' => $dados->prazo_maximo_para_canelamento != "00:00" && $dados->prazo_maximo_para_canelamento != "" ? $dados->prazo_maximo_para_canelamento : null
             ],
             'ClienteConfiguracao' => [
                 //'id' => $dados->configuracoes_id,

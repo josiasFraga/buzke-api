@@ -39,7 +39,7 @@ class AppController extends Controller {
     public $images_painel_path = "https://buzke.com.br/webroot/api/app/webroot/img/";
     public $files_path = "https://buzke.com.br/app/webroot/api/app/webroot/img/anexos";
     public $dias_semana_str = array('Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado');
-    public $dias_semana_abrev = array('dom','seg','ter','qua','qui','sex','sáb');
+    public $dias_semana_abrev = array('dom','seg','ter','qua','qui','sex','sab');
     public $quadra_de_padel_subcategoria = 7;
     
     public function beforeFilter() {

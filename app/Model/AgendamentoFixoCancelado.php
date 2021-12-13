@@ -25,6 +25,11 @@ class AgendamentoFixoCancelado extends AppModel {
                 continue;
             }
 
+            if ($agendamento['Agendamento']['horario'] < date('Y-m-d H:i:s')) {
+                //unset($agendamentos[$key]);
+                //continue;
+            }
+
             $checa_cancelamento = $this->find('first',[
                 'conditions' => [
                     'AgendamentoFixoCancelado.agendamento_id' => $agendamento['Agendamento']['id'],

@@ -408,9 +408,13 @@ class Agendamento extends AppModel {
                     $mes_checar = 1;
                     $ano_checar++;
                 }
+
+                if ($age['Agendamento']['horario'] >= date('Y-m-d H:i:s')){
+                    $dados_retornar[] = $age;
+                   
+                }
                 
                 //$age['Agendamento']['horario'] = date('Y-m-d', $i).' '.$hora;
-                $dados_retornar[] = $age;
             }
             
 
