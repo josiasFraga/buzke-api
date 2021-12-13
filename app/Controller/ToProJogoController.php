@@ -736,18 +736,19 @@ class ToProJogoController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
         }
 
-        if (!isset($dados->id) || $dados->id == '') {
-            throw new BadRequestException('ID não informado', 400);
+        if (!isset($dados->invite_id) || $dados->invite_id == '') {
+            throw new BadRequestException('ID do convite não informado', 400);
         }
 
         if (!isset($dados->token) || $dados->token == '') {
             throw new BadRequestException('Token não informado', 400);
         }
 
-        if (!isset($dados->acao) || $dados->acao == '' || !in_array($dados->acao, ['Y','R']) ) {
+        if (!isset($dados->acao) || $dados->acao == '' || !in_array($dados->acao, ['1','2']) ) {//1 confirmar = Y, 2 recusar = R
             throw new BadRequestException('Ação não informada', 400);
         }
 
+        $this->log($dados,'debug');
 
         $dados_token = $this->verificaValidadeToken($dados->token, $dados->email);
         if ( !$dados_token ) {
@@ -755,65 +756,116 @@ class ToProJogoController extends AppController {
         }
 
         $this->loadModel('ClienteCliente');
-        $this->loadModel('ToProJogo');
-        $this->loadModel('ToProJogoEsporte');
+        $this->loadModel('AgendamentoConvite');
         
         $meus_ids_de_cliente = $this->ClienteCliente->buscaDadosSemVinculo($dados_token['Usuario']['id'], false);
 
-        $dados_to_pro_jogo = $this->ToProJogo->find('first',[
+        $dados_convite = $this->AgendamentoConvite->find('first',[
             'fields' => [
-                'ToProJogo.id', 
+                '*', 
             ],
             'conditions' => [
-                'id' => $dados->id,
-                'cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id']
+                'AgendamentoConvite.id' => $dados->invite_id,
+                'or' => [
+                    'ToProJogo.cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id'],
+                    'Agendamento.cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id']
+                ]
             ],
-            'link' => []
+            'link' => ['ToProJogo' => 'Agendamento']
         ]);
 
-        if ( count($dados_to_pro_jogo) == 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O Tô Pro Jogo que você está tentando alterar, não existe!'))));
+        if ( count($dados_convite) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O convite que você está tentando alterar, não existe!'))));
         }
 
-        $dados_salvar = array(
-            'ToProJogo' => array(
-                'id' => $dados->id, 
-                'data_inicio' => $data_inicio, 
-                'data_fim' => $data_fim, 
-                //'email' => $dados->email, 
-                'hora_inicio' => $dados->hora_de, 
-                'hora_fim' => $dados->hora_ate, 
-                'dia_semana' => $dia_semana, 
-                'dia_mes' => $dia_mes, 
-            ),
-            'ToProJogoEsporte' => []
-        );
+        //verifica se o horário não foi cancelado
+        if ( $dados_convite['AgendamentoConvite']['horario_cancelado'] == 'Y' ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O agendamento deste convite foi cancelado!'))));
+        }
 
-        $esportes = [];
-        foreach($dados as $key_dado => $dado) {
-            if ( strpos($key_dado, 'esporte_') !== false ) {
-                list($discart, $subcategoria_id) = explode('esporte_', $key_dado);
-                $esportes[] = $subcategoria_id;
+        //verifica se foi o usuário que convidou ou foi o convidado
+        $convidado = false;
+        if ( $dados_convite['AgendamentoConvite']['cliente_cliente_id'] == $meus_ids_de_cliente[0]['ClienteCliente']['id'] ) {
+            $convidado = true;
+        }
+
+       //verifica qual o status do convite
+       $status = 'aguardando_marcante';
+       if ($dados_convite['AgendamentoConvite']['confirmado_usuario'] == 'R' ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O convite foi recusado pelo convidante!'))));
+       }
+    
+       if ($dados_convite['AgendamentoConvite']['confirmado_convidado'] == 'R' ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O convite foi recusado pelo convidado!'))));
+       }
+
+       if ($convidado) {
+            if ($acao == 1) {
+               $msg = 'O convidado ['.$dados_token['Usuario']['nome'].'] aceitou o convite para o jogo. :)';
+               $resposta = 'Y';
+
+            } else {
+                $msg = 'O convidado ['.$dados_token['Usuario']['nome'].'] recusou o convite para o jogo. :(';
+                $resposta = 'R';
             }
-        }
 
-        if ( count($esportes) == 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Selecione ao menos um esporte antes de clicar em salvar!'))));
-        }
-
-        $this->ToProJogoEsporte->deleteAll(['ToProJogoEsporte.to_pro_jogo_id' => $dados->id], true);
-
-        foreach($esportes as $key => $esporte) {
-            $dados_salvar['ToProJogoEsporte'][] = [
-                'subcategoria_id' => $esporte
+            $dados_salvar = [
+                'id' => $dados->invite_id,
+                'confirmado_convidado' => $resposta,
             ];
+
+            $salvo = $this->AgendamentoConvite->save($dados_salvar);
+            if ( $salvo ) {
+                $this->enviaNotificacaoDeAcaoDoConvite($msg, $dados_convite['Agendamento']['cliente_cliente_id'], $dados_convite['Agendamento']['id']);
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Resposta ao convite cadastrada com sucesso!'))));
+            } else {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao cadastrar a resposta do convite!'))));
+            }
+
+       } else {
+            if ($acao == 1) {
+                $msg = 'O dono do horário ['.$dados_token['Usuario']['nome'].'] confirmou sua participação no jogo. :)';
+                $resposta = 'Y';
+
+            } else {
+                $msg = 'O dono do horário ['.$dados_token['Usuario']['nome'].'] informou que o jogo já estava completo. :(';
+                $resposta = 'R';
+            }
+
+            $dados_salvar = [
+                'id' => $dados->invite_id,
+                'confirmado_usuario' => $resposta,
+            ];
+
+            $salvo = $this->AgendamentoConvite->save($dados_salvar);
+            if ( $salvo ) {
+                $this->enviaNotificacaoDeAcaoDoConvite($msg, $dados_convite['AgendamentoConvite']['cliente_cliente_id'], $dados_convite['Agendamento']['id']);
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Resposta ao convite cadastrada com sucesso!'))));
+            } else {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao cadastrar a resposta do convite!'))));
+            }
+
+        }
+    
+    }
+
+    private function enviaNotificacaoDeAcaoDoConvite($msg = '', $cliente_cliente_id = '', $agendamento_id = ''){
+
+        if ($msg == '' || $cliente_cliente_id == '' || $agendamento_id == '') {
+            return false;
         }
 
-        $this->ToProJogo->set($dados_salvar);
-        if ($this->ToProJogo->saveAssociated($dados_salvar, ['deep' => true])) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Alterado com sucesso!'))));
-        } else {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
+        $this->loadModel('ClienteCliente');
+        $dados_usuario = $this->ClienteCliente->finUserData($cliente_cliente_id, ['Usuario.id']);
+        if ( count($dados_usuario) == 0 ) {
+            return false;
         }
+        
+        $this->loadModel('Token');
+        $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_usuario['id']);
+        if ( count($notifications_ids) == 0 ) {
+            return false;
+        }
+        $this->sendNotification( $notifications_ids, $agendamento_id, $msg, 'convite_acao', ["en"=> '$[notif_count] Notificações de Convites']  );
     }
 }
