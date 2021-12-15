@@ -181,6 +181,8 @@ class AgendamentosController extends AppController {
 
                 if ($cancelable === null) {
                     $cancelable_return = $this->checkIsCancelable($agendamento['Agendamento']['horario'], $agendamento['Cliente']['prazo_maximo_para_canelamento']);
+                } else {
+                    $cancelable_return = true;
                 }
 
                 $agendamentos[$key]['Agendamento']['cancelable'] = $cancelable_return;
@@ -402,6 +404,23 @@ class AgendamentosController extends AppController {
         $this->loadModel('ClienteSubcategoria');
         $this->loadModel('ClienteConfiguracao');
         $this->loadModel('ClienteServico');
+        $this->loadModel('Cliente');
+        $this->loadModel('Usuario');
+        $this->loadModel('UsuarioLocalizacao');
+
+        //busca os dados da empresa
+        $dados_cliente = $this->Cliente->find('first',[
+            'fields' => ['Cliente.id', 'Localidade.loc_no', 'Localidade.ufe_sg'],
+            'conditions' => [
+                'Cliente.id' => $dados->cliente_id,
+                'Cliente.ativo' => 'Y'
+            ],
+            'link' => ['Localidade']
+        ]);
+
+        if (count($dados_cliente) == 0) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Empresa não encontrada!'))));
+        }
 
         //verifico quem está tentando salvar o agendamento, se é uma empresa ou um usuário
         if ( $dados_usuario['Usuario']['cliente_id'] != '' && $dados_usuario['Usuario']['cliente_id'] != null ) {
@@ -550,6 +569,30 @@ class AgendamentosController extends AppController {
             $dados_salvar = array_merge($dados_salvar, ['endereco' => $dados->endereco]);
         }
 
+        $clientes_clientes_ids_convidados = [];
+        if ( is_array($dados->convites_tpj)) {
+            $dados->convites_tpj = (object)$dados->convites_tpj;
+        }
+        if (isset($dados->convites_tpj) && count(get_object_vars($dados->convites_tpj)) > 0) {
+            foreach($dados->convites_tpj as $key => $convite){
+                if($convite) {
+                    list($discard, $id_convidado) = explode('_',$key);
+                    $clientes_clientes_ids_convidados[] = $id_convidado;
+                }
+            }
+        }
+
+        if ( is_array($dados->convites_grl)) {
+            $dados->convites_grl = (object)$dados->convites_grl;
+        }
+
+        if (isset($dados->convites_grl) && count(get_object_vars($dados->convites_grl)) > 0) {
+            $usuarios_perfil_convite = $this->Usuario->getClientDataByPadelistProfile($dados->convites_grl);
+            $usuarios_perfil_convite = $this->UsuarioLocalizacao->filterByLastLocation($usuarios_perfil_convite, $dados_cliente['Localidade']);
+            $clientes_clientes_ids_convidados = array_merge($clientes_clientes_ids_convidados, $usuarios_perfil_convite);
+            $clientes_clientes_ids_convidados = array_values($clientes_clientes_ids_convidados);
+        }
+
         $this->Agendamento->create();
         $this->Agendamento->set($dados_salvar);
         $dados_agendamento_salvo = $this->Agendamento->save($dados_salvar);
@@ -573,20 +616,6 @@ class AgendamentosController extends AppController {
             $data_str_agendamento = date('d/m',strtotime($dados_agendamento_salvo['Agendamento']['horario']));
             $hora_str_agendamento = date('H:i',strtotime($dados_agendamento_salvo['Agendamento']['horario']));
             $this->sendNotification( $notifications_ids, $dados_agendamento_salvo['Agendamento']['id'], "Novo Agendamento :)", "Você tem um novo agendamento de ".$cadastrado_por." às ".$hora_str_agendamento." do dia ".$data_str_agendamento, "agendamento", 'novo_agendamento', ["en"=> '$[notif_count] Novos Agendamentos'] );
-        }
-
-        $clientes_clientes_ids_convidados = [];
-        if ( is_Array($dados->convites_tpj)) {
-            $dados->convites_tpj = (object)$dados->convites_tpj;
-        }
-        if (isset($dados->convites_tpj) && count(get_object_vars($dados->convites_tpj)) > 0) {
-            $clientes_clientes_convidados_ids = [];
-            foreach($dados->convites_tpj as $key => $convite){
-                if($convite) {
-                    list($discard, $id_convidado) = explode('_',$key);
-                    $clientes_clientes_ids_convidados[] = $id_convidado;
-                }
-            }
         }
 
         if ( count($clientes_clientes_ids_convidados) > 0 ) {

@@ -44,4 +44,36 @@ class UsuarioLocalizacao extends AppModel {
         ]);
 
     }
+
+    public function filterByLastLocation($players, $location) {
+        if ( count($players) == 0 ) {
+            return [];
+        }
+        
+        $dados_retornar = [];
+        foreach($players as $key => $palyer) {
+            $usuario_id = $palyer['ClienteCliente']['usuario_id'];
+            $dados_ultima_localizacao = $this->find('first', [
+                'conditions' => [
+                    'or' => [
+                        'Token.usuario_id' => $usuario_id,
+                        'UsuarioLocalizacao.usuario_id' => $usuario_id,
+                    ],
+                ],
+                'link' => ['Token'],
+                'order' => ['UsuarioLocalizacao.id DESC']
+            ]);
+
+
+            if ( count($dados_ultima_localizacao) > 0 ) {
+                $verifica_cidade = strpos($dados_ultima_localizacao['UsuarioLocalizacao']['description'], $location['ufe_sg'].',') > -1;
+                $verifica_uf = strpos($dados_ultima_localizacao['UsuarioLocalizacao']['description'], $location['loc_no']) > -1;
+                if ( $verifica_cidade && $verifica_uf ) {
+                    $dados_retornar[] = $palyer['ClienteCliente']['id'];
+                } 
+            }
+        }
+
+        return $dados_retornar;
+    }
 }

@@ -548,6 +548,15 @@ class UsuariosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados da cidade não encontrados.'))));
         }
 
+        $wp = null;
+        if (isset($dados->telefone_possui_wp) && $dados->telefone_possui_wp) {
+            $wp = $telefone;
+        } else {
+            if (isset($dados->wp) && $dados->wp != '') {
+                $wp = $dados->wp;
+            }
+        }
+
         $token = md5(uniqid($telefone, true));
 
         $dados_salvar = array(
@@ -572,6 +581,7 @@ class UsuariosController extends AppController {
                 'cpf' => $cpf,
                 'cnpj' => $cnpj,
                 'telefone' => $telefone,
+                'wp' => $wp,
                 'cidade_id' => $dadosLocalidade['Localidade']['loc_nu_sequencial'],
                 'estado' => $uf,
                 'cep' => $cep,

@@ -1002,8 +1002,14 @@ class ClientesController extends AppController {
         if ( count($dados) > 0 ) {
             $dados['Cliente']['logo'] = $this->images_path.'clientes/'.$dados['Cliente']['logo'];
             $dados['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($dados['Cliente']['id']);
+            $dados['Cliente']['isPaddleCourt'] = $this->ClienteSubcategoria->checkIsPaddleCourt($dados['Cliente']['id']);
             if ( $dados['Cliente']['prazo_maximo_para_canelamento'] != null && $dados['Cliente']['prazo_maximo_para_canelamento'] != '' )
                 $dados['Cliente']['prazo_maximo_para_canelamento'] = substr($dados['Cliente']['prazo_maximo_para_canelamento'], 0, 5);
+
+                
+            $dados['Cliente']['telefone_possui_wp'] = false;
+            if ($dados['Cliente']['telefone'] == $dados['Cliente']['wp'])
+                $dados['Cliente']['telefone_possui_wp'] = true;
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
@@ -1129,13 +1135,23 @@ class ClientesController extends AppController {
             }
         }
 
+        $wp = null;
+        if (isset($dados->telefone_possui_wp) && $dados->telefone_possui_wp) {
+            $wp = $dados->telefone;
+        } else {
+            if (isset($dados->wp) && $dados->wp != '') {
+                $wp = $dados->wp;
+            }
+        }
+
         $dados_salvar = [
             'Cliente' => [
                 'id' => $dados_token['Usuario']['cliente_id'],
                 'cpf' => $cpf,
-                'cpnj' => $cnpj,
+                'cnpj' => $cnpj,
                 'nome' => $dados->nomeProfissional,
                 'telefone' => $dados->telefone,
+                'wp' => $wp,
                 'cep' => $dados->cep,
                 'endereco' => $dados->endereco,
                 'endereco_n' => $dados->n,

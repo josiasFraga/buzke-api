@@ -17,7 +17,7 @@ class AgendamentoConvite extends AppModel {
         if ( $agendamento_id == null ) {
             return [];
         }
-        $this->virtualFields['_usuario_foto'] = 'CONCAT("'.$photo_path .'",ClienteCliente.img)';
+        $this->virtualFields['_usuario_foto'] = 'CONCAT("'.$photo_path .'",Usuario.img)';
         return $this->find('all',[
             'fields' => [
                 'ClienteCliente.id',
@@ -28,9 +28,10 @@ class AgendamentoConvite extends AppModel {
                 'AgendamentoConvite.agendamento_id' => $agendamento_id,
                 'AgendamentoConvite.confirmado_usuario' => 'Y',
                 'AgendamentoConvite.confirmado_convidado' => 'Y',
+                //'ClienteCliente.id' => null,
 
             ],
-            'link' => ['ClienteCliente'],
+            'link' => ['ClienteCliente' => ['Usuario']],
             'group' => ['AgendamentoConvite.id']
         ]);
 

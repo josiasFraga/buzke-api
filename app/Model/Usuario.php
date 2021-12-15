@@ -87,4 +87,49 @@ class Usuario extends AppModel {
 		));
 	}
 
+	public function getClientDataByPadelistProfile($dados_peril) {
+
+        $conditions = [
+            'ClienteCliente.cliente_id' => null,
+            'not' => [
+                'ClienteCliente.id' => null
+            ]
+        ];
+        if ( $dados_peril->lado != 'I' ) {
+            $conditions = array_merge($conditions, [
+                'UsuarioDadosPadel.lado' => ['A', $dados_peril->lado]
+            ]);
+        }
+        if ( $dados_peril->sexo != 'I' ) {
+            $conditions = array_merge($conditions, [
+                'ClienteCliente.sexo' => $dados_peril->sexo
+            ]);
+        }
+
+        $categorias = [];
+        foreach($dados_peril as $key => $perfil) {
+            if (strpos($key, 'categoria_') > -1 && $perfil) {
+                list($discard, $categoria) = explode('_',$key);
+                $categorias[] = $categoria;
+            }
+        }
+        if ( count($categorias) > 0 ) {
+            $conditions = array_merge($conditions, [
+                'UsuarioPadelCategoria.categoria_id' => $categorias
+            ]);
+        }
+
+        $jogadores = $this->find('all', [
+            'fields' => [
+                'ClienteCliente.id',
+                'ClienteCliente.usuario_id'
+            ],
+            'conditions' => $conditions,
+            'link' => ['UsuarioDadosPadel', 'ClienteCliente', 'UsuarioPadelCategoria'],
+            'group' => ['ClienteCliente.id']
+        ]);
+        
+        return $jogadores;
+	}
+
 }

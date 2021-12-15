@@ -37,6 +37,28 @@ class ClienteSubcategoria extends AppModel {
 
     }
 
+    public function checkIsPaddleCourt($cliente_id=null) {
+  
+      if ($cliente_id == null){
+        return false;
+      }
+
+      $isCourt = false;
+      $check_subcategoria = $this->find('first',[
+        'conditions' => [
+          'ClienteSubcategoria.cliente_id' => $cliente_id,
+          'Subcategoria.id' => 7,
+        ],
+        'link' => ['Subcategoria']
+      ]);
+
+      if (count($check_subcategoria) > 0)
+        $isCourt = true;
+
+      return $isCourt;
+
+    }
+
     public function getArrIdsByBusinessId($cliente_id = null) {
 
       if($cliente_id == null) {
