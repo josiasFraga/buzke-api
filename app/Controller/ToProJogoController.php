@@ -591,6 +591,7 @@ class ToProJogoController extends AppController {
                 'Agendamento.cliente_cliente_id',
                 'Cliente.nome',
                 'Cliente.telefone',
+                'Cliente.wp',
                 'Cliente.endereco',
                 'Cliente.endereco_n',
                 'Cliente.bairro',
