@@ -29,8 +29,9 @@ class ClienteHorarioAtendimento extends AppModel {
             if ( strtotime($horario_abertura) >= strtotime($horario_fechamento) ) {
                 return false;
             }
+            //debug($hr[$model_horario]['abertura']);
 
-            $horarios[0] = [
+            $horarios[] = [
                 'horario' => $hr[$model_horario]['abertura'], 
                 'vagas' => $max_vagas_horario, 
                 'domicilio' => $hr[$model_horario]['a_domicilio'], 
@@ -38,7 +39,12 @@ class ClienteHorarioAtendimento extends AppModel {
             ];
 
             while ( strtotime($this->addMinutes2Time($ultimo_hoario_gerado, $intervalo_horarios_min)) < strtotime($horario_fechamento) ) {
+    
                 $nextTime = $this->addMinutes2Time($ultimo_hoario_gerado, $intervalo_horarios_min);
+
+                if (strtotime($horario_abertura) > strtotime($nextTime)) {
+                    break;
+                }
                 $horarios[] = [
                     'horario' => $nextTime, 
                     'vagas' => $max_vagas_horario, 
