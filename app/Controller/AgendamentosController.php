@@ -175,17 +175,25 @@ class AgendamentosController extends AppController {
                 $agendamentos[$key]['ClienteServico']['valor_br'] = number_format($agendamentos[$key]['ClienteServico']['valor'], 2, ',', '.');
                 $agendamentos[$key]['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($agendamento['Cliente']['id']);
 
-                if ( $agendamento['Agendamento']['dia_semana'] != '' || $agendamento['Agendamento']['dia_mes'] != '' ) {
+                if ( isset($agendamento['AgendamentoConvite']) ) {
+                    $agendamentos[$key]['Agendamento']['tipo'] = 'convidado';
+                    $agendamentos[$key]['Agendamento']['convidado_por'] = [
+                        'nome' => $agendamento['ClienteCliente']['nome'],
+                        'foto' => $this->images_path.'usuarios/'.$agendamento['Usuario']['img'],
+                    ];
+                }
+                else if ( $agendamento['Agendamento']['dia_semana'] != '' || $agendamento['Agendamento']['dia_mes'] != '' ) {
                     $agendamentos[$key]['Agendamento']['tipo'] = 'fixo';
                 }
 
                 if ($cancelable === null) {
-                    $cancelable_return = $this->checkIsCancelable($agendamento['Agendamento']['horario'], $agendamento['Cliente']['prazo_maximo_para_canelamento']);
+                    $cancelable_return = $this->checkIsCancelable($agendamento['Agendamento']['horario'], $agendamento['Cliente']['prazo_maximo_para_canelamento'],$agendamentos[$key]['Agendamento']['tipo']);
                 } else {
                     $cancelable_return = true;
                 }
 
                 $agendamentos[$key]['Agendamento']['cancelable'] = $cancelable_return;
+                unset($agendamentos[$key]['AgendamentoConvite']);
             }
         }
         
@@ -329,8 +337,13 @@ class AgendamentosController extends AppController {
 
     }
 
-    private function checkIsCancelable($horario, $prazo_maximo) {
-        if ($prazo_maximo == null || $prazo_maximo == '') {
+    private function checkIsCancelable($horario, $prazo_maximo,$tipo) {
+        
+        if ( $tipo == 'convidado' ) {//se o agendamento é originado de um convite, não é possível cancelar
+            return false;
+        }
+
+        if ($prazo_maximo == null || $prazo_maximo == '') {//se a empresa nào setou prazo para cancelamento, é possível cancelar
             return true;
         }
 

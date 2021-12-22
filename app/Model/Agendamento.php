@@ -149,7 +149,24 @@ class Agendamento extends AppModel {
     public function buscaAgendamentoUsuario($cliente_cliente_ids = []) {
 
         $agendamentos_basicos = $this->find('all',[
-            'fields' => ['*'],
+            'fields' => [     
+                'Cliente.id',
+                'Cliente.nome',
+                'Cliente.telefone',
+                'Cliente.wp', 
+                'Cliente.estado', 
+                'Cliente.logo',
+                'Cliente.endereco',
+                'Cliente.endereco_n',
+                'Cliente.bairro',
+                'Cliente.prazo_maximo_para_canelamento',
+                'Agendamento.*', 
+                'Localidade.loc_no',
+                'Localidade.ufe_sg',
+                'ClienteServico.nome',
+                'ClienteServico.descricao',
+                'ClienteServico.valor',
+            ],
             'conditions' => [
                 'Agendamento.horario >=' => date('Y-m-d 00:00:00'),
                 'Agendamento.cliente_cliente_id' => $cliente_cliente_ids,
@@ -162,6 +179,8 @@ class Agendamento extends AppModel {
             ],
             'link' => ['Cliente' => ['Localidade'], 'ClienteServico']
         ]);
+
+        //debug($agendamentos_basicos);
 
         $fixo_semanal = $this->buscaAgendamentoUsuarioFixoSemanal($cliente_cliente_ids);
         if ( count($fixo_semanal) > 0 ) {
@@ -177,13 +196,35 @@ class Agendamento extends AppModel {
             $fixo_mensal = $this->montaArrayHorariosFixoMensal($fixo_mensal, $limitDate);
         }
 
-        return array_merge($agendamentos_basicos, $fixo_semanal, $fixo_mensal);
+        $agendamentos_de_convites = $this->buscaAgendamentoDeConvite($cliente_cliente_ids);
+        if ( count($agendamentos_de_convites) > 0 ) {
+            $agendamentos_de_convites = $this->montaArrayHorariosConvite($agendamentos_de_convites);
+        }
+
+        return array_merge($agendamentos_basicos, $fixo_semanal, $fixo_mensal, $agendamentos_de_convites);
     }
 
     public function buscaAgendamentoUsuarioFixoSemanal($cliente_cliente_ids = []) {
 
         return $this->find('all',[
-            'fields' => ['*'],
+            'fields' => [
+                'Cliente.id',
+                'Cliente.nome',
+                'Cliente.telefone',
+                'Cliente.wp', 
+                'Cliente.estado', 
+                'Cliente.logo',
+                'Cliente.endereco',
+                'Cliente.endereco_n',
+                'Cliente.bairro',
+                'Cliente.prazo_maximo_para_canelamento',
+                'Agendamento.*', 
+                'Localidade.loc_no',
+                'Localidade.ufe_sg',
+                'ClienteServico.nome',
+                'ClienteServico.descricao',
+                'ClienteServico.valor',
+            ],
             'conditions' => [
                 'Agendamento.cliente_cliente_id' => $cliente_cliente_ids,
                 'Agendamento.cancelado' => "N",
@@ -202,7 +243,24 @@ class Agendamento extends AppModel {
     public function buscaAgendamentoUsuarioFixoMensal($cliente_cliente_ids = []) {
 
         return $this->find('all',[
-            'fields' => ['*'],
+            'fields' => [ 
+                'Cliente.id',
+                'Cliente.nome',
+                'Cliente.telefone',
+                'Cliente.wp', 
+                'Cliente.estado', 
+                'Cliente.logo',
+                'Cliente.endereco',
+                'Cliente.endereco_n',
+                'Cliente.bairro',
+                'Cliente.prazo_maximo_para_canelamento',
+                'Agendamento.*', 
+                'Localidade.loc_no',
+                'Localidade.ufe_sg',
+                'ClienteServico.nome',
+                'ClienteServico.descricao',
+                'ClienteServico.valor',
+            ],
             'conditions' => [
                 'Agendamento.cliente_cliente_id' => $cliente_cliente_ids,
                 'Agendamento.cancelado' => "N",
@@ -214,6 +272,46 @@ class Agendamento extends AppModel {
                 'Agendamento.horario'
             ],
             'link' => ['Cliente' => ['Localidade'], 'ClienteServico']
+        ]);
+
+    }
+
+    public function buscaAgendamentoDeConvite($cliente_cliente_ids = []) {
+        
+
+        return $this->find('all',[
+            'fields' => [
+                'Cliente.id',
+                'Cliente.nome',
+                'Cliente.telefone',
+                'Cliente.wp', 
+                'Cliente.estado', 
+                'Cliente.logo', 
+                'Cliente.endereco',
+                'Cliente.endereco_n',
+                'Cliente.bairro',
+                'Cliente.prazo_maximo_para_canelamento',
+                'Agendamento.*', 
+                'AgendamentoConvite.*', 
+                'Localidade.loc_no',
+                'Localidade.ufe_sg',
+                'ClienteServico.nome',
+                'ClienteServico.descricao',
+                'ClienteServico.valor',
+                'ClienteCliente.nome',
+                'Usuario.img'
+            ],
+            'conditions' => [
+                'AgendamentoConvite.horario >=' => date('Y-m-d 00:00:00'),
+                'AgendamentoConvite.confirmado_usuario' => "Y",
+                'AgendamentoConvite.confirmado_convidado' => "Y",
+                'AgendamentoConvite.cliente_cliente_id' => $cliente_cliente_ids,
+                'AgendamentoConvite.horario_cancelado' => "N",
+            ],
+            'order' => [
+                'AgendamentoConvite.horario'
+            ],
+            'link' => ['ClienteCliente' => ['Usuario'], 'Cliente' => ['Localidade'], 'ClienteServico', 'AgendamentoConvite']
         ]);
 
     }
@@ -417,6 +515,23 @@ class Agendamento extends AppModel {
                 //$age['Agendamento']['horario'] = date('Y-m-d', $i).' '.$hora;
             }
             
+
+        }
+
+        return $dados_retornar;
+    }
+
+    public function montaArrayHorariosConvite($agendamentos = []) {
+        
+        if ( count($agendamentos) == 0 ) {
+            return [];
+        }
+
+        $dados_retornar = [];
+        foreach( $agendamentos as $key => $age ) {
+            $age['Agendamento']['horario'] = $age['AgendamentoConvite']['horario'];
+            //unset($age['AgendamentoConvite']);
+            $dados_retornar[] = $age;
 
         }
 

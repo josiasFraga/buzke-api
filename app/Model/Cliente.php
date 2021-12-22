@@ -23,6 +23,9 @@ class Cliente extends AppModel {
 		'ClienteServico' => array(
 			'foreignKey' => 'cliente_id'
 		),
+		'Torneio' => array(
+			'foreignKey' => 'cliente_id'
+		),
     );
 
     public $hasOne = array(
