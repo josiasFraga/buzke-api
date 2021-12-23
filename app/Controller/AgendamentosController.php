@@ -155,6 +155,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('ClienteHorarioAtendimentoExcessao');
         $this->loadModel('AgendamentoFixoCancelado');
         $this->loadModel('ClienteSubcategoria');
+        $this->loadModel('AgendamentoConvite');
         $agendamentos = $this->Agendamento->buscaAgendamentoUsuario($meus_ids_de_cliente);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
@@ -185,6 +186,8 @@ class AgendamentosController extends AppController {
                 else if ( $agendamento['Agendamento']['dia_semana'] != '' || $agendamento['Agendamento']['dia_mes'] != '' ) {
                     $agendamentos[$key]['Agendamento']['tipo'] = 'fixo';
                 }
+
+                $agendamentos[$key]['Agendamento']['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($agendamento['Agendamento']['id'], $this->images_path.'/usuarios/', $agendamento['Agendamento']['horario']);
 
                 if ($cancelable === null) {
                     $cancelable_return = $this->checkIsCancelable($agendamento['Agendamento']['horario'], $agendamento['Cliente']['prazo_maximo_para_canelamento'],$agendamentos[$key]['Agendamento']['tipo']);

@@ -629,7 +629,7 @@ class ToProJogoController extends AppController {
             $dados[$key]['ClienteServico']['valor_br'] = number_format($tpj['ClienteServico']['valor'], 2, ',', '.');
             $dados[$key]['AgendamentoConvite']['_data_desc'] = date('Y-m-d') == date('Y-m-d',strtotime($tpj['AgendamentoConvite']['horario'])) ? 'Hoje' : date('d/m/Y',strtotime($tpj['AgendamentoConvite']['horario']));
             $dados[$key]['AgendamentoConvite']['_hora_desc'] = date('H:i',strtotime($tpj['AgendamentoConvite']['horario']));
-            $dados[$key]['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($dados[$key]['AgendamentoConvite']['agendamento_id'], $this->images_path.'/clientes_clientes/');
+            $dados[$key]['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($dados[$key]['AgendamentoConvite']['agendamento_id'], $this->images_path.'/usuarios/', $tpj['AgendamentoConvite']['horario']);
             if ( $usuario_dono_horario ) {
                 $dados[$key]['AgendamentoConvite']['_tipo'] = [
                     'id' => 1,

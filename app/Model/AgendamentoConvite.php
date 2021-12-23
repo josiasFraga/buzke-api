@@ -13,7 +13,7 @@ class AgendamentoConvite extends AppModel {
         ),
     );
 
-    public function getConfirmedUsers($agendamento_id = null, $photo_path = '') {
+    public function getConfirmedUsers($agendamento_id = null, $photo_path = '',$agendamento_horario='') {
         if ( $agendamento_id == null ) {
             return [];
         }
@@ -28,6 +28,7 @@ class AgendamentoConvite extends AppModel {
                 'AgendamentoConvite.agendamento_id' => $agendamento_id,
                 'AgendamentoConvite.confirmado_usuario' => 'Y',
                 'AgendamentoConvite.confirmado_convidado' => 'Y',
+                'AgendamentoConvite.horario' => $agendamento_horario,
                 //'ClienteCliente.id' => null,
 
             ],
