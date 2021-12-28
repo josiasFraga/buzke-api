@@ -239,6 +239,25 @@ class AppController extends Controller {
         }
     }
 
+    public function enviaNotificacaoDeAcaoDoConvite($msg = '', $cliente_cliente_id = '', $agendamento_id = ''){
+
+        if ($msg == '' || $cliente_cliente_id == '' || $agendamento_id == '') {
+            return false;
+        }
+
+        $this->loadModel('ClienteCliente');
+        $dados_usuario = $this->ClienteCliente->finUserData($cliente_cliente_id, ['Usuario.id']);
+        if ( count($dados_usuario) == 0 ) {
+            return false;
+        }
+        
+        $this->loadModel('Token');
+        $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_usuario['id']);
+        if ( count($notifications_ids) == 0 ) {
+            return false;
+        }
+        $this->sendNotification( $notifications_ids, $agendamento_id, $msg, 'convite_acao', ["en"=> '$[notif_count] Notificações de Convites']  );
+    }
     
     public function dateHourEnBr( $data , $r_data, $r_hora ){
 		if ($r_data && $r_hora) {

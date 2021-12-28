@@ -718,7 +718,7 @@ class AgendamentosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O agendamento que você está tentando exlcuir, não existe!'))));
         }
 
-        if ( $dados_agendamento['Agendamento']['dia_semana'] != '' || $dados_agendamento['Agendamento']['dia_mes'] ) {
+        if ( $dados_agendamento['Agendamento']['dia_semana'] != '' || $dados_agendamento['Agendamento']['dia_mes'] != '' ) {
             if ( $dados->tipo == 1 ) {
                 $this->loadModel('AgendamentoFixoCancelado');
                 $dados_salvar = [
@@ -730,8 +730,10 @@ class AgendamentosController extends AppController {
 
                 if ( !$this->AgendamentoFixoCancelado->save($dados_salvar) ) {
                     return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cancelar o agendamento. Por favor, tente novamente mais tarde!'))));
-                } 
+                }
+                
 
+                $this->AvisaConvidados($dados_agendamento, $dados);
                 $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento);
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Agendamento cancelado com sucesso!'))));
 
@@ -740,6 +742,7 @@ class AgendamentosController extends AppController {
 
         $dados_salvar['Agendamento']['id'] = $dados_agendamento['Agendamento']['id'];
         $dados_salvar['Agendamento']['cancelado'] = 'Y';
+        $this->AvisaConvidados($dados_agendamento, $dados);
 
         if ( !$this->Agendamento->save($dados_salvar) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cancelar o agendamento. Por favor, tente mais tarde!'))));
@@ -748,6 +751,30 @@ class AgendamentosController extends AppController {
         $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento);
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Agendamento cancelado com sucesso!'))));
 
+    }
+
+    private function avisaConvidados($dados_agendamento, $dados) {
+        //busca os convites do agendamento
+        $this->loadModel('AgendamentoConvite');
+        $convites = $this->AgendamentoConvite->getNotRecusedUsers($dados_agendamento['Agendamento']['id'], $this->images_path.'/usuarios/', $dados->horario);
+
+        //se há convites, avisa os candidatos que o agendamento foi cancelado
+        if ( count($convites) > 0 ) {
+            foreach($convites as $key => $convite) {
+
+                $msg = 'Infelizmente, o agendamento que voce era convidado, foi cancelado! :(';
+
+                $dados_salvar = [
+                    'id' => $convite['AgendamentoConvite']['id'],
+                    'horario_cancelado' => 'Y',
+                ];
+    
+                $salvo = $this->AgendamentoConvite->save($dados_salvar);
+                if ( $salvo ) {
+                    $this->enviaNotificacaoDeAcaoDoConvite($msg, $convite['ClienteCliente']['id'], $dados_agendamento['Agendamento']['id']);
+                }
+            }
+        }
     }
 
     private function enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento) {

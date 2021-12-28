@@ -655,7 +655,7 @@ class ToProJogoController extends AppController {
                 if ( $tpj['AgendamentoConvite']['confirmado_usuario'] == 'R' ) {
                     $dados[$key]['AgendamentoConvite']['_status'] = [
                         'id' => 5,
-                        'desc' => 'Recusado pelo dono do horário'
+                        'desc' => 'O jogo já fechou :('
                     ];
                 }
                 else if ( $tpj['AgendamentoConvite']['confirmado_convidado'] == 'R' ) {
@@ -852,23 +852,94 @@ class ToProJogoController extends AppController {
     
     }
 
-    private function enviaNotificacaoDeAcaoDoConvite($msg = '', $cliente_cliente_id = '', $agendamento_id = ''){
+    public function fecharJogo () {
+        $this->layout = 'ajax';
+        //$dados = json_decode($this->request->data['dados']);
+        $dados = $this->request->data['dados'];
 
-        if ($msg == '' || $cliente_cliente_id == '' || $agendamento_id == '') {
-            return false;
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), true);
         }
 
-        $this->loadModel('ClienteCliente');
-        $dados_usuario = $this->ClienteCliente->finUserData($cliente_cliente_id, ['Usuario.id']);
-        if ( count($dados_usuario) == 0 ) {
-            return false;
+        $dados = (object)$dados;
+
+        //$this->log($dados,'debug');
+
+        if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
         }
-        
-        $this->loadModel('Token');
-        $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_usuario['id']);
-        if ( count($notifications_ids) == 0 ) {
-            return false;
+
+        if ( !isset($dados->agendamento_id) || $dados->agendamento_id == "" ) {
+            throw new BadRequestException('ID não informado!', 401);
         }
-        $this->sendNotification( $notifications_ids, $agendamento_id, $msg, 'convite_acao', ["en"=> '$[notif_count] Notificações de Convites']  );
+
+        if ( !isset($dados->horario) || $dados->horario == "" ) {
+            throw new BadRequestException('Horário não informado!', 401);
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Agendamento');
+
+        $conditions = [
+            'Agendamento.id' => $dados->agendamento_id,
+            'ClienteCliente.usuario_id' => $dados_usuario['Usuario']['id']
+        ];
+
+        $dados_agendamento = $this->Agendamento->find('first',[
+            'fields' => [
+                'Agendamento.id', 
+                'Agendamento.horario', 
+                'Agendamento.dia_semana', 
+                'Agendamento.dia_mes',  
+                'Agendamento.horario', 
+                'ClienteCliente.*',
+                'Cliente.id',
+                'Cliente.nome',
+                'Usuario.id', 
+                'Usuario.nome'
+            ],
+            'conditions' => $conditions,
+            'link' => [
+                'ClienteCliente' => ['Usuario'], 'Cliente'
+            ]
+        ]);
+       
+
+        if ( count($dados_agendamento) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O agendamento do jogo que voce está tentando exlcuir, não existe!'))));
+        }
+
+        $this->loadModel('AgendamentoConvite');
+        $convites_nao_confirmados = $this->AgendamentoConvite->getUnconfirmedUsers($dados->agendamento_id, $this->images_path.'/usuarios/', $dados->horario);
+
+        if ( count($convites_nao_confirmados) > 0 ) {
+            foreach($convites_nao_confirmados as $key => $convite) {
+
+                $msg = 'O usuário ['.$dados_usuario['Usuario']['nome'].'] informou que o jogo já fechou. :(';
+                $resposta = 'R';
+
+                $dados_salvar = [
+                    'id' => $convite['AgendamentoConvite']['id'],
+                    'confirmado_usuario' => 'R',
+                ];
+    
+                $salvo = $this->AgendamentoConvite->save($dados_salvar);
+                if ( $salvo ) {
+                    $this->enviaNotificacaoDeAcaoDoConvite($msg, $convite['ClienteCliente']['id'], $convite['AgendamentoConvite']['agendamento_id']);
+                    //return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Resposta ao convite cadastrada com sucesso!'))));
+                } else {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao cadastrar a resposta do convite!'))));
+                }
+            }
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Jogo fechado com sucesso!'))));
+
     }
 }
