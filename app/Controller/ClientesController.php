@@ -32,6 +32,16 @@ class ClientesController extends AppController {
             ]);
         }
 
+        if ( isset($dados['location']) && $dados['location'] != '' ) {
+            $this->loadModel('Localidade');
+            $dados_localidade = $this->Localidade->findByGoogleAddress($dados['location']);
+
+            $conditions = array_merge($conditions, [
+                'Cliente.cidade_id' => $dados_localidade['Localidade']['loc_nu_sequencial'],
+                'Cliente.estado' => $dados_localidade['Localidade']['ufe_sg'],
+            ]);
+        }
+
         $clientes = $this->Cliente->find('all',[
             'fields' => [
                 'Cliente.*',
