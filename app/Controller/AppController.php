@@ -223,6 +223,20 @@ class AppController extends Controller {
 
         $dados_salvar = [];
         foreach($clientes_clientes_ids as $key => $cli_cli_id) {
+
+            $v_convite = $this->AgendamentoConvite->find('first',[
+                'conditions' => [
+                    'AgendamentoConvite.cliente_cliente_id' => $cli_cli_id,
+                    'AgendamentoConvite.agendamento_id' => $dados_agendamento['id'],
+                    'AgendamentoConvite.horario' => $dados_agendamento['horario'],
+                ],
+                'link' => []
+            ]);
+
+            if ( count($v_convite) > 0 ) {
+                continue;
+            }
+
             $dados_salvar[] = [
                 'agendamento_id' => $dados_agendamento['id'],
                 'cliente_cliente_id' => $cli_cli_id,
@@ -230,11 +244,12 @@ class AppController extends Controller {
             ];
         }
 
+        if ( count($dados_salvar) == 0 )
+            return true; 
+
         $this->AgendamentoConvite->saveAll($dados_salvar);
 
         if( count($notifications_ids) > 0 ) {
-            $this->log($notifications_ids,'debug');
-            $this->log($dados_agendamento,'debug');
             $this->sendNotification($notifications_ids, $dados_agendamento['id'], "Convite de Partida Recebido", 'Você foi convidado para uma partida, clique na notificação para ver os detalhes.', "game_invite", 'novo_convite', ["en"=> '$[notif_count] Novos Convites Para Jogos']  );
         }
     }

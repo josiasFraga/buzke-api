@@ -585,28 +585,12 @@ class AgendamentosController extends AppController {
             $dados_salvar = array_merge($dados_salvar, ['endereco' => $dados->endereco]);
         }
 
-        $clientes_clientes_ids_convidados = [];
         if ( is_array($dados->convites_tpj)) {
             $dados->convites_tpj = (object)$dados->convites_tpj;
-        }
-        if (isset($dados->convites_tpj) && count(get_object_vars($dados->convites_tpj)) > 0) {
-            foreach($dados->convites_tpj as $key => $convite){
-                if($convite) {
-                    list($discard, $id_convidado) = explode('_',$key);
-                    $clientes_clientes_ids_convidados[] = $id_convidado;
-                }
-            }
         }
 
         if ( is_array($dados->convites_grl)) {
             $dados->convites_grl = (object)$dados->convites_grl;
-        }
-
-        if (isset($dados->convites_grl) && count(get_object_vars($dados->convites_grl)) > 0) {
-            $usuarios_perfil_convite = $this->Usuario->getClientDataByPadelistProfile($dados->convites_grl);
-            $usuarios_perfil_convite = $this->UsuarioLocalizacao->filterByLastLocation($usuarios_perfil_convite, $dados_cliente['Localidade']);
-            $clientes_clientes_ids_convidados = array_merge($clientes_clientes_ids_convidados, $usuarios_perfil_convite);
-            $clientes_clientes_ids_convidados = array_values($clientes_clientes_ids_convidados);
         }
 
         $this->Agendamento->create();
@@ -617,7 +601,7 @@ class AgendamentosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cadastrar seu agendamento!'))));
         }
 
-        //busca os ids do onesignal do usuário a ser notificado do cancelamento do horário
+        //busca os ids do onesignal do usuário a ser notificado do cadastro do horário
         $this->loadModel('Token');
         if ( $cadastrado_por == 'cliente' ) {
             $this->loadModel('Cliente');
@@ -634,11 +618,141 @@ class AgendamentosController extends AppController {
             $this->sendNotification( $notifications_ids, $dados_agendamento_salvo['Agendamento']['id'], "Novo Agendamento :)", "Você tem um novo agendamento de ".$cadastrado_por." às ".$hora_str_agendamento." do dia ".$data_str_agendamento, "agendamento", 'novo_agendamento', ["en"=> '$[notif_count] Novos Agendamentos'] );
         }
 
+        $this->enviaConvites($dados, $dados_agendamento_salvo, $dados_cliente['Localidade']);
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tudo certo! Agendamento cadastrado com sucesso!'))));
+    }
+
+    public function convitesAdicionais(){
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), false);
+        }elseif ( gettype($dados) == 'array' ) {
+            $dados = json_decode(json_encode($dados), false);
+        }
+
+
+        if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados->cliente_id) || $dados->cliente_id == "" || !is_numeric($dados->cliente_id) ) {
+            throw new BadRequestException('Dados da empresa não informada!', 401);
+        }
+
+        if ( !isset($dados->horaSelecionada) || $dados->horaSelecionada == "" ) {
+            throw new BadRequestException('Hora não informada!', 401);
+        }
+
+        list($data_selecionada, $horario_selecionado) = explode(' ',$dados->horaSelecionada->horario);
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+        
+        $this->loadModel('ClienteCliente');
+        $this->loadModel('Agendamento');
+        $this->loadModel('ClienteSubcategoria');
+        $this->loadModel('Cliente');
+
+        //busca os dados da empresa
+        $dados_cliente = $this->Cliente->find('first',[
+            'fields' => ['Cliente.id', 'Localidade.loc_no', 'Localidade.ufe_sg'],
+            'conditions' => [
+                'Cliente.id' => $dados->cliente_id,
+                'Cliente.ativo' => 'Y'
+            ],
+            'link' => ['Localidade']
+        ]);
+
+        if (count($dados_cliente) == 0) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Empresa não encontrada!'))));
+        }
+
+        $agendamento_dia_semana = date('w',strtotime($data_selecionada.' '.$horario_selecionado));
+        $agendamento_dia_mes = (int)date('d',strtotime($data_selecionada.' '.$horario_selecionado));
+
+        //verifica se a empresa é uma quadra, se não for, nào sào permitidos convites
+        $isCourt = $this->ClienteSubcategoria->checkIsCourt($dados->cliente_id);
+
+        if (!$isCourt) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O agendamento não pertence a uma quadra!'))));
+        }
+        
+        //busca os dados do usuário do agendamento como cliente
+        $dados_usuario_como_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_usuario['Usuario']['id'], true);
+        $dados_agendamento = $this->Agendamento->find('first',[
+            'conditions' => [
+                'Agendamento.cliente_id' => $dados->cliente_id,
+                'Agendamento.cliente_cliente_id' => $dados_usuario_como_cliente,
+                'TIME(Agendamento.horario)' => $horario_selecionado,
+                'Agendamento.cancelado' => 'N',
+                'or' => [
+                    [
+                        'DATE(Agendamento.horario)' => $data_selecionada,
+                        'Agendamento.dia_semana' => null,
+                        'Agendamento.dia_mes' => null,
+                    ],[
+                        'Agendamento.dia_semana' => $agendamento_dia_semana,
+                    ],[
+                        'Agendamento.dia_mes' => $agendamento_dia_mes,
+                    ]
+                ]
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_agendamento) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Agendamento não encontrado!'))));
+        }
+
+        if ( isset($dados->convites_tpj) && is_array($dados->convites_tpj)) {
+            $dados->convites_tpj = (object)$dados->convites_tpj;
+        }
+
+        if ( isset($dados->convites_grl) && is_array($dados->convites_grl)) {
+            $dados->convites_grl = (object)$dados->convites_grl;
+        }
+    
+
+        $this->enviaConvites($dados, $dados_agendamento, $dados_cliente['Localidade']);
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tudo certo! Convites enviados com sucesso!'))));
+    }
+
+    private function enviaConvites ($dados, $dados_agendamento_salvo, $cliente_localizacao) {
+
+        $this->loadModel('Usuario');
+        $this->loadModel('UsuarioLocalizacao');
+    
+        $clientes_clientes_ids_convidados = [];
+
+        //convites do to pro jogo
+        if (isset($dados->convites_tpj) && count(get_object_vars($dados->convites_tpj)) > 0) {
+            foreach($dados->convites_tpj as $key => $convite){
+                if($convite) {
+                    list($discard, $id_convidado) = explode('_',$key);
+                    $clientes_clientes_ids_convidados[] = $id_convidado;
+                }
+            }
+        }
+
+        //convites geral
+        if (isset($dados->convites_grl) && count(get_object_vars($dados->convites_grl)) > 0) {
+            $usuarios_perfil_convite = $this->Usuario->getClientDataByPadelistProfile($dados->convites_grl);
+            $usuarios_perfil_convite = $this->UsuarioLocalizacao->filterByLastLocation($usuarios_perfil_convite, $cliente_localizacao);
+            $clientes_clientes_ids_convidados = array_merge($clientes_clientes_ids_convidados, $usuarios_perfil_convite);
+            $clientes_clientes_ids_convidados = array_values($clientes_clientes_ids_convidados);
+        }
+
         if ( count($clientes_clientes_ids_convidados) > 0 ) {
             $this->saveInviteAndSendNotification($clientes_clientes_ids_convidados, $dados_agendamento_salvo['Agendamento']);
         }
-        
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tudo certo! Agendamento cadastrado com sucesso!'))));
+
     }
 
     public function excluir(){
