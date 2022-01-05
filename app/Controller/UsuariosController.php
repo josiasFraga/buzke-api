@@ -52,7 +52,6 @@ class UsuariosController extends AppController {
 
         $this->log($dados,'debug');
 
-
         $email = $dados->email;
         $senha = $dados->password;
 
@@ -72,7 +71,6 @@ class UsuariosController extends AppController {
                 'Cliente.*'
             )
         ));
-
 
         if (count($usuario) == 0) {
             throw new BadRequestException('Login e/ou Senha não conferem.', 401);
@@ -101,7 +99,6 @@ class UsuariosController extends AppController {
                 'fields' => ['*'],
                 'conditions' => [
                     'ClienteSubcategoria.cliente_id' => $usuario['Usuario']['cliente_id'],
-                    'ClienteSubcategoria.cliente_id' => $usuario['Usuario']['cliente_id']
                 ],
                 'link' => ['Subcategoria']
             ]);

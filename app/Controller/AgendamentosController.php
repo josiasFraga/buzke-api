@@ -322,6 +322,7 @@ class AgendamentosController extends AppController {
                     'motive' => $agend['Agendamento']['motive'], 
                     'horario' => $agend['Agendamento']['horario'], 
                     'endereco' => $agend['Agendamento']['endereco'], 
+                    'tipo_str' => $agend['Agendamento']['dia_semana'] != null ||  $agend['Agendamento']['dia_mes'] != null ? 'Fixo' : 'Padrão',
                 ];
 
                 if ( $data != $last_data ) {

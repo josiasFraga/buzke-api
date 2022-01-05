@@ -1208,4 +1208,46 @@ class ClientesController extends AppController {
         return "";
 
     }
+
+    public function setShowToUsers() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+        } else {
+            $dados = json_decode($dados);
+        }
+
+        if ((!isset($dados->token) || $dados->token == "") ||  (!isset($dados->email) || $dados->email == "")) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+    
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_usuario['Usuario']['cliente_id'] == '' || $dados_usuario['Usuario']['cliente_id'] == null || $dados_usuario['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Sem permissão de acesso!', 401);
+        }
+
+        $value = $dados->value;
+
+        $dados_salvar = [
+            'id' => $dados_usuario['Usuario']['cliente_id'],
+            'mostrar' => $value,
+        ];
+        
+        $this->loadModel('Cliente');
+        $atualiza_dados = $this->Cliente->save($dados_salvar);
+
+        if ( !$atualiza_dados ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao atualizar seus dados. Por favor, tente novamente mais tarde!'))));
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Seus dados foram atualizados com sucesso!'))));
+
+    }
 }
