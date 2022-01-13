@@ -5,6 +5,9 @@ class TorneioCategoria extends AppModel {
 	public $belongsTo = array(
 		'Torneio' => array(
 			'foreignKey' => 'torneio_id'
+        ),
+		'PadelCategoria' => array(
+			'foreignKey' => 'categoria_id'
 		)
 	);
 
