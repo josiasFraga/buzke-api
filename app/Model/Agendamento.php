@@ -25,6 +25,9 @@ class Agendamento extends AppModel {
 		'AgendamentoConvite' => array(
 			'foreignKey' => 'agendamento_id'
         ),
+		'AgendamentoAviso' => array(
+			'foreignKey' => 'agendamento_id'
+        ),
     );
 
     public function verificaHorarios($horarios = [], $cliente_id = null, $data = null) {
@@ -536,6 +539,19 @@ class Agendamento extends AppModel {
         }
 
         return $dados_retornar;
+    }
+
+    public function cancelSheduling($sheduling_id = null){
+
+        if ( $sheduling_id == null )
+            return false;
+
+        $dados_salvar = [
+            'id' => $sheduling_id,
+            'cancelado' => 'Y'
+        ];
+
+        return $this->save($dados_salvar);
     }
 
 }

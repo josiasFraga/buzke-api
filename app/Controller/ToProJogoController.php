@@ -504,11 +504,11 @@ class ToProJogoController extends AppController {
 
         $this->loadModel('Cliente');
         $dados_cliente = $this->Cliente->find('first',[
-            'fields' => ['Cliente.id'],
+            'fields' => ['Cliente.id', 'Localidade.loc_no', 'Localidade.ufe_sg'],
             'conditions' => [
                 'Cliente.id' => $dados['cliente_id']
             ],
-            'link' => []
+            'link' => ['Localidade']
         ]);
 
         if ( count($dados_cliente) == 0 ) {
@@ -522,7 +522,7 @@ class ToProJogoController extends AppController {
         $day = json_decode($dados['day'], true);
 
         $this->loadModel('ToProJogo');
-        $usuarios = $this->ToProJogo->findUsers($hora_selecionada['horario'], $day['dateString'], $dados_token['Usuario']['id'], $subcategorias);
+        $usuarios = $this->ToProJogo->findUsers($hora_selecionada['horario'], $day['dateString'], $dados_token['Usuario']['id'], $subcategorias, $dados_cliente);
 
         if ( count($usuarios) > 0 ) {
             $this->loadModel('UsuarioPadelCategoria');

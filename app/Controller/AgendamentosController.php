@@ -815,7 +815,6 @@ class AgendamentosController extends AppController {
                 'Agendamento.horario', 
                 'Agendamento.dia_semana', 
                 'Agendamento.dia_mes',  
-                'Agendamento.horario', 
                 'ClienteCliente.*',
                 'Cliente.id',
                 'Cliente.nome',
@@ -848,7 +847,7 @@ class AgendamentosController extends AppController {
                 }
                 
 
-                $this->AvisaConvidados($dados_agendamento, $dados);
+                $this->avisaConvidadosCancelamento($dados_agendamento, $dados);
                 $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento);
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Agendamento cancelado com sucesso!'))));
 
@@ -857,57 +856,14 @@ class AgendamentosController extends AppController {
 
         $dados_salvar['Agendamento']['id'] = $dados_agendamento['Agendamento']['id'];
         $dados_salvar['Agendamento']['cancelado'] = 'Y';
-        $this->AvisaConvidados($dados_agendamento, $dados);
 
         if ( !$this->Agendamento->save($dados_salvar) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cancelar o agendamento. Por favor, tente mais tarde!'))));
         }
         
+        $this->avisaConvidadosCancelamento($dados_agendamento, $dados);
         $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento);
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Agendamento cancelado com sucesso!'))));
 
-    }
-
-    private function avisaConvidados($dados_agendamento, $dados) {
-        //busca os convites do agendamento
-        $this->loadModel('AgendamentoConvite');
-        $convites = $this->AgendamentoConvite->getNotRecusedUsers($dados_agendamento['Agendamento']['id'], $this->images_path.'/usuarios/', $dados->horario);
-
-        //se há convites, avisa os candidatos que o agendamento foi cancelado
-        if ( count($convites) > 0 ) {
-            foreach($convites as $key => $convite) {
-
-                $msg = 'Infelizmente, o agendamento que voce era convidado, foi cancelado! :(';
-
-                $dados_salvar = [
-                    'id' => $convite['AgendamentoConvite']['id'],
-                    'horario_cancelado' => 'Y',
-                ];
-    
-                $salvo = $this->AgendamentoConvite->save($dados_salvar);
-                if ( $salvo ) {
-                    $this->enviaNotificacaoDeAcaoDoConvite($msg, $convite['ClienteCliente']['id'], $dados_agendamento['Agendamento']['id']);
-                }
-            }
-        }
-    }
-
-    private function enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento) {
-
-        //busca os ids do onesignal do usuário a ser notificado do cancelamento do horário
-        $this->loadModel('Token');
-        if ( $cancelado_por == 'cliente' ) {    
-            $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_agendamento['Usuario']['id']);
-            $nome_usuario_cancelou = $dados_agendamento['Cliente']['nome'];
-        } else {
-            $notifications_ids = $this->Token->getIdsNotificationsEmpresa($dados_agendamento['Cliente']['id']);
-            $nome_usuario_cancelou = $dados_agendamento['Usuario']['nome'];
-        }
-
-        if ( count($notifications_ids) > 0 ) {
-            $data_str_agendamento = date('d/m',strtotime($dados_agendamento['Agendamento']['horario']));
-            $hora_str_agendamento = date('H:i',strtotime($dados_agendamento['Agendamento']['horario']));
-            $this->sendNotification( $notifications_ids, $dados_agendamento['Agendamento']['id'], "Agendamento Cancelado :(", $nome_usuario_cancelou." cancelou o agendamento das ".$hora_str_agendamento." do dia ".$data_str_agendamento, "agendamento_cancelado", 'agendamento_cancelado', ["en"=> '$[notif_count] Agendamentos Cancelados']  );
-        }
     }
 }

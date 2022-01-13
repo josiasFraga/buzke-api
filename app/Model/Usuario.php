@@ -132,4 +132,30 @@ class Usuario extends AppModel {
         return $jogadores;
 	}
 
+    
+
+    public function getShedulingConfirmedUsers($agendamento_id = null,$agendamento_horario='') {
+        if ( $agendamento_id == null || $agendamento_horario == '' ) {
+            return [];
+        }
+        return $this->find('list',[
+            'fields' => [
+                'Usuario.id',
+                'Usuario.id',
+            ],
+            'conditions' => [
+                'AgendamentoConvite.agendamento_id' => $agendamento_id,
+                'AgendamentoConvite.confirmado_usuario' => 'Y',
+                'AgendamentoConvite.confirmado_convidado' => 'Y',
+                'AgendamentoConvite.horario' => $agendamento_horario,
+                'AgendamentoConvite.horario_cancelado' => 'N'
+                //'ClienteCliente.id' => null,
+
+            ],
+            'link' => ['ClienteCliente' => ['AgendamentoConvite']],
+            'group' => ['Usuario.id']
+        ]);
+
+    }
+
 }

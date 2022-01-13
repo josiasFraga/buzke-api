@@ -46,6 +46,14 @@ class AppModel extends Model {
 		return $data;
 	}
 
+	public function datetimeBrEn( $data ){
+		list( $data, $hora ) = explode(' ', $data);
+		$data = explode("/",$data);
+		$data = $data[2]."-".$data[1]."-".$data[0];
+		$data = date("Y-m-d", strtotime($data));
+		return $data." ".$hora;
+	}
+
 	public function dateEnBr( $data ){
 		$data = date("d/m/Y", strtotime($data));
 		return $data;

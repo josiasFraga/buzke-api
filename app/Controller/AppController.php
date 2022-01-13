@@ -56,6 +56,14 @@ class AppController extends Controller {
         return number_format($val, 2, ',', '.');
     }
 
+	public function datetimeBrEn( $data ){
+		list( $data, $hora ) = explode(' ', $data);
+		$data = explode("/",$data);
+		$data = $data[2]."-".$data[1]."-".$data[0];
+		$data = date("Y-m-d", strtotime($data));
+		return $data." ".$hora;
+	}
+
 	public function dateBrEn( $data ){
 		$data = explode("/",$data);
 		$data = $data[2]."-".$data[1]."-".$data[0];
@@ -66,6 +74,11 @@ class AppController extends Controller {
 	public function dateEnBr( $data ){
 		return date("d/m/Y", strtotime($data));
 	}
+    
+    function timeToMinutes($time){
+        $time = explode(':', $time);
+        return ($time[0]*60) + ($time[1]) + ($time[2]/60);
+    }
 
     public function verificaValidadeToken($usuario_token, $usuario_email = null){
         $this->loadModel('Token');
@@ -254,6 +267,19 @@ class AppController extends Controller {
         }
     }
 
+    public function sendShedulingAlertNotification($usuarios_ids, $dados_agendamento, $agendamento_horario) {
+        
+        $this->loadModel('Token');
+
+        $usuarios_ids = array_values($usuarios_ids);
+        $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuarios_ids);
+
+        if( count($notifications_ids) > 0 ) {
+            $mensagem = 'Só passamos para te avisar do seu agendamento em '.date('d/m/Y',strtotime($agendamento_horario)).' às '.date('H:i',strtotime($agendamento_horario)).'. na empresa '.$dados_agendamento['Cliente']['nome'].'.';
+            $this->sendNotification($notifications_ids, $dados_agendamento['Agendamento']['id'], "Aviso de horário marcado", $mensagem, "sheduling_alert", '', ["en"=> '$[notif_count] Avisos de Horários Marcados']  );
+        }
+    }
+
     public function enviaNotificacaoDeAcaoDoConvite($msg = '', $cliente_cliente_id = '', $agendamento_id = ''){
 
         if ($msg == '' || $cliente_cliente_id == '' || $agendamento_id == '') {
@@ -272,6 +298,51 @@ class AppController extends Controller {
             return false;
         }
         $this->sendNotification( $notifications_ids, $agendamento_id, $msg, 'convite_acao', ["en"=> '$[notif_count] Notificações de Convites']  );
+    }
+
+    public function enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento) {
+
+        //busca os ids do onesignal do usuário a ser notificado do cancelamento do horário
+        $this->loadModel('Token');
+        if ( $cancelado_por == 'cliente' ) {    
+            $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_agendamento['Usuario']['id']);
+            $nome_usuario_cancelou = $dados_agendamento['Cliente']['nome'];
+        } else {
+            $notifications_ids = $this->Token->getIdsNotificationsEmpresa($dados_agendamento['Cliente']['id']);
+            $nome_usuario_cancelou = $dados_agendamento['Usuario']['nome'];
+        }
+
+        if ( count($notifications_ids) > 0 ) {
+            $data_str_agendamento = date('d/m',strtotime($dados_agendamento['Agendamento']['horario']));
+            $hora_str_agendamento = date('H:i',strtotime($dados_agendamento['Agendamento']['horario']));
+            $this->sendNotification( $notifications_ids, $dados_agendamento['Agendamento']['id'], "Agendamento Cancelado :(", $nome_usuario_cancelou." cancelou o agendamento das ".$hora_str_agendamento." do dia ".$data_str_agendamento, "agendamento_cancelado", 'agendamento_cancelado', ["en"=> '$[notif_count] Agendamentos Cancelados']  );
+        }
+    }
+
+    public function avisaConvidadosCancelamento($dados_agendamento, $dados) {
+        //busca os convites do agendamento
+        $this->loadModel('AgendamentoConvite');
+        $convites = $this->AgendamentoConvite->getNotRecusedUsers($dados_agendamento['Agendamento']['id'], $this->images_path.'/usuarios/', $dados->horario);
+
+        //se há convites, avisa os candidatos que o agendamento foi cancelado
+        if ( count($convites) > 0 ) {
+            foreach($convites as $key => $convite) {
+
+                $msg = 'Infelizmente, o agendamento que voce era convidado, foi cancelado! :(';
+
+                $dados_salvar = [
+                    'id' => $convite['AgendamentoConvite']['id'],
+                    'horario_cancelado' => 'Y',
+                ];
+    
+                $salvo = $this->AgendamentoConvite->save($dados_salvar);
+                if ( $salvo ) {
+                    $this->enviaNotificacaoDeAcaoDoConvite($msg, $convite['ClienteCliente']['id'], $dados_agendamento['Agendamento']['id']);
+                }
+            }
+        }
+
+        return true;
     }
     
     public function dateHourEnBr( $data , $r_data, $r_hora ){

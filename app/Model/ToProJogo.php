@@ -29,44 +29,52 @@ class ToProJogo extends AppModel {
         return true;
     }
 
-	public function findUsers($horario = null, $data = null, $usuario_id, $subcategorias) {
+	public function findUsers($horario = null, $data = null, $usuario_id, $subcategorias, $dados_empresa) {
 		if ( $horario == null || $data == null) {
 			return [];
 		}
 
 		$dia_semana = date('w',strtotime($data));
 		$dia_mes = (int)date('d',strtotime($data));
+		
+		$conditions = [
+			'ToProJogoEsporte.subcategoria_id' => array_values($subcategorias),
+			["UsuarioLocalizacao.description like" => "%".$dados_empresa['Localidade']['loc_no']."%"],
+			["UsuarioLocalizacao.description like" => "%".$dados_empresa['Localidade']['ufe_sg'].",%"],
+			'not' => ['Usuario.id' => $usuario_id],
+			'or' => [
+				[
+					'ToProJogo.data_inicio <=' => $data,
+					'ToProJogo.data_fim >=' => $data,
+					'ToProJogo.hora_inicio <=' => $horario,
+					'ToProJogo.hora_fim >=' => $horario,
+				],
+				
+				[
+					'ToProJogo.dia_semana' => $dia_semana,
+					'ToProJogo.hora_inicio <=' => $horario,
+					'ToProJogo.hora_fim >=' => $horario,
+				],
+				[
+					'ToProJogo.dia_mes' => $dia_mes,
+					'ToProJogo.hora_inicio <=' => $horario,
+					'ToProJogo.hora_fim >=' => $horario,
+				],
 
-		return $this->find('all',[
+			]
+		];
+
+		//$this->log($conditions, 'debug');
+
+		$dados =  $this->find('all',[
 			'fields' => ['*'],
-			'conditions' => [
-				'ToProJogoEsporte.subcategoria_id' => array_values($subcategorias),
-				'not' => ['Usuario.id' => $usuario_id],
-				'or' => [
-					[
-						'ToProJogo.data_inicio <=' => $data,
-						'ToProJogo.data_fim >=' => $data,
-						'ToProJogo.hora_inicio <=' => $horario,
-						'ToProJogo.hora_fim >=' => $horario,
-					],
-					
-					[
-						'ToProJogo.dia_semana' => $dia_semana,
-						'ToProJogo.hora_inicio <=' => $horario,
-						'ToProJogo.hora_fim >=' => $horario,
-					],
-					[
-						'ToProJogo.dia_mes' => $dia_mes,
-						'ToProJogo.hora_inicio <=' => $horario,
-						'ToProJogo.hora_fim >=' => $horario,
-					],
-
-				]
-			],
+			'conditions' => $conditions,
 			'group' => ['ToProJogo.cliente_cliente_id'],
-			'link' => ['ToProJogoEsporte', 'ClienteCliente' => ['Usuario' => ['UsuarioDadosPadel']]],
+			'link' => ['ToProJogoEsporte', 'UsuarioLocalizacao', 'ClienteCliente' => ['Usuario' => ['UsuarioDadosPadel']]],
 			'order' => ['ClienteCliente.nome'],
 		]);
+		$this->log($dados, 'debug');
+		return $dados;
 
 	}
 }

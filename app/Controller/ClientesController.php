@@ -1015,7 +1015,8 @@ class ClientesController extends AppController {
             $dados['Cliente']['isPaddleCourt'] = $this->ClienteSubcategoria->checkIsPaddleCourt($dados['Cliente']['id']);
             if ( $dados['Cliente']['prazo_maximo_para_canelamento'] != null && $dados['Cliente']['prazo_maximo_para_canelamento'] != '' )
                 $dados['Cliente']['prazo_maximo_para_canelamento'] = substr($dados['Cliente']['prazo_maximo_para_canelamento'], 0, 5);
-
+            
+            $dados['Cliente']['tempo_aviso_usuarios'] = substr($dados['Cliente']['tempo_aviso_usuarios'], 0, 5);
                 
             $dados['Cliente']['telefone_possui_wp'] = false;
             if ($dados['Cliente']['telefone'] == $dados['Cliente']['wp'])
@@ -1083,6 +1084,10 @@ class ClientesController extends AppController {
 
         if (!isset($dados->localidade ) || $dados->localidade  == '') {
             throw new BadRequestException('Localidade não informada', 400);
+        }
+
+        if (!isset($dados->avisar_com ) || $dados->avisar_com  == '' || $dados->avisar_com  == '00:00' ) {
+            throw new BadRequestException('Tempo para aviso dos usuários não informado', 400);
         }
         
         $token = $dados->token;
@@ -1168,7 +1173,8 @@ class ClientesController extends AppController {
                 'tipo' => $dados->tipo_cadastro,
                 'cidade_id' => $dadosLocalidade['Localidade']['loc_nu_sequencial'],
                 'estado' => $dados->uf,
-                'prazo_maximo_para_canelamento' => $dados->prazo_maximo_para_canelamento != "00:00" && $dados->prazo_maximo_para_canelamento != "" ? $dados->prazo_maximo_para_canelamento : null
+                'prazo_maximo_para_canelamento' => $dados->prazo_maximo_para_canelamento != "00:00" && $dados->prazo_maximo_para_canelamento != "" ? $dados->prazo_maximo_para_canelamento : null,
+                'tempo_aviso_usuarios' => $dados->avisar_com,
             ],
             'ClienteConfiguracao' => [
                 //'id' => $dados->configuracoes_id,

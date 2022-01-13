@@ -54,7 +54,6 @@ class AgendamentoFixoCancelado extends AppModel {
 
     }
 
-
     public function nAgendamentosFixosCanceladosCliente($cliente_id = null, $data = null, $hora = null){
         if ( $cliente_id == null ) {
             return 0;
@@ -74,6 +73,34 @@ class AgendamentoFixoCancelado extends AppModel {
             'link' => ['Agendamento']
         ]);
 
+    }
+
+    public function cancelSheduling($sheduling_data = [], $cliente_cliente_id = null, $cancelado_por = 'cliente'){
+
+        if ( count($sheduling_data) == 0 || $cliente_cliente_id == null )
+            return false;
+
+        $check_cancel = $this->find('first',[
+            'conditions' => [
+                'agendamento_id' => $sheduling_data['Agendamento']['id'],
+                'horario' => $sheduling_data['Agendamento']['horario'],
+            ], 
+            'link' => []
+        ]);
+
+        if ( count($check_cancel) > 0 )
+            return true;
+
+        $dados_salvar = [
+            'agendamento_id' => $sheduling_data['Agendamento']['id'],
+            'cliente_cliente_id' => $cliente_cliente_id,
+            'horario' => $sheduling_data['Agendamento']['horario'],
+            'cancelado_por' => $cancelado_por,
+            'motivo' => 'Torneio neste horário',
+        ];
+
+        $this->create();
+        return $this->save($dados_salvar);
     }
    
     
