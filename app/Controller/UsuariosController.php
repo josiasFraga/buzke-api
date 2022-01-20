@@ -102,7 +102,7 @@ class UsuariosController extends AppController {
                 'link' => ['Subcategoria']
             ]);
 
-            $usuario['Cliente']['is_paddle_court'] = $this->ClienteSubCategoria->checkIsPaddleCourt($usuario['Usuario']['cliente_id']);
+            $usuario['Cliente']['is_paddle_court'] = $this->ClienteSubcategoria->checkIsPaddleCourt($usuario['Usuario']['cliente_id']);
             $usuario['Cliente']['is_court'] = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
 
             $cadastro_categorias_ok = count($subcategorias) > 0;
