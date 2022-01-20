@@ -81,19 +81,18 @@ class UsuariosController extends AppController {
         }
 
         $cadastro_horarios_ok = 'false';
+        $cadastro_categorias_ok = 'false';
         if ( $usuario['Usuario']['nivel_id'] == 2 ) {
+
+            //verifica se o usuário já definiu o horarios de atendimento
             $this->loadModel('ClienteHorarioAtendimento');
             $cadastro_horarios_ok = $this->ClienteHorarioAtendimento->find('count',[
                 'conditions' => [
                     'ClienteHorarioAtendimento.cliente_id' => $usuario['Usuario']['cliente_id']
                 ]
             ]) > 0;
-        }
 
-        $cadastro_categorias_ok = 'false';
-        $business_is_court = false;
-        $business_is_paddle_court = false;
-        if ( $usuario['Usuario']['nivel_id'] == 2 ) {
+            //verifica se o usuário já definiu as subcategorias
             $this->loadModel('ClienteSubcategoria');
             $subcategorias = $this->ClienteSubcategoria->find('all',[
                 'fields' => ['*'],
@@ -103,16 +102,8 @@ class UsuariosController extends AppController {
                 'link' => ['Subcategoria']
             ]);
 
-            if ( count($subcategorias) > 0 ) {
-                foreach($subcategorias as $key_subc => $subc) {
-                    if ($subc['Subcategoria']['categoria_id'] == 4){
-                        $business_is_paddle_court = true;
-                    }
-                }
-            }
-
-            $usuario['Cliente']['is_paddle_court'] = $business_is_court;
-            $usuario['Cliente']['is_court'] = $business_is_court ? true : $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
+            $usuario['Cliente']['is_paddle_court'] = $this->ClienteSubCategoria->checkIsPaddleCourt($usuario['Usuario']['cliente_id']);
+            $usuario['Cliente']['is_court'] = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
 
             $cadastro_categorias_ok = count($subcategorias) > 0;
         }
