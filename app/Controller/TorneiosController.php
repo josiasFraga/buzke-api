@@ -1,7 +1,7 @@
 <?php
 class TorneiosController extends AppController {
 
-    public function index() {
+    public function index($tipo='geral') {
 
         $this->layout = 'ajax';
         $dados = $this->request->query;
@@ -30,6 +30,7 @@ class TorneiosController extends AppController {
         $this->loadModel('Torneio');
 
         $conditions = [];
+        $owner = false;
         if ( $dados['tipo'] == 'meus' ) {
 
             if ( !isset($dados_token['Usuario']) ) {
@@ -40,6 +41,7 @@ class TorneiosController extends AppController {
                 $conditions = array_merge($conditions, [
                     'Torneio.cliente_id' => $dados_token['Usuario']['cliente_id']
                 ]);
+                $owner = true;
 
             } else {
                 $this->loadModel('ClienteCliente');
@@ -76,6 +78,7 @@ class TorneiosController extends AppController {
                 'De '.date('d/m',strtotime($trn['Torneio']['inicio'])).
                 ' até '.date('d/m',strtotime($trn['Torneio']['fim']));
             $torneios[$key]['Torneio']['img'] = $this->images_path."torneios/".$trn['Torneio']['img'];
+            $torneios[$key]['Torneio']['_owner'] = $owner;
         }
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $torneios))));
