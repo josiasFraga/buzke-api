@@ -1,7 +1,7 @@
 <?php
 class TorneiosController extends AppController {
 
-    public function index($tipo='geral') {
+    public function index() {
 
         $this->layout = 'ajax';
         $dados = $this->request->query;
@@ -55,8 +55,7 @@ class TorneiosController extends AppController {
             }
         } else {
             $conditions = array_merge($conditions, [
-                'Torneio.inicio <=' => date('Y-m-d'),
-                'Torneio.fim >=' => date('Y-m-d')
+                'Torneio.inicio >=' => date('Y-m-d'),
             ]);
 
         }
@@ -85,6 +84,81 @@ class TorneiosController extends AppController {
 
     }
 
+    public function dados() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados['id']) || $dados['id'] == "" || !is_numeric($dados['id']) ) {
+            throw new BadRequestException('ID não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = null;
+
+        if ( isset($dados['email']) && $dados['email'] != "" ) {
+            $email = $dados['email'];
+        }
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Torneio');
+        $this->loadModel('TorneioCategoria');
+        $this->loadModel('TorneioData');
+
+        $conditions = [];
+
+        $conditions = array_merge($conditions, [
+            'Torneio.id' => $dados['id'],
+        ]);
+
+        $dados = $this->Torneio->find('first',[
+            'fields' => [
+                'Torneio.*', 'Cliente.nome', 'Cliente.endereco', 'Cliente.endereco_n', 'Cliente.wp', 'Localidade.loc_no', 'Localidade.ufe_sg', 'Cliente.telefone'
+            ],
+            'conditions' => $conditions,
+            'order' => ['Torneio.inicio'],
+            'link' => ['TorneioInscricao', 'Cliente' => ['Localidade']]
+        ]);
+
+        if ( count($dados) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Dados do torneio não econtrados!'))));
+        }
+
+        $owner = isset($dados_token['Usuario']) && $dados_token['Usuario']['cliente_id'] == $dados['Torneio']['cliente_id'];
+  
+        $dados['Torneio']['_periodo'] = 
+            'De '.date('d/m',strtotime($dados['Torneio']['inicio'])).
+            ' até '.date('d/m',strtotime($dados['Torneio']['fim']));
+        $dados['Torneio']['img'] = $this->images_path."torneios/".$dados['Torneio']['img'];
+        $dados['Torneio']['_owner'] = $owner;
+        $dados['Torneio']['_periodo_inscricao'] = 
+            'de '.
+            date('d',strtotime($dados['Torneio']['inscricoes_de'])).
+            '/'.$this->meses_abrev[(int)date('m',strtotime($dados['Torneio']['inscricoes_de']))].
+            ' até '.
+            date('d',strtotime($dados['Torneio']['inscricoes_ate'])).
+            '/'.$this->meses_abrev[(int)date('m',strtotime($dados['Torneio']['inscricoes_ate']))];
+
+        $dados['Torneio']['_subscriptions_opened'] = ($dados['Torneio']['inscricoes_de'] <= date('Y-m-d H:i:s') && $dados['Torneio']['inscricoes_ate'] >= date('Y-m-d H:i:s'));
+        $dados['Torneio']['_valor_inscricao'] =  'R$ '.number_format($dados['Torneio']['valor_inscricao'],2,',','.');
+        $dados['TorneioCategoria'] = $this->TorneioCategoria->getByTournamentId($dados['Torneio']['id']);
+        $dados['TorneioData'] = $this->TorneioData->getByTournamentId($dados['Torneio']['id']);
+        //$dados['Torneio']['_subscription_enabled'] = $subscription_enabled;
+        
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
+
+    }
+
     public function cadastrar(){
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];
@@ -95,8 +169,6 @@ class TorneiosController extends AppController {
         }elseif ( gettype($dados) == 'array' ) {
             $dados = json_decode(json_encode($dados), false);
         }
-
-        //$this->log($dados, 'debug');
 
         if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
@@ -118,18 +190,48 @@ class TorneiosController extends AppController {
             throw new BadRequestException('Fim não informado!', 401);
         }
 
+        if ( !isset($dados->duracao) || $dados->duracao == "" ) {
+            throw new BadRequestException('Fim não informado!', 401);
+        }
+        
+        if ( !isset($dados->inscricoes_de) || $dados->inscricoes_de == "" ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data inicial das inscrições não informada'))));
+        }
+
+        if ( !isset($dados->inscricoes_ate) || $dados->inscricoes_ate == "" ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data limite das inscrições não informada'))));
+        }
+
+        if ( !isset($dados->valor_inscricao) || $dados->valor_inscricao == "" ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Valor da inscrição não informado'))));
+        }
+
         if ( !isset($dados->torneio_categoria) || $dados->torneio_categoria == "" || !is_array($dados->torneio_categoria) || count($dados->torneio_categoria) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar ao menos uma categoria para cadastrar um torneio'))));
         }
 
-        if ( !isset($dados->torneio_data) || $dados->torneio_data == "" || !is_array($dados->torneio_data) || count($dados->torneio_data) == 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar ao menos um período de realização de jogos para cadastrar um torneio'))));
+        if ( !isset($dados->torneio_quadras) || $dados->torneio_quadras == "" || !is_array($dados->torneio_quadras) || count($dados->torneio_quadras) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar ao menos uma quadra para cadastrar um torneio'))));
         }
+        
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_usuario['Usuario']['cliente_id'] == null || $dados_usuario['Usuario']['cliente_id'] == '' ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        //if ( !isset($dados->torneio_data) || $dados->torneio_data == "" || !is_array($dados->torneio_data) || count($dados->torneio_data) == 0 ) {
+        //    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar ao menos um período de realização de jogos para cadastrar um torneio'))));
+        //}
 
         //categorias do torneio
         foreach( $dados->torneio_categoria as $key => $categoria ){
 
-            if ( ( !isset($categoria->categoria_id) || $categoria->categoria_id == "" ) && ( !isset($categoria->nome) || $categoria->nome == "" ) ) {
+            if ( ( !isset($categoria->categoria_id) || $categoria->categoria_id == "" || $categoria->categoria_id == "0") && ( !isset($categoria->nome) || $categoria->nome == "" ) ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Categoria ou nome não informados'))));
             }
             if ( !isset($categoria->sexo) || $categoria->sexo == "" || !in_array($categoria->sexo, ['M','F','MI']) ) {
@@ -144,50 +246,105 @@ class TorneiosController extends AppController {
             if ( !isset($categoria->limite_duplas) || $categoria->limite_duplas == "" || !is_numeric($categoria->limite_duplas) ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Limite de duplas da categoria não informado'))));
             }
-            if ( !isset($categoria->inscricoes_de) || $categoria->inscricoes_de == "" ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data inicial das inscrições da categoria não informada'))));
-            }
-            if ( !isset($categoria->inscricoes_ate) || $categoria->inscricoes_ate == "" ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data limite das inscrições da categoria não informada'))));
-            }
         }
 
         //periodos do torneio
-        $quadras_periodos = [];
-        foreach( $dados->torneio_data as $key => $torneio_data ){
+        $quadras = [];
+        $periodos = [];
+        $periodos_temp = [];
+        foreach( $dados->torneio_quadras as $key => $torneio_quadra ){
 
-            if ( !isset($torneio_data->data) || $torneio_data->data == ""  ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data do período não informado'))));
+            if ( !isset($torneio_quadra->quadra_periodos) || !is_array($torneio_quadra->quadra_periodos) || count($torneio_quadra->quadra_periodos) == 0 ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Ao menos um período de partidas para a quadra deve ser informado'))));
             }
-            if ( !isset($torneio_data->inicio) || $torneio_data->inicio == ""  ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora início do período não informado'))));
+
+            $quadra_nome = null;
+            $quadra_id = null;
+
+            if ( isset($torneio_quadra->nome) && $torneio_quadra->nome != "" ) {
+                $quadra_nome = $torneio_quadra->nome;
             }
-            if ( !isset($torneio_data->fim) || $torneio_data->fim == ""  ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora limite do período não informado'))));
+
+            if ( isset($torneio_quadra->quadra_id) && $torneio_quadra->quadra_id != "" && $torneio_quadra->quadra_id != "0" ) {
+                $quadra_id = $torneio_quadra->quadra_id;
             }
-            if ( !isset($torneio_data->duracao_jogos) || $torneio_data->duracao_jogos == ""  ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Duração do jogos do período não informado'))));
+
+            if ( $quadra_nome  == null && $quadra_id == null ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Nome ou ID da quadra não informado'))));
             }
-            $quadras_periodos[$key]['inicio'] = $torneio_data->data.' '.$torneio_data->inicio;
-            $quadras_periodos[$key]['fim'] = $torneio_data->data.' '.$torneio_data->fim;
+
+            $quadras[$key] = ['nome' => $quadra_nome, 'servico_id' => $quadra_id, 'confirmado' => 'Y'];
+
+            foreach( $torneio_quadra->quadra_periodos as $key_periodo => $periodo ) {
+
+                if ( !isset($periodo->data) || $periodo->data == "" ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data do período não informada.'))));
+                }
+                if ( !isset($periodo->das) || $periodo->das == "" ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora de início do período não informado.'))));
+                }
+                if ( !isset($periodo->ate_as) || $periodo->ate_as == "" ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora final do período não informado.'))));
+                }
+                if ( $periodo->das >= $periodo->ate_as) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'A hora de início deve ser inferior a data final.'))));
+                }
+
+                $quadras[$key]['TorneioQuadraPeriodo'][] = ['inicio' => $periodo->data." ".$periodo->das, 'fim' =>  $periodo->data." ".$periodo->ate_as];
+
+                $periodos_temp[$periodo->data][] = ['inicio' => $periodo->das, 'fim' => $periodo->ate_as];
+            }
 
         }
-
-        //quadras
-        $quadras = [];
-        if ( isset($dados->torneio_quadras) ) {
-    
-            if ( is_array($dados->torneio_quadras) )
-                $dados->torneio_quadras = (object)$dados->torneio_quadras;
-            
-            foreach($dados->torneio_quadras as $key => $quadra){
-                if($quadra) {
-                    list($discard, $id_quadra) = explode('_',$key);
-                    $quadras[] = ['servico_id' => $id_quadra, 'confirmado' => 'Y', 'TorneioQuadraPeriodo' => $quadras_periodos];
+        
+        foreach($periodos_temp as $data => $per_temp){
+            foreach( $per_temp as $key_item => $item ){
+                if ( !isset($periodos[$data]) ) {
+                    $periodos[$data][] = ['data' => $data, 'inicio' => $item['inicio'], 'fim' => $item['fim'], 'duracao_jogos' => $dados->duracao];
+                } else {
+                    foreach( $periodos[$data] as $key_per_temp => $item_salvo ){
+                        //se o item está entre o salvo
+                        if ( $item['inicio'] >= $item_salvo['inicio'] && $item['fim'] <= $item_salvo['inicio']  ) {
+                            continue;
+                        }
+                        //se o item está antes do salvo
+                        if ( $item['inicio'] < $item_salvo['inicio'] && $item['fim'] < $item_salvo['inicio']  ) {
+                            $periodos[$data][] = ['data' => $data, 'inicio' => $item['inicio'], 'fim' => $item['fim'], 'duracao_jogos' => $dados->duracao];
+                        }
+                        //se o item está depois do salvo
+                        else if ( $item['inicio'] > $item_salvo['fim'] && $item['fim'] > $item_salvo['fim'] ) {
+                            $periodos[$data][] = ['data' => $data, 'inicio' => $item['inicio'], 'fim' => $item['fim'], 'duracao_jogos' => $dados->duracao];
+                        }
+                        //se o item tem o início entre o salvo
+                        else if ( $item['inicio'] > $item_salvo['inicio'] && $item['inicio'] < $item_salvo['fim'] ) {
+                            $periodos[$data][$key_per_temp]['fim'] = $item['fim'];
+                        }
+                        //se o item tem o fim entre o salvo
+                        else if ( $item['fim'] > $item_salvo['inicio'] && $item['fim'] < $item_salvo['fim'] ) {
+                            $periodos[$data][$key_per_temp]['inicio'] = $item['inicio'];
+                        }
+                        //se o item tem o final igual ao início do salvo
+                        if ( $item['fim'] == $item_salvo['inicio']  ) {
+                            $periodos[$data][$key_per_temp]['inicio'] = $item['inicio'];
+                        }
+                        //se o item tem o início igual ao final do salvo
+                        else if ( $item['inicio'] == $item_salvo['fim'] ) {
+                            $periodos[$data][$key_per_temp]['fim'] = $item['fim'];
+                        }
+                    }
                 }
             }
         }
-        if ( isset($dados->torneio_quadras_terceiros) ) {
+
+        $periodos_salvar = [];
+        foreach($periodos as $key => $periodo){
+            foreach($periodo as $key_item => $item){
+                $periodos_salvar[] = $item;
+            }
+        }
+   
+       
+        /*if ( isset($dados->torneio_quadras_terceiros) ) {
 
             if( is_array($dados->torneio_quadras_terceiros) )
                 $dados->torneio_quadras_terceiros = (object)$dados->torneio_quadras_terceiros;
@@ -195,19 +352,10 @@ class TorneiosController extends AppController {
             foreach($dados->torneio_quadras_terceiros as $key => $quadra){
                 $quadras[] = ['nome' => $quadra->nome, 'confirmado' => 'Y', 'TorneioQuadraPeriodo' => $quadras_periodos];
             }
-        }
+        }*/
 
         if ( count($quadras) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve selecionar ao menos uma quadra para cadastrar um torneio.'))));
-        }
-
-        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
-        if ( !$dados_usuario ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
-        if ( $dados_usuario['Usuario']['cliente_id'] == null || $dados_usuario['Usuario']['cliente_id'] == '' ) {
-            throw new BadRequestException('Usuário não logado!', 401);
         }
 
         $this->loadModel('Torneio');
@@ -218,9 +366,13 @@ class TorneiosController extends AppController {
                 'descricao' => $dados->descricao,
                 'inicio' => $dados->inicio,
                 'fim' => $dados->fim,
+                'inscricoes_de' => $dados->inscricoes_de,
+                'inscricoes_ate' => $dados->inscricoes_ate,
+                'impedimentos' => isset($dados->impedimentos) && $dados->impedimentos > 0 ? $dados->impedimentos : 0,
+                'valor_inscricao' => $dados->valor_inscricao,
             ],
             'TorneioCategoria' => $dados->torneio_categoria,
-            'TorneioData' => $dados->torneio_data,
+            'TorneioData' => $periodos_salvar,
             'TorneioQuadra' => $quadras,
         ];
 

@@ -49,6 +49,15 @@ class Torneio extends AppModel {
         if ( isset($this->data[$this->alias]['fim']) && $this->data[$this->alias]['fim'] != '') {
             $this->data[$this->alias]['fim'] = $this->dateBrEn($this->data[$this->alias]['fim']);
         }
+        if ( isset($this->data[$this->alias]['inscricoes_de']) && $this->data[$this->alias]['inscricoes_de'] != '') {
+            $this->data[$this->alias]['inscricoes_de'] = $this->dateBrEn($this->data[$this->alias]['inscricoes_de']);
+        }
+        if ( isset($this->data[$this->alias]['inscricoes_ate']) && $this->data[$this->alias]['inscricoes_ate'] != '') {
+            $this->data[$this->alias]['inscricoes_ate'] = $this->dateBrEn($this->data[$this->alias]['inscricoes_ate']);
+        }
+        if ( isset($this->data[$this->alias]['valor_inscricao']) && $this->data[$this->alias]['valor_inscricao'] != '') {
+            $this->data[$this->alias]['valor_inscricao'] = $this->currencyToFloat($this->data[$this->alias]['valor_inscricao']);
+        }
         return true;
     }
 }

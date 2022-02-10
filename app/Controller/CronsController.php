@@ -1,4 +1,5 @@
 <?php
+App::uses('CakeEmail', 'Network/Email');
 class CronsController extends AppController {
     public function avisa_usuarios_agendamentos(){
 
@@ -9,6 +10,7 @@ class CronsController extends AppController {
         $dia_semana = date('w',strtotime($hoje));
         $dia_mes = (int)date('d',strtotime($hoje));
         $dia_semana_amanha = $dia_semana + 1;
+        $avisar_alguem = false;
 
         if ( $dia_semana_amanha > 6 )
             $dia_semana_amanha = 0;
@@ -107,16 +109,28 @@ class CronsController extends AppController {
                     $this->AgendamentoAviso->save($dados_salvar);
                     
                     $this->sendShedulingAlertNotification($usuarios_ids, $agendamento, $agendamento_horario);
+                    $avisar_alguem = true;
                     $n_avisos++;
                     
                 }
                 
             }
 
+            if ( $avisar_alguem ) {
+                $Email = new CakeEmail('smtp_aplicativo');
+                $Email->from(array('aplicativo@buzke.com.br' => 'Buzke'));
+                $Email->emailFormat('html');
+                $Email->to('josiasrs2009@gmail.com');
+                $Email->template('sugestao');
+                $Email->subject('Sugestao - Buzke');
+                $Email->viewVars(array('nome_usuario'=>'notificação de horario', 'sugestao' => $n_avisos ));//variable will be replaced from template
+                $Email->send();
+            }
+
         }
 
 
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Usuários avisados cadastrado com sucesso!', 'dados' => $n_avisos))));
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Usuários avisados com sucesso!', 'dados' => $n_avisos))));
 
     }
 

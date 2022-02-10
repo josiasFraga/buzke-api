@@ -34,6 +34,7 @@ error_reporting(E_ALL);
  */
 class AppModel extends Model {
 	public $actsAs = array('Containable', 'Linkable');
+    public $meses_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
 	
 	public function formatDate($date, $formato = 'Y-m-d') {
 		return date($formato, strtotime(str_replace('/', '-', $date)));

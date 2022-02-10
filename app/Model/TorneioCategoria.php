@@ -18,15 +18,55 @@ class TorneioCategoria extends AppModel {
 	);
 
     public function beforeSave($options = array()) {
-        if ( isset($this->data[$this->alias]['inscricoes_de']) && $this->data[$this->alias]['inscricoes_de'] != '') {
-            $this->data[$this->alias]['inscricoes_de'] = $this->dateBrEn($this->data[$this->alias]['inscricoes_de']);
-        }
-        if ( isset($this->data[$this->alias]['inscricoes_ate']) && $this->data[$this->alias]['inscricoes_ate'] != '') {
-            $this->data[$this->alias]['inscricoes_ate'] = $this->dateBrEn($this->data[$this->alias]['inscricoes_ate']);
-        }
-        if ( isset($this->data[$this->alias]['valor_inscricao']) && $this->data[$this->alias]['valor_inscricao'] != '') {
-            $this->data[$this->alias]['valor_inscricao'] = $this->currencyToFloat($this->data[$this->alias]['valor_inscricao']);
+        if ( isset($this->data[$this->alias]['categoria_id']) && $this->data[$this->alias]['categoria_id'] == '0') {
+            $this->data[$this->alias]['categoria_id'] = null;
         }
         return true;
+    }
+
+    public function getByTournamentId($tournament_id = null){
+
+        if ( $tournament_id == null )
+            return [];
+
+        $this->virtualFields['_inscritos'] = 'count(TorneioInscricao.id)';
+        
+        $categorias =  $this->find('all',[
+            'fields' => ['*'],
+            'conditions' => [
+                'TorneioCategoria.torneio_id' => $tournament_id
+            ],
+            'order' => [
+                'PadelCategoria.titulo', 
+                'TorneioCategoria.nome', 
+                'TorneioCategoria.sexo'
+            ],
+            'link' => ['PadelCategoria', 'TorneioInscricao'],
+            'group' => [
+                'TorneioCategoria.id'
+            ]
+        ]);
+
+        $categorias_retornar = [];
+        if ( count($categorias) > 0 ) {
+
+            foreach( $categorias as $key => $cat) {
+                $sexo = 'Masculina';
+                if ($cat['TorneioCategoria']['sexo'] == 'F') {
+                    $sexo = 'Feminina';
+                }
+                if ($cat['TorneioCategoria']['sexo'] == 'MI') {
+                    $sexo = 'Mista';
+                }
+                
+                $cat['TorneioCategoria']['_categoria_nome'] = $cat['PadelCategoria']['titulo'].$cat['TorneioCategoria']['nome'].' - '.$sexo;
+                $cat['TorneioCategoria']['_categoria_id'] = $cat['PadelCategoria']['id'];
+
+                $categorias_retornar[$key] = $cat['TorneioCategoria'];
+            }
+
+        }
+
+        return $categorias_retornar;
     }
 }
