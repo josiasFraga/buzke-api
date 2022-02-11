@@ -565,19 +565,22 @@ class TorneiosController extends AppController {
        
         //impedimentos da dupla
         $impedimentos = [];
-        foreach( $dados->impedimentos as $key => $impedimento ){
-
-            if ( !isset($impedimento->data) || $impedimento->data == ""  ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data do impedimento não informado'))));
+        if ( isset($dados->impedimentos) && count($dados->impedimentos) > 0 ) {
+            foreach( $dados->impedimentos as $key => $impedimento ){
+    
+                if ( !isset($impedimento->data) || $impedimento->data == ""  ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data do impedimento não informado'))));
+                }
+                if ( !isset($impedimento->das) || $impedimento->das == ""  ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora início do impedimento não informado'))));
+                }
+                if ( !isset($impedimento->ate_as) || $impedimento->ate_as == ""  ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora limite do impedimento não informado'))));
+                }
+                $impedimentos[$key]['inicio'] = $this->dateBrEn($impedimento->data).' '.$impedimento->das;
+                $impedimentos[$key]['fim'] = $this->dateBrEn($impedimento->data).' '.$impedimento->ate_as;
+    
             }
-            if ( !isset($impedimento->das) || $impedimento->das == ""  ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora início do impedimento não informado'))));
-            }
-            if ( !isset($impedimento->ate_as) || $impedimento->ate_as == ""  ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora limite do impedimento não informado'))));
-            }
-            $impedimentos[$key]['inicio'] = $this->dateBrEn($impedimento->data).' '.$impedimento->das;
-            $impedimentos[$key]['fim'] = $this->dateBrEn($impedimento->data).' '.$impedimento->ate_as;
 
         }
 
@@ -642,16 +645,8 @@ class TorneiosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
         }
         
-
-        //debug($dados_torneio); die();
-        
         //$dados_cliente_cliente = $this->ClienteCliente->buscaDadosSemVinculo($inscricao_usuario_id, true);
         //$dados_cliente_cliente = array_values($dados_cliente_cliente);
-
-        //$dupla_id = null;
-        $dupla_nome = null;
-    
-
         
         $dados_salvar = [
             'TorneioInscricao' => [
@@ -659,13 +654,23 @@ class TorneiosController extends AppController {
                 'cliente_cliente_id' => $v_cadastro_jogador_1['ClienteCliente']['id'],
                 'dupla_id' => $v_cadastro_jogador_2['ClienteCliente']['id'],
                 'torneio_categoria_id' => $dados->torneio_categoria_id,
-                'dupla_nome' => $dupla_nome,
             ],
+            'TorneioInscricaoJogador' => [
+                [                    
+                    'cliente_cliente_id' => $v_cadastro_jogador_1['ClienteCliente']['id'],
+                ],
+                [
+                    'cliente_cliente_id' => $v_cadastro_jogador_2['ClienteCliente']['id'],
+                ]
+            ]
+
         ];
 
         if ( count($impedimentos) > 0 ) {
             $dados_salvar['TorneioInscricaoImpedimento'] = $impedimentos;
         }
+
+        //debug($dados_salvar); die();
 
         if ( !$this->TorneioInscricao->saveAssociated($dados_salvar, ['deep' => true]) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao realizar a inscrição.'))));

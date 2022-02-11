@@ -20,7 +20,7 @@ class ClienteCliente extends AppModel {
 		'AgendamentoConvite' => array(
 			'foreignKey' => 'cliente_cliente_id'
 		),
-		'TorneioInscricao' => array(
+		'TorneioInscricaoJogador' => array(
 			'foreignKey' => 'cliente_cliente_id'
 		),
     );

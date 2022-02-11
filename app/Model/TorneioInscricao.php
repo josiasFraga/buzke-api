@@ -6,12 +6,6 @@ class TorneioInscricao extends AppModel {
 		'Torneio' => array(
 			'foreignKey' => 'torneio_id'
         ),
-		'ClienteCliente' => array(
-			'foreignKey' => 'cliente_cliente_id'
-        ),
-		'TorneioDupla' => array(
-			'foreignKey' => 'dupla_id'
-        ),
 		'TorneioCategoria' => array(
 			'foreignKey' => 'torneio_categoria_id'
         ),
@@ -19,6 +13,9 @@ class TorneioInscricao extends AppModel {
 
 	public $hasMany = array(
 		'TorneioInscricaoImpedimento' => array(
+			'foreignKey' => 'torneio_inscricao_id'
+        ),
+		'TorneioInscricaoJogador' => array(
 			'foreignKey' => 'torneio_inscricao_id'
         ),
 	);
@@ -33,12 +30,9 @@ class TorneioInscricao extends AppModel {
 		$first_check = $this->find('first',[
 			'conditions' => [
 				'TorneioInscricao.torneio_id' => $torneio_id,
-				'or' => [
-					'TorneioInscricao.cliente_cliente_id' => $dados_cliente_cliente['ClienteCliente']['id'],
-					'TorneioInscricao.dupla_id' => $dados_cliente_cliente['ClienteCliente']['id']
-				]
+				'TorneioInscricaoJogador.cliente_cliente_id' => $dados_cliente_cliente['ClienteCliente']['id']
 			],
-			'link' => []
+			'link' => ['TorneioInscricaoJogador']
 		]);
 
 		if ( count($first_check) > 0 )
@@ -50,12 +44,9 @@ class TorneioInscricao extends AppModel {
 		$second_check = $this->find('first',[
 			'conditions' => [
 				'TorneioInscricao.torneio_id' => $torneio_id,
-				'or' => [
-					'ClienteCliente.usuario_id' => $dados_cliente_cliente['ClienteCliente']['usuario_id'],
-					'TorneioDupla.usuario_id' => $dados_cliente_cliente['ClienteCliente']['usuario_id']
-				]
+				'ClienteCliente.usuario_id' => $dados_cliente_cliente['ClienteCliente']['usuario_id']
 			],
-			'link' => ['ClienteCliente', 'TorneioDupla']
+			'link' => ['TorneioInscricaoJogador' => ['ClienteCliente']]
 		]);
 
 		if ( count($second_check) > 0 )
