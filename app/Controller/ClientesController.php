@@ -870,6 +870,7 @@ class ClientesController extends AppController {
                 'Uf.ufe_sg',
                 'ClienteClienteDadosPadel.*'
             ],
+            'order' => ['ClienteCliente.nome'],
             'contain' => ['Localidade', 'Uf', 'Agendamento' => ['conditions' => ['Agendamento.cliente_id' => $dados_token['Usuario']['cliente_id']]], 'Usuario', 'ClienteClienteDadosPadel', 'ClienteClientePadelCategoria'],
             'group' => ['ClienteCliente.id']
         ]);
@@ -952,6 +953,7 @@ class ClientesController extends AppController {
                 'ClienteCliente.bairro',
             ],
             'link' => [],
+            'order' => ['ClienteCliente.nome'],
             //'contain' => ['Localidade', 'Uf', 'Agendamento' => ['conditions' => ['Agendamento.cliente_id' => $dados_token['Usuario']['cliente_id']]], 'Usuario', 'ClienteClienteDadosPadel', 'ClienteClientePadelCategoria'],
             'group' => ['ClienteCliente.id']
         ]);

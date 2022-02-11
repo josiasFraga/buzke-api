@@ -158,6 +158,60 @@ class TorneiosController extends AppController {
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
 
     }
+    
+
+    public function categorias() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Email não informado!', 401);
+        }
+
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados['torneio_id']) || $dados['torneio_id'] == "" || !is_numeric($dados['torneio_id']) ) {
+            throw new BadRequestException('ID não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+    
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('TorneioCategoria');
+
+        $conditions = [];
+
+        $conditions = array_merge($conditions, [
+            'TorneioCategoria.torneio_id' => $dados['torneio_id'],
+        ]);
+
+        $this->TorneioCategoria->virtualFields['_nome'] = 'CONCAT_WS("", TorneioCategoria.nome, PadelCategoria.titulo)';
+        $dados = $this->TorneioCategoria->find('all',[
+            
+            'conditions' => $conditions,
+            'order' => ['CONCAT_WS("", TorneioCategoria.nome, PadelCategoria.titulo)'],
+            'link' => ['PadelCategoria'],
+            'group' => ['TorneioCategoria.id'],
+        ]);
+
+        if ( count($dados) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Categorias do torneio não econtrados!'))));
+        }
+      
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
+
+    }
 
     public function cadastrar(){
         $this->layout = 'ajax';
@@ -485,7 +539,7 @@ class TorneiosController extends AppController {
         }
     }
 
-    public function inscricao(){
+    public function cadastrar_inscricao(){
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];
 
@@ -496,18 +550,17 @@ class TorneiosController extends AppController {
             $dados = json_decode(json_encode($dados), false);
         }
 
-        //$this->log($dados, 'debug');
-
+       
         if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
 
-        if ( !isset($dados->categoria) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar ao menos uma categoria para realizar sua inscrição em um torneio.'))));
-        }
-
         if ( !isset($dados->torneio_id) || $dados->torneio_id == '' || $dados->torneio_id == null ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar o torneio que você deseja fazer a inscrição.'))));
+        }
+
+        if ( !isset($dados->torneio_categoria_id) || $dados->torneio_categoria_id == '' || $dados->torneio_categoria_id == null ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar a categoria para realizar sua inscrição em um torneio.'))));
         }
        
         //impedimentos da dupla
@@ -517,34 +570,15 @@ class TorneiosController extends AppController {
             if ( !isset($impedimento->data) || $impedimento->data == ""  ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data do impedimento não informado'))));
             }
-            if ( !isset($impedimento->inicio) || $impedimento->inicio == ""  ) {
+            if ( !isset($impedimento->das) || $impedimento->das == ""  ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora início do impedimento não informado'))));
             }
-            if ( !isset($impedimento->fim) || $impedimento->fim == ""  ) {
+            if ( !isset($impedimento->ate_as) || $impedimento->ate_as == ""  ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora limite do impedimento não informado'))));
             }
-            $impedimentos[$key]['inicio'] = $this->dateBrEn($impedimento->data).' '.$impedimento->inicio;
-            $impedimentos[$key]['fim'] = $this->dateBrEn($impedimento->data).' '.$impedimento->fim;
+            $impedimentos[$key]['inicio'] = $this->dateBrEn($impedimento->data).' '.$impedimento->das;
+            $impedimentos[$key]['fim'] = $this->dateBrEn($impedimento->data).' '.$impedimento->ate_as;
 
-        }
-
-        foreach($dados->categoria as $key => $categoria){
-            if($categoria) {
-                list($discard, $categoria_id) = explode('_',$key);
-            }
-        }
-
-        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
-        if ( !$dados_usuario ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
-        $inscricao_usuario_id = $dados_usuario['Usuario']['id'];
-        if ( $dados_usuario['Usuario']['cliente_id'] != null && $dados_usuario['Usuario']['cliente_id'] != '' ) {
-            if ( !isset($impedimento->cliente_cliente_id) || $impedimento->cliente_cliente_id == ""  ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Cliente não informado'))));
-            }
-            $inscricao_usuario_id = $dados->cliente_cliente_id;
         }
 
         $this->loadModel('ClienteCliente');
@@ -552,69 +586,79 @@ class TorneiosController extends AppController {
         $this->loadModel('Torneio');
         //$this->loadModel('TorneioCategoria');
 
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_usuario['Usuario']['nivel_id'] == 2 ){
+
+            if ( !isset($dados->jogador_1) || $dados->jogador_1 == '' || $dados->jogador_1 == null ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O Jogador 1 deve ser informado.'))));
+            }
+            
+            if ( !isset($dados->jogador_2) || $dados->jogador_2 == '' || $dados->jogador_2 == null ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O Jogador 2 deve ser informado.'))));
+            }
+
+            $v_cadastro_jogador_1 = $this->ClienteCliente->buscaDadosClienteCliente($dados->jogador_1, $dados_usuario['Usuario']['cliente_id']);
+            if ( count($v_cadastro_jogador_1) == 0 ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O Jogador 1 não foi localizado.'))));
+            }
+
+            $v_cadastro_jogador_2 = $this->ClienteCliente->buscaDadosClienteCliente($dados->jogador_2, $dados_usuario['Usuario']['cliente_id']);
+            if ( count($v_cadastro_jogador_2) == 2 ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O Jogador 2 não foi localizado.'))));
+            }
+        }
+
         $dados_torneio = $this->Torneio->find('first',[
             'fields' => ['*'],
             'conditions' => [
                 'Torneio.id' => $dados->torneio_id,
-                'Torneio.inicio <=' => date('Y-m-d'),
-                'Torneio.fim >=' => date('Y-m-d'),
-                'TorneioCategoria.id' => $categoria_id
+                'Torneio.inscricoes_de <=' => date('Y-m-d'),
+                'Torneio.inscricoes_ate >=' => date('Y-m-d'),
             ],
-            'link' => ['TorneioCategoria' => ['PadelCategoria']],
+            'link' => [],
         ]);
 
         if ( count($dados_torneio) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do torneio não encontrados.'))));
         }
-
-        if ( date('Y-m-d H:i:s') < $dados_torneio['TorneioCategoria']['inscricoes_de'] ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O prazo para inscrição ainda não começou.'))));
+        
+        if ( $dados_torneio['Torneio']['impedimentos'] < count($impedimentos) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você só pode selecionar até '.$dados_torneio['Torneio']['impedimentos'].' impedimentos.'))));
         }
 
-        if ( date('Y-m-d H:i:s') > $dados_torneio['TorneioCategoria']['inscricoes_ate'] ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O prazo para inscrição já encerrou.'))));
+        $check_inscricao = $this->TorneioInscricao->checkSubscription($v_cadastro_jogador_1, $dados->torneio_id);
+
+        if ( $check_inscricao !== false ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 1 já está inscrito no torneio'))));
         }
 
-        if ( $dados_torneio['TorneioCategoria']['impedimentos'] < count($impedimentos) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você só pode selecionar até '.$dados_torneio['TorneioCategoria']['impedimentos'].' impedimentos.'))));
+        $check_inscricao = $this->TorneioInscricao->checkSubscription($v_cadastro_jogador_2, $dados->torneio_id);
+
+        if ( $check_inscricao !== false ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
         }
         
-        $dados_cliente_cliente = $this->ClienteCliente->buscaDadosSemVinculo($inscricao_usuario_id, true);
-        $dados_cliente_cliente = array_values($dados_cliente_cliente);
 
-        $dupla_id = null;
+        //debug($dados_torneio); die();
+        
+        //$dados_cliente_cliente = $this->ClienteCliente->buscaDadosSemVinculo($inscricao_usuario_id, true);
+        //$dados_cliente_cliente = array_values($dados_cliente_cliente);
+
+        //$dupla_id = null;
         $dupla_nome = null;
     
-        if ( isset($dados->dupla_nome) && $dados->dupla_nome != '' && $dados->dupla_nome != null )
-            $dupla_nome = $dados->dupla_nome;
 
-        if ( isset($dados->dupla_id) && $dados->dupla_id != '' && $dados->dupla_id != null ) {
-            $dupla_id = $dados->dupla_id;
-            $check_inscricao = $this->TorneioInscricao->getByClientClientId($dupla_id, $dados->torneio_id);
-        
-            if ( count($check_inscricao) > 0 ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'A dupla já estava inscrita neste torneio.'))));
-            }
-
-            /*if ( $dados_torneio['TorneioCategoria']['categoria_id'] != null ) {
-                $check_categoria = $this->
-                debug($dados_torneio['PadelCategoria']); die();
-            }*/
-
-        }
-
-        $check_inscricao = $this->TorneioInscricao->getByClientClientId($dados_cliente_cliente[0], $dados->torneio_id);
-        
-        if ( count($check_inscricao) > 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você já estava inscrito neste torneio.'))));
-        }
         
         $dados_salvar = [
             'TorneioInscricao' => [
                 'torneio_id' => $dados->torneio_id,
-                'cliente_cliente_id' => $dados_cliente_cliente[0],
-                'dupla_id' => $dupla_id,
-                'torneio_categoria_id' => $categoria_id,
+                'cliente_cliente_id' => $v_cadastro_jogador_1['ClienteCliente']['id'],
+                'dupla_id' => $v_cadastro_jogador_2['ClienteCliente']['id'],
+                'torneio_categoria_id' => $dados->torneio_categoria_id,
                 'dupla_nome' => $dupla_nome,
             ],
         ];
@@ -624,10 +668,10 @@ class TorneiosController extends AppController {
         }
 
         if ( !$this->TorneioInscricao->saveAssociated($dados_salvar, ['deep' => true]) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao realizar sua inscrição.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao realizar a inscrição.'))));
         }
 
         
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tudo certo! Sua inscrição foi cadastrada com sucesso!'))));
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tudo certo! A inscrição foi cadastrada com sucesso!'))));
     }
 }
