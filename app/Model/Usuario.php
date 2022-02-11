@@ -158,4 +158,24 @@ class Usuario extends AppModel {
 
     }
 
+    public function getByEmail($email) {
+        return $this->find('first',[
+            'fields' => [
+                'Usuario.id',
+                'Usuario.nome',
+                'Usuario.telefone'
+            ],
+            'conditions' => [
+                'Usuario.email' => $email
+            ]
+        ]);
+    }
+
+    public function atualizaTelefone($usuario_id, $telefone){
+        return $this->save([
+            'id' => $usuario_id,
+            'telefone' => $telefone
+        ]);
+    }
+
 }

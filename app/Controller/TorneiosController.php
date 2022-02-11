@@ -47,15 +47,12 @@ class TorneiosController extends AppController {
                 $this->loadModel('ClienteCliente');
                 $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
                 $conditions = array_merge($conditions, [
-                    'or' => [
-                        ['TorneioInscricao.cliente_cliente_id' => $meus_ids_de_cliente],
-                        ['TorneioInscricao.dupla_id' => $meus_ids_de_cliente],
-                    ]
+                    'TorneioInscricaoJogador.cliente_cliente_id' => $meus_ids_de_cliente,  
                 ]);
             }
         } else {
             $conditions = array_merge($conditions, [
-                'Torneio.inicio >=' => date('Y-m-d'),
+                //'Torneio.fim >=' => date('Y-m-d'),
             ]);
 
         }
@@ -66,7 +63,7 @@ class TorneiosController extends AppController {
             ],
             'conditions' => $conditions,
             'order' => ['Torneio.inicio'],
-            'link' => ['TorneioInscricao', 'Cliente' => ['Localidade']]
+            'link' => ['TorneioInscricao' => ['TorneioInscricaoJogador'], 'Cliente' => ['Localidade']]
         ]);
         
         //debug($conditions); die();
@@ -113,8 +110,12 @@ class TorneiosController extends AppController {
         $this->loadModel('Torneio');
         $this->loadModel('TorneioCategoria');
         $this->loadModel('TorneioData');
+        $this->loadModel('TorneioInscricaoJogador');
+        $this->loadModel('ClienteCliente');
 
         $conditions = [];
+
+        $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
 
         $conditions = array_merge($conditions, [
             'Torneio.id' => $dados['id'],
@@ -152,14 +153,13 @@ class TorneiosController extends AppController {
         $dados['Torneio']['_valor_inscricao'] =  'R$ '.number_format($dados['Torneio']['valor_inscricao'],2,',','.');
         $dados['TorneioCategoria'] = $this->TorneioCategoria->getByTournamentId($dados['Torneio']['id']);
         $dados['TorneioData'] = $this->TorneioData->getByTournamentId($dados['Torneio']['id']);
-        //$dados['Torneio']['_subscription_enabled'] = $subscription_enabled;
+        $dados['Torneio']['_subscribed'] = $this->TorneioInscricaoJogador->checkSubscribed($meus_ids_de_cliente);
         
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
 
     }
     
-
     public function categorias() {
 
         $this->layout = 'ajax';
@@ -587,13 +587,29 @@ class TorneiosController extends AppController {
         $this->loadModel('ClienteCliente');
         $this->loadModel('TorneioInscricao');
         $this->loadModel('Torneio');
+        $this->loadModel('Usuario');
         //$this->loadModel('TorneioCategoria');
 
         $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
         if ( !$dados_usuario ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
+        
+        $dados_torneio = $this->Torneio->find('first',[
+            'fields' => ['*'],
+            'conditions' => [
+                'Torneio.id' => $dados->torneio_id,
+                'Torneio.inscricoes_de <=' => date('Y-m-d'),
+                'Torneio.inscricoes_ate >=' => date('Y-m-d'),
+            ],
+            'link' => [],
+        ]);
 
+        if ( count($dados_torneio) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do torneio não encontrados.'))));
+        }
+
+        //se é uma empresa cadastrando
         if ( $dados_usuario['Usuario']['nivel_id'] == 2 ){
 
             if ( !isset($dados->jogador_1) || $dados->jogador_1 == '' || $dados->jogador_1 == null ) {
@@ -613,22 +629,127 @@ class TorneiosController extends AppController {
             if ( count($v_cadastro_jogador_2) == 2 ){
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O Jogador 2 não foi localizado.'))));
             }
+
+        //se é um usuário cadastrando
+        } else if ( $dados_usuario['Usuario']['nivel_id'] == 3 ){
+
+            if ( !isset($dados->telefone) || $dados->telefone == '' || $dados->telefone == null ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O seu telefone deve ser informado.'))));
+            }
+            if ( !isset($dados->nome_dupla) || $dados->nome_dupla == '' || $dados->nome_dupla == null ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O nome da dupla deve ser informado.'))));
+            }
+            if ( !isset($dados->telefone_dupla) || $dados->telefone_dupla == '' || $dados->telefone_dupla == null ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O telefone da dupla deve ser informado.'))));
+            }
+
+            $email_dupla = null;
+            $usuario_id_dupla = null;
+
+            //verifica se o email da dupla foi stado
+            if ( isset($dados->email_dupla) && $dados->email_dupla != '' && $dados->email_dupla != null ) {
+                if ( !filter_var($dados->email_dupla, FILTER_VALIDATE_EMAIL) ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O email da dupla é inálido.'))));
+                }
+                $email_dupla = $dados->email_dupla;
+            }
+
+            //se o email foi setado, verifica se tem algum usuario cadastrado com este email
+            if ( $email_dupla != null ){
+
+                $dados_usuario_dupla = $this->Usuario->getByEmail($email_dupla);
+                if ( count($dados_usuario_dupla) > 0 ){
+                    $usuario_id_dupla = $dados_usuario['Usuario']['id'];
+                    //se tem, verifico se existe os dados da dupla na empresa do torneio
+                    $dados_cliente_cliente_dupla = $this->ClienteCliente->buscaDadosUsuarioComoCliente($usuario_id_dupla, $dados_torneio['Torneio']['cliente_id']);
+                    if ( count($dados_cliente_cliente_dupla) > 0 ){
+    
+                        //verifico se o usuário da dupla já nao esta cadastrado no torneio antes de atualizar os dados
+                        $check_inscricao = $this->TorneioInscricao->checkSubscription($dados_cliente_cliente_dupla, $dados->torneio_id);
+            
+                        if ( $check_inscricao !== false ){
+                            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
+                        }
+
+                        $dados_salvar_dupla = [
+                            'id' => $dados_cliente_cliente_dupla['ClienteCliente']['id'],
+                            'nome' => $dados->nome_dupla,
+                            'telefone' => $dados->telefone_dupla,
+                            'usuario_id' => $dados_cliente_cliente_dupla['ClienteCliente']['usuario_id'],
+                        ];
+
+                    } else {
+                        $dados_salvar_dupla = [
+                            'usuario_id' => $usuario_id_dupla,
+                            'cliente_id' => $dados_torneio['Torneio']['cliente_id'],
+                            'nome' => $dados->nome_dupla,
+                            'email' => $email_dupla,
+                            'telefone' => $dados->telefone_dupla,
+                        ];
+                    }
+                }
+
+            }
+
+            //se ainda não cadastrei/atualizei os dados da dupla
+            if ( !isset($dados_salvar_dupla) ){
+
+                if ( $email_dupla != null ) {
+                    $dados_cliente_cliente_dupla = $this->ClienteCliente->buscaPorEmail($dados_torneio['Torneio']['cliente_id'], $email_dupla);
+                }
+
+                if ( isset($dados_cliente_cliente_dupla) && count($dados_cliente_cliente_dupla) > 0 ){
+
+                    //verifico se o usuário da dupla já nao esta cadastrado no torneio antes de atualizar os dados
+                    $check_inscricao = $this->TorneioInscricao->checkSubscription($dados_cliente_cliente_dupla, $dados->torneio_id);
+            
+                    if ( $check_inscricao !== false ){
+                        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
+                    }
+
+                    $dados_salvar_dupla = [
+                        'id' => $dados_cliente_cliente_dupla['ClienteCliente']['id'],
+                        'nome' => $dados->nome_dupla,
+                        'telefone' => $dados->telefone_dupla,
+                        'usuario_id' => $dados_cliente_cliente_dupla['ClienteCliente']['usuario_id'],
+                    ];
+
+                } else {
+                    $dados_salvar_dupla = [
+                        'usuario_id' => null,
+                        'cliente_id' => $dados_torneio['Torneio']['cliente_id'],
+                        'nome' => $dados->nome_dupla,
+                        'email' => $email_dupla,
+                        'cpf' => null,
+                        'telefone' => $dados->telefone_dupla,
+                    ];
+
+                }
+
+            }
+
+            //atualizo o telefone do usuário
+            $this->Usuario->atualizaTelefone($dados_usuario['Usuario']['id'], $dados->telefone);
+
+            $v_cadastro_jogador_1 = $this->ClienteCliente->buscaDadosUsuarioComoCliente($dados_usuario['Usuario']['id'], $dados_torneio['Torneio']['cliente_id']);
+            if ( count($v_cadastro_jogador_1) == 0 ){
+                //se não achei os dados do usuário como cliente da empresa, eu crio
+                $v_cadastro_jogador_1 = $this->ClienteCliente->criaDadosComoCliente($dados_usuario['Usuario']['id'], $dados_torneio['Torneio']['cliente_id']);
+            }
+
+            if ( count($v_cadastro_jogador_1) == 0 ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar seus dados no torneio.'))));
+            }
+
+            $this->ClienteCliente->create();
+            $v_cadastro_jogador_2 = $this->ClienteCliente->save($dados_salvar_dupla);
+
+            if ( count($v_cadastro_jogador_2) == 0 ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar os dados da dupla.'))));
+            }
+
         }
 
-        $dados_torneio = $this->Torneio->find('first',[
-            'fields' => ['*'],
-            'conditions' => [
-                'Torneio.id' => $dados->torneio_id,
-                'Torneio.inscricoes_de <=' => date('Y-m-d'),
-                'Torneio.inscricoes_ate >=' => date('Y-m-d'),
-            ],
-            'link' => [],
-        ]);
-
-        if ( count($dados_torneio) == 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do torneio não encontrados.'))));
-        }
-        
         if ( $dados_torneio['Torneio']['impedimentos'] < count($impedimentos) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você só pode selecionar até '.$dados_torneio['Torneio']['impedimentos'].' impedimentos.'))));
         }
