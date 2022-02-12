@@ -29,7 +29,6 @@ class TorneioCategoria extends AppModel {
         if ( $tournament_id == null )
             return [];
 
-        $this->virtualFields['_inscritos'] = 'count(TorneioInscricao.id)';
         
         $categorias =  $this->find('all',[
             'fields' => ['*'],
@@ -41,7 +40,10 @@ class TorneioCategoria extends AppModel {
                 'TorneioCategoria.nome', 
                 'TorneioCategoria.sexo'
             ],
-            'link' => ['PadelCategoria', 'TorneioInscricao'],
+            'link' => [
+                'PadelCategoria', 
+                'TorneioInscricao'
+            ],
             'group' => [
                 'TorneioCategoria.id'
             ]

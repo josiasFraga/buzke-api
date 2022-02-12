@@ -22,4 +22,34 @@ class TorneioInscricaoJogador extends AppModel {
             ]
         ]) > 0;
     }
+
+    public function buscaNomeDupla($inscricao_id = null){
+        if ($inscricao_id == null ) {
+            return '';
+        }
+
+        $jogadores = $this->find('all',[
+            'fields' => [
+                'ClienteCliente.nome'
+            ],
+            'conditions' => [
+                'TorneioInscricaoJogador.torneio_inscricao_id' => $inscricao_id
+            ],
+            'link' => ['ClienteCliente']
+        ]);
+
+        if ( count($jogadores) == 0 ) {
+            return "";
+        }
+
+        $nomes = [];
+
+        foreach($jogadores as $key => $jogador){
+            $nomes[] = $jogador['ClienteCliente']['nome'];
+        }
+
+        $nomes_str = implode(' | ',$nomes);
+        return $nomes_str;
+        
+    }
 }

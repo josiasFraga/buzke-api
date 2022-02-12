@@ -30,7 +30,10 @@ class TorneioInscricao extends AppModel {
 		$first_check = $this->find('first',[
 			'conditions' => [
 				'TorneioInscricao.torneio_id' => $torneio_id,
-				'TorneioInscricaoJogador.cliente_cliente_id' => $dados_cliente_cliente['ClienteCliente']['id']
+				'TorneioInscricaoJogador.cliente_cliente_id' => $dados_cliente_cliente['ClienteCliente']['id'],
+				'not' => [
+					'TorneioInscricao.confirmado' => 'R'
+				]
 			],
 			'link' => ['TorneioInscricaoJogador']
 		]);
@@ -44,7 +47,10 @@ class TorneioInscricao extends AppModel {
 		$second_check = $this->find('first',[
 			'conditions' => [
 				'TorneioInscricao.torneio_id' => $torneio_id,
-				'ClienteCliente.usuario_id' => $dados_cliente_cliente['ClienteCliente']['usuario_id']
+				'ClienteCliente.usuario_id' => $dados_cliente_cliente['ClienteCliente']['usuario_id'],
+				'not' => [
+					'TorneioInscricao.confirmado' => 'R'
+				]
 			],
 			'link' => ['TorneioInscricaoJogador' => ['ClienteCliente']]
 		]);

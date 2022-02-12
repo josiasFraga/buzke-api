@@ -60,4 +60,18 @@ class Torneio extends AppModel {
         }
         return true;
     }
+
+	public function checkIsSubscriptionsFinished($torneio_id = null) {
+		if ( $torneio_id == null ){
+			return false;
+		}
+
+		return $this->find('count',[
+			'conditions' => [
+				'Torneio.id' => $torneio_id,
+				'Torneio.inscricoes_ate <' => date('Y-m-d'),
+			]
+		]) > 0;
+
+	}
 }
