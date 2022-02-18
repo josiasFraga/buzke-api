@@ -18,6 +18,9 @@ class TorneioInscricao extends AppModel {
 		'TorneioInscricaoJogador' => array(
 			'foreignKey' => 'torneio_inscricao_id'
         ),
+		'TorneioGrupo' => array(
+			'foreignKey' => 'torneio_inscricao_id'
+        ),
 	);
 
 	public function checkSubscription($dados_cliente_cliente = [], $torneio_id = null) {
