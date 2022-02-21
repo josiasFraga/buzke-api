@@ -114,6 +114,7 @@ class TorneiosController extends AppController {
         $this->loadModel('TorneioInscricao');
         $this->loadModel('TorneioInscricaoJogador');
         $this->loadModel('ClienteCliente');
+        $this->loadModel('TorneioGrupo');
 
         $conditions = [];
 
@@ -153,9 +154,12 @@ class TorneiosController extends AppController {
 
         $dados['Torneio']['_subscriptions_opened'] = ($dados['Torneio']['inscricoes_de'] <= date('Y-m-d H:i:s') && $dados['Torneio']['inscricoes_ate'] >= date('Y-m-d H:i:s'));
         $dados['Torneio']['_valor_inscricao'] =  'R$ '.number_format($dados['Torneio']['valor_inscricao'],2,',','.');
+        $all_group_generated = true;
+        $some_group_generated = false;
         $categorias = $this->TorneioCategoria->getByTournamentId($dados['Torneio']['id']);
         if ( count($categorias) > 0 ) {
             foreach($categorias as $key => $cat){
+
                 $categorias[$key]['_inscritos'] = 
                     $this->TorneioInscricao->find('count',[
                         'conditions' => [
@@ -165,12 +169,32 @@ class TorneiosController extends AppController {
                             ]
                         ]
                     ]);
+
+                $is_group_generated = $this->TorneioGrupo->find('count',[
+                    'conditions' => [
+                        'TorneioGrupo.torneio_categoria_id' => $cat['id'],
+                        'not' => [
+                            'TorneioInscricao.confirmado' => 'R',
+                        ]
+                    ],
+                    'link' => ['TorneioInscricao']
+                ]) > 0;
+
+                if ( !$is_group_generated ) {
+                    $all_group_generated = false;
+                } else if ( $is_group_generated ) {
+                    $some_group_generated = true;
+                }
+
+                $categorias[$key]['_is_group_generated'] = $is_group_generated;
             }
         }
         $dados['TorneioCategoria'] = $categorias;
         $dados['TorneioData'] = $this->TorneioData->getByTournamentId($dados['Torneio']['id']);
         $dados['Torneio']['_subscribed'] = $this->TorneioInscricaoJogador->checkSubscribed($meus_ids_de_cliente);
         $dados['Torneio']['_subscriptions_finished'] = $this->Torneio->checkIsSubscriptionsFinished($dados['Torneio']['id']);
+        $dados['Torneio']['_all_group_generated'] = $all_group_generated;
+        $dados['Torneio']['_some_group_generated'] = $some_group_generated;
         
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
@@ -378,12 +402,6 @@ class TorneiosController extends AppController {
             }
             if ( !isset($categoria->sexo) || $categoria->sexo == "" || !in_array($categoria->sexo, ['M','F','MI']) ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Sexo da categoria não informado'))));
-            }
-            if ( !isset($categoria->n_chaves) || $categoria->n_chaves == "" || !is_numeric($categoria->n_chaves) ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Nº de chaves da categoria não informado'))));
-            }
-            if ( !isset($categoria->n_duplas_p_chave) || $categoria->n_duplas_p_chave == "" || !is_numeric($categoria->n_duplas_p_chave) ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Nº de duplas por chave da categoria não informado'))));
             }
             if ( !isset($categoria->limite_duplas) || $categoria->limite_duplas == "" || !is_numeric($categoria->limite_duplas) ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Limite de duplas da categoria não informado'))));
@@ -1114,7 +1132,7 @@ class TorneiosController extends AppController {
                     $grupos_salvar[$letra_grupo][] = [
                         'torneio_inscricao_id' => $inscricao['TorneioInscricao']['id'],
                         'torneio_categoria_id' => $dados->torneio_categoria_id,
-                        'nome' => 'Grupo '.$alphas[$i],
+                        'nome' => 'Chave '.$alphas[$i],
                     ];
                     unset($inscricoes[$key]);
                    
@@ -1145,7 +1163,7 @@ class TorneiosController extends AppController {
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Grupos gerados com sucesso!'))));
     }
 
-    public function busca_grupos(){
+    public function grupos(){
 
         $this->layout = 'ajax';
         $dados = $this->request->query;
@@ -1166,15 +1184,12 @@ class TorneiosController extends AppController {
         if ( !$dados_usuario ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
-        
-        //se é uma empresa cadastrando
-        if ( $dados_usuario['Usuario']['nivel_id'] != 2 ){
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Sem permissão para buscar grupos.'))));
-        }
-
 
         $this->loadModel('TorneioGrupo');
         $this->loadModel('TorneioCategoria');
+        $this->loadModel('TorneioInscricao');
+        $this->loadModel('TorneioInscricaoJogador');
+    
         $dados_torneio_categoria = $this->TorneioCategoria->find('first',[
             'fields' => ['*'],
             'conditions' => [
@@ -1196,6 +1211,85 @@ class TorneiosController extends AppController {
             'link' => [],
         ]);
 
+        $grupos_retornar = [];
+        if ( count($grupos) > 0 ) {
+            foreach( $grupos as $key => $grupo ){
+                $integrantes = $this->TorneioInscricao->find('all',[
+                    'conditions' => [
+                        'TorneioInscricao.torneio_categoria_id' => $dados['torneio_categoria_id'],
+                        'TorneioGrupo.nome' => $grupo,
+                        'not' => [
+                            'TorneioInscricao.confirmado' => 'R',
+                        ]
+                    ],
+                    'link' => ['TorneioGrupo']
+                ]);
+                
+                if ( count($integrantes) > 0 ) {
+
+                    foreach( $integrantes as $key_integrante => $integrante) {
+                        $integrantes[$key_integrante]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($integrante['TorneioInscricao']['id']);
+                        //$dados[$key]['TorneioInscricao']['_owner'] = $owner;
+                    }
+
+                }
+    
+                $grupos_retornar[] = [
+                    '_nome' => $grupo,
+                    '_integrantes' => $integrantes,
+                ];
+            }
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $grupos_retornar))));
+    }
+
+    public function busca_grupos_lista(){
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Email não informado!', 401);
+        }
+
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados['torneio_categoria_id']) || $dados['torneio_categoria_id'] == "" || !is_numeric($dados['torneio_categoria_id']) ) {
+            throw new BadRequestException('ID não informado!', 401);
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados['token'], $dados['email']);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('TorneioGrupo');
+        $this->loadModel('TorneioCategoria');
+        $dados_torneio_categoria = $this->TorneioCategoria->find('first',[
+            'fields' => ['*'],
+            'conditions' => [
+                'TorneioCategoria.id' => $dados['torneio_categoria_id'],
+            ],
+            'link' => ['Torneio'],
+        ]);
+
+        if ( count($dados_torneio_categoria) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Categoria não encontrada.'))));
+        }
+    
+        $grupos = $this->TorneioGrupo->find('all',[
+            'fields' => ['TorneioGrupo.nome', 'TorneioGrupo.nome'],
+            'conditions' => [
+                'TorneioGrupo.torneio_categoria_id' => $dados['torneio_categoria_id'],
+            ],
+            'order' => 'TorneioGrupo.nome',
+            'group' => 'TorneioGrupo.nome',
+            'link' => [],
+        ]);
+
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $grupos))));
     }
 
@@ -1209,7 +1303,7 @@ class TorneiosController extends AppController {
                         $grupos_salvar[$key_grupo][] = [
                             'torneio_inscricao_id' => $inscricao['TorneioInscricao']['id'],
                             'torneio_categoria_id' => $torneio_categoria_id,
-                            'nome' => 'Grupo '.$key_grupo,
+                            'nome' => 'Chave '.$key_grupo,
                         ];
     
                         unset($inscricoes[$key]);
@@ -1249,7 +1343,7 @@ class TorneiosController extends AppController {
         }
 
         if ( !isset($dados->grupo_destino) || $dados->grupo_destino == '' || $dados->grupo_destino == null ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Grupo de destino não informada.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Chave de destino não informada.'))));
         }
 
         $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
@@ -1311,7 +1405,7 @@ class TorneiosController extends AppController {
         ]);
 
         if ( count($dados_grupo) == 0 ){
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Grupo não econtrado.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Chave não econtrada.'))));
         }
 
         $dados_salvar = [
