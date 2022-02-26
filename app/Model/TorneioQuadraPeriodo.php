@@ -17,4 +17,51 @@ class TorneioQuadraPeriodo extends AppModel {
         }
         return true;
     }
+
+	public function getTimeList($torneio_id = null) {
+		
+		if( $torneio_id == null ) {
+			return [];
+		}
+
+		$periodos = $this->find('all',[
+            'conditions' => [
+                'TorneioQuadra.torneio_id' => $torneio_id
+            ],
+            'link' => ['TorneioQuadra'],
+            'order' => ['TorneioQuadraPeriodo.inicio']
+        ]);
+
+        if ( count($periodos) == 0 ) {
+            return [];
+        }
+
+        $horarios = [];
+
+        foreach($periodos as $key => $periodo) {
+
+            $inicio = $horario = $periodo['TorneioQuadraPeriodo']['inicio'];
+            $fim = $periodo['TorneioQuadraPeriodo']['fim'];
+
+            list($hours,$minutes) = explode(':',$periodo['TorneioQuadraPeriodo']['duracao_jogos']);
+
+            for (
+                $horario;
+                $horario <= $fim;
+                $horario = date('Y-m-d H:i:s',strtotime('+'.$hours.' hour +'.$minutes.' minutes',strtotime($horario))) 
+            ) {
+
+                $horarios[] = [
+                    'torneio_quadra_id' => $periodo['TorneioQuadraPeriodo']['torneio_quadra_id'],
+                    'duracao' => $periodo['TorneioQuadraPeriodo']['duracao_jogos'],
+                    'horario' => $horario
+                ];
+
+            }
+
+        }
+
+        return $horarios;
+
+	}
 }

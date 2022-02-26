@@ -1,4 +1,5 @@
 <?php
+App::uses('CombinationsComponent', 'Controller/Component');
 class TorneiosController extends AppController {
 
     public function index() {
@@ -115,6 +116,7 @@ class TorneiosController extends AppController {
         $this->loadModel('TorneioInscricaoJogador');
         $this->loadModel('ClienteCliente');
         $this->loadModel('TorneioGrupo');
+        $this->loadModel('TorneioJogo');
 
         $conditions = [];
 
@@ -189,12 +191,21 @@ class TorneiosController extends AppController {
                 $categorias[$key]['_is_group_generated'] = $is_group_generated;
             }
         }
+
+        $matches_generated = $this->TorneioJogo->find('count',[
+            'conditions' => [
+                'Agendamento.torneio_id' => $dados['Torneio']['id']
+            ], 
+            'link' => ['Agendamento']
+        ]) > 0;
+
         $dados['TorneioCategoria'] = $categorias;
         $dados['TorneioData'] = $this->TorneioData->getByTournamentId($dados['Torneio']['id']);
         $dados['Torneio']['_subscribed'] = $this->TorneioInscricaoJogador->checkSubscribed($meus_ids_de_cliente);
         $dados['Torneio']['_subscriptions_finished'] = $this->Torneio->checkIsSubscriptionsFinished($dados['Torneio']['id']);
         $dados['Torneio']['_all_group_generated'] = $all_group_generated;
         $dados['Torneio']['_some_group_generated'] = $some_group_generated;
+        $dados['Torneio']['_matches_generated'] = $matches_generated;
         
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
@@ -356,9 +367,9 @@ class TorneiosController extends AppController {
             throw new BadRequestException('Fim não informado!', 401);
         }
 
-        if ( !isset($dados->duracao) || $dados->duracao == "" ) {
-            throw new BadRequestException('Fim não informado!', 401);
-        }
+        //if ( !isset($dados->duracao) || $dados->duracao == "" ) {
+        //    throw new BadRequestException('Fim não informado!', 401);
+        //}
         
         if ( !isset($dados->inscricoes_de) || $dados->inscricoes_de == "" ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data inicial das inscrições não informada'))));
@@ -446,11 +457,14 @@ class TorneiosController extends AppController {
                 if ( !isset($periodo->ate_as) || $periodo->ate_as == "" ) {
                     return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora final do período não informado.'))));
                 }
+                if ( !isset($periodo->duracao) || $periodo->duracao == "" ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Duração dos jogos na quadra não informados.'))));
+                }
                 if ( $periodo->das >= $periodo->ate_as) {
                     return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'A hora de início deve ser inferior a data final.'))));
                 }
 
-                $quadras[$key]['TorneioQuadraPeriodo'][] = ['inicio' => $periodo->data." ".$periodo->das, 'fim' =>  $periodo->data." ".$periodo->ate_as];
+                $quadras[$key]['TorneioQuadraPeriodo'][] = ['inicio' => $periodo->data." ".$periodo->das, 'fim' =>  $periodo->data." ".$periodo->ate_as, 'duracao_jogos' => $periodo->duracao];
 
                 $periodos_temp[$periodo->data][] = ['inicio' => $periodo->das, 'fim' => $periodo->ate_as];
             }
@@ -460,7 +474,7 @@ class TorneiosController extends AppController {
         foreach($periodos_temp as $data => $per_temp){
             foreach( $per_temp as $key_item => $item ){
                 if ( !isset($periodos[$data]) ) {
-                    $periodos[$data][] = ['data' => $data, 'inicio' => $item['inicio'], 'fim' => $item['fim'], 'duracao_jogos' => $dados->duracao];
+                    $periodos[$data][] = ['data' => $data, 'inicio' => $item['inicio'], 'fim' => $item['fim']];
                 } else {
                     foreach( $periodos[$data] as $key_per_temp => $item_salvo ){
                         //se o item está entre o salvo
@@ -469,11 +483,11 @@ class TorneiosController extends AppController {
                         }
                         //se o item está antes do salvo
                         if ( $item['inicio'] < $item_salvo['inicio'] && $item['fim'] < $item_salvo['inicio']  ) {
-                            $periodos[$data][] = ['data' => $data, 'inicio' => $item['inicio'], 'fim' => $item['fim'], 'duracao_jogos' => $dados->duracao];
+                            $periodos[$data][] = ['data' => $data, 'inicio' => $item['inicio'], 'fim' => $item['fim']];
                         }
                         //se o item está depois do salvo
                         else if ( $item['inicio'] > $item_salvo['fim'] && $item['fim'] > $item_salvo['fim'] ) {
-                            $periodos[$data][] = ['data' => $data, 'inicio' => $item['inicio'], 'fim' => $item['fim'], 'duracao_jogos' => $dados->duracao];
+                            $periodos[$data][] = ['data' => $data, 'inicio' => $item['inicio'], 'fim' => $item['fim']];
                         }
                         //se o item tem o início entre o salvo
                         else if ( $item['inicio'] > $item_salvo['inicio'] && $item['inicio'] < $item_salvo['fim'] ) {
@@ -1471,6 +1485,292 @@ class TorneiosController extends AppController {
        
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tudo certo! O torneio foi cancelado com sucesso.'))));
+    }
+
+    public function gera_jogos(){
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), false);
+        }elseif ( gettype($dados) == 'array' ) {
+            $dados = json_decode(json_encode($dados), false);
+        }
+
+        if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados->torneio_id) || $dados->torneio_id == '' || $dados->torneio_id == null ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Torneio não informado.'))));
+        }
+        
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+        
+        //se é uma empresa cadastrando
+        if ( $dados_usuario['Usuario']['nivel_id'] != 2 ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Sem permissão para gerar jogos.'))));
+        }
+
+        $this->loadModel('Torneio');
+        $this->loadModel('TorneioCategoria');
+        $this->loadModel('TorneioQuadra');
+        $this->loadModel('TorneioGrupo');
+        $this->loadModel('TorneioQuadraPeriodo');
+        $this->loadModel('Agendamento');
+
+        $dados_torneio = $this->Torneio->find('first',[
+            'fields' => ['*'],
+            'conditions' => [
+                'Torneio.id' => $dados->torneio_id,
+                'Torneio.cliente_id' => $dados_usuario['Usuario']['cliente_id'],
+            ],
+            'link' => [],
+        ]);
+
+        if ( count($dados_torneio) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do torneio não encontrados.'))));
+        }
+        
+        if ($dados_torneio['Torneio']['inscricoes_ate'] >= date('Y-m-d') ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'As inscrições do torneio ainda não foram encerradas.'))));
+        }
+
+        $verifica_categorias = $this->TorneioCategoria->find('first',[
+            'fields' => ['*'],
+            'conditions' => [
+                'TorneioCategoria.torneio_id' => $dados->torneio_id,
+                'TorneioInscricao.id' => null,
+            ],
+            'link' => ['TorneioInscricao'],
+        ]);
+
+        if ( count($verifica_categorias) > 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Ainda existem categorias sem grupos gerados.'))));
+        }
+
+        //busca quadras do torneio
+        $quadras = $this->TorneioQuadra->find('all',[
+            'conditions' => [
+                'TorneioQuadra.torneio_id' => $dados->torneio_id
+            ],
+            'contain' => ['TorneioQuadraPeriodo', 'ClienteServico']
+        ]);
+
+        //busca grupos
+        $grupos = $this->TorneioGrupo->find('all',[
+            'fields' => ['*'],
+            'conditions' => [
+                'TorneioCategoria.torneio_id' => $dados->torneio_id
+            ],
+            'link' => ['TorneioInscricao' => ['TorneioCategoria']]
+        ]);
+
+        //gera os confrontos por grupos
+        $confrontos = $this->geraConfrontos($grupos);
+
+        if ( !$confrontos || count($confrontos) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível gerar os confronto.'))));
+        }
+
+        //gera os horatios do torneio
+        $horarios = $this->TorneioQuadraPeriodo->getTimeList($dados->torneio_id);
+
+        if ( !$horarios || count($horarios) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível gerar os horários dos confrontos.'))));
+        }
+
+        //atribui os horarios gerados aos confrontos
+        $confrontos = $this->atribui_horarios_confrontos($confrontos,$horarios);
+
+        if ( !$confrontos || count($confrontos) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível gerar os jogos.'))));
+        }
+
+        $dados_salvar = [];
+        foreach( $confrontos as $key => $dados_confronto ){
+            if ( isset($dados_confronto['confrontos']) && is_array($dados_confronto['confrontos']) && count($dados_confronto['confrontos']) ){
+
+                foreach($dados_confronto['confrontos'] as $key_confronto => $confronto ){
+                    $dados_salvar[] = [
+                        'Agendamento' => [
+                            'cliente_id' => $dados_usuario['Usuario']['cliente_id'],
+                            'torneio_id' => $dados->torneio_id,
+                            'horario' => $confronto['horario']['horario'],
+                            'duracao' => $confronto['horario']['duracao']
+                        ],
+                        'TorneioJogo' => [
+                            [
+                                'torneio_categoria_id' => $dados_confronto['torneio_categoria_id'],
+                                'time_1' => $confronto[0]['inscricao_id'],
+                                'time_2' => $confronto[1]['inscricao_id'],
+                                'fase' => 1
+                            ]
+                        ]
+                    ];
+
+                }
+            }
+        }
+
+        $this->Agendamento->deleteAll(['Agendamento.torneio_id' => $dados->torneio_id]);
+        if (!$this->Agendamento->saveAll($dados_salvar, ['deep' => true])) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar os jogos.'))));
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Jogos gerados com sucesso!'))));
+    }
+
+    private function geraConfrontos ($grupos = []){
+        $arr_retornar = [];
+        if ( count($grupos) == 0 ) {
+            return $arr_retornar;
+        }
+
+        $arr_grupos = [];
+
+        foreach($grupos as $key => $grupo){
+            $torneio_categoria_id = $grupo['TorneioGrupo']['torneio_categoria_id'];
+            $arr_grupos[$torneio_categoria_id][$grupo['TorneioGrupo']['nome']][] = ['grupo' => $grupo['TorneioGrupo']['nome'], 'inscricao_id' => $grupo['TorneioInscricao']['id']];
+        }
+        
+        foreach($arr_grupos as $torneio_categoria_id => $chaveamentos ) {
+
+            foreach($chaveamentos as $grupo_nome => $inscricoes){
+                $arr_retornar[] = [
+                    'torneio_categoria_id' => $torneio_categoria_id,
+                    'grupo_nome' => $grupo_nome,
+                    'confrontos' => $this->gera_confrontos($inscricoes),
+                ];
+            }
+
+        }
+
+        return $arr_retornar;
+
+    }
+
+    private function gera_confrontos($inscricoes = []){
+        if ( count($inscricoes) == 0 ){
+            return [];
+        }
+
+        $Combinations = new CombinationsComponent($inscricoes);
+        $combinations = $Combinations->getCombinations(2, false);
+        return $combinations;
+
+    }
+
+    private function atribui_horarios_confrontos( $confrontos = [], $horarios = [] ){
+
+        if ( count($confrontos) == 0 || count($horarios) == 0 ){
+            return [];
+        }
+        
+        //conto os confrontos
+        $n_confrontos = 0;
+        foreach( $confrontos as $key => $dados_confronto ){
+            if ( count($dados_confronto['confrontos']) > 0 ){
+                $n_confrontos += count($dados_confronto['confrontos']);
+            }
+        }
+
+        //verifica se tem horarios o suficiente pra todos os jogos
+        if ( $n_confrontos > count($horarios) ){
+            return false;
+        }
+
+        //pega os primeiros horarios pra não ter jogos de fase superior antes de jogos de fase anterior
+        $horarios = array_slice($horarios, 0, $n_confrontos);
+        $horarios = array_values($horarios);
+
+        //embaralha os horarios
+        shuffle($horarios);
+
+        //atribui um horario pra cada jogo        
+        foreach( $confrontos as $key => $dados_confronto ){
+            if ( count($dados_confronto['confrontos']) > 0 ){
+
+                $arr_confrontos = $dados_confronto['confrontos'];
+
+                foreach( $arr_confrontos as $key_confronto => $confronto ){
+                    $horario = $horarios[0];
+                    $confrontos[$key]['confrontos'][$key_confronto]['horario'] = $horario;
+                    unset($horarios[0]);
+                    $horarios = array_values($horarios);
+                }
+            }
+        }
+
+        return $confrontos;
+
+    }
+
+    public function busca_jogos(){
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Email não informado!', 401);
+        }
+
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados['torneio_id']) || $dados['torneio_id'] == "" || !is_numeric($dados['torneio_id']) ) {
+            throw new BadRequestException('Torneio não informado!', 401);
+        }
+
+        if ( !isset($dados['torneio_categoria_id']) || $dados['torneio_categoria_id'] == "" || !is_numeric($dados['torneio_categoria_id']) ) {
+            throw new BadRequestException('Categoria não informada!', 401);
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados['token'], $dados['email']);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('TorneioJogo');
+        $this->loadModel('TorneioInscricaoJogador');
+    
+        $jogos = $this->TorneioJogo->find('all',[
+            'fields' => ['Agendamento.horario', 'TorneioJogo.*'],
+            'conditions' => [
+                'Agendamento.torneio_id' => $dados['torneio_id'],
+                'TorneioJogo.torneio_categoria_id' => $dados['torneio_categoria_id'],
+            ],
+            'order' => ['Agendamento.horario'],
+            'link' => ['Agendamento'],
+        ]);
+
+       $datas = [];
+       $datas_retornar = [];
+        if ( count($jogos) > 0 ) {
+            foreach( $jogos as $key => $jogo ){
+                $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_1']);
+                $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_2']);
+                $jogos[$key]['TorneioJogo']['_hora'] = date('H:i',strtotime($jogo['Agendamento']['horario']));
+                $datas[] = date('d/m/Y',strtotime($jogo['Agendamento']['horario']));
+            }
+        }
+
+        if ( count($datas) > 0 ) {
+
+            $datas = array_unique($datas);
+            foreach( $datas as $data ){
+                $datas_retornar[] = ['data' => $data];
+            }
+
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $jogos, 'datas' => $datas_retornar))));
+
     }
 
 }

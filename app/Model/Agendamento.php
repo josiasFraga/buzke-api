@@ -28,6 +28,9 @@ class Agendamento extends AppModel {
 		'AgendamentoAviso' => array(
 			'foreignKey' => 'agendamento_id'
         ),
+		'TorneioJogo' => array(
+			'foreignKey' => 'agendamento_id'
+        ),
     );
 
     public function verificaHorarios($horarios = [], $cliente_id = null, $data = null) {
