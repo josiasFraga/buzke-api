@@ -2112,7 +2112,7 @@ class TorneiosController extends AppController {
         }
 
         if ( !isset($dados['torneio_quadra_id']) || $dados['torneio_quadra_id'] == "" || !is_numeric($dados['torneio_quadra_id']) ) {
-            throw new BadRequestException('Quadra não informada!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
 
         $dados_usuario = $this->verificaValidadeToken($dados['token'], $dados['email']);
@@ -2156,11 +2156,11 @@ class TorneiosController extends AppController {
         }
 
         if ( !isset($dados['torneio_quadra_id']) || $dados['torneio_quadra_id'] == "" || !is_numeric($dados['torneio_quadra_id']) ) {
-            throw new BadRequestException('Quadra não informada!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
 
         if ( !isset($dados['data']) || $dados['data'] == "" ) {
-            throw new BadRequestException('Data não informada!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
 
         $dados_usuario = $this->verificaValidadeToken($dados['token'], $dados['email']);
