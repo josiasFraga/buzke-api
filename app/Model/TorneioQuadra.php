@@ -15,5 +15,8 @@ class TorneioQuadra extends AppModel {
 		'TorneioQuadraPeriodo' => array(
 			'foreignKey' => 'torneio_quadra_id'
         ),
+		'TorneioJogo' => array(
+			'foreignKey' => 'torneio_quadra_id'
+        ),
 	);
 }

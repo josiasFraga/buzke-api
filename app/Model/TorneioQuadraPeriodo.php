@@ -18,16 +18,30 @@ class TorneioQuadraPeriodo extends AppModel {
         return true;
     }
 
-	public function getTimeList($torneio_id = null) {
-		
-		if( $torneio_id == null ) {
-			return [];
-		}
+	public function getTimeList($torneio_id = null, $torneio_quadra_id = null, $data = null) {
+
+        $conditions = [];
+
+        if ( $torneio_id != null ) {
+            $conditions = array_merge($conditions,[
+                'TorneioQuadra.torneio_id' => $torneio_id
+            ]);
+        }
+
+        if ( $torneio_quadra_id != null ) {
+            $conditions = array_merge($conditions,[
+                'TorneioQuadra.id' => $torneio_quadra_id
+            ]);
+        }
+
+        if ( $data != null ) {
+            $conditions = array_merge($conditions,[
+                'DATE(TorneioQuadraPeriodo.inicio)' => $data
+            ]);
+        }
 
 		$periodos = $this->find('all',[
-            'conditions' => [
-                'TorneioQuadra.torneio_id' => $torneio_id
-            ],
+            'conditions' => $conditions,
             'link' => ['TorneioQuadra'],
             'order' => ['TorneioQuadraPeriodo.inicio']
         ]);

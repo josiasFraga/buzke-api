@@ -14,6 +14,9 @@ class TorneioCategoria extends AppModel {
 	public $hasMany = array(
 		'TorneioInscricao' => array(
 			'foreignKey' => 'torneio_categoria_id'
+        ),
+		'TorneioJogo' => array(
+			'foreignKey' => 'torneio_categoria_id'
 		)
 	);
 
