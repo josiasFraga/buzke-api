@@ -2135,7 +2135,7 @@ class TorneiosController extends AppController {
 
         $datas_list = [];
         foreach( $datas as $key => $data ) {
-            $datas_list[] = date('d/m/Y', strtotime($data['TorneioQuadraPeriodo']['inicio']));
+            $datas_list[]['data'] = date('d/m/Y', strtotime($data['TorneioQuadraPeriodo']['inicio']));
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $datas_list))));
@@ -2181,7 +2181,7 @@ class TorneiosController extends AppController {
                 if ( $this->TorneioJogo->checaJogoNoHorario($dados['torneio_quadra_id'], $horario['horario']) ) {
                     $texto_horario = ' *';
                 }
-                $horarios_retornar[] = $horario['horario'].$texto_horario;
+                $horarios_retornar[]['horario'] = $horario['horario'].$texto_horario;
             }
         }
 
