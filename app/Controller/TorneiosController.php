@@ -2189,4 +2189,39 @@ class TorneiosController extends AppController {
 
     }
 
+    public function busca_quadras(){
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Email não informado!', 401);
+        }
+
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados['torneio_id']) || $dados['torneio_id'] == "" || !is_numeric($dados['torneio_id']) ) {
+            throw new BadRequestException('ID do torneio nào informado!', 401);
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados['token'], $dados['email']);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('TorneioQuadra');
+        $this->TorneioQuadra->virtualFields['_quadra_nome'] = 'CONCAT_WS("", TorneioQuadra.nome, ClienteServico.nome)';
+        $quadras = $this->TorneioQuadra->find('all',[
+            'fields' => ['TorneioQuadra.*', 'ClienteServico.nome'],
+            'conditions' => [
+                'TorneioQuadra.torneio_id' => $dados['torneio_id'],
+            ],
+            'link' => ['ClienteServico'],
+        ]);
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $quadras))));
+    }
+
 }
