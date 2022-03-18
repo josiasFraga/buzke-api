@@ -20,6 +20,9 @@ class Torneio extends AppModel {
         ),
 		'TorneioInscricao' => array(
 			'foreignKey' => 'torneio_id'
+		),
+		'Agendamento' => array(
+			'foreignKey' => 'torneio_id'
 		)
 	);
 

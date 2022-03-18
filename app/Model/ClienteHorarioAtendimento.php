@@ -120,7 +120,15 @@ class ClienteHorarioAtendimento extends AppModel {
 
         foreach($agendamentos as $key => $agendamento) {
 
+            //se ja setou o status passa batido
             if ( isset($agendamento['Agendamento']['status']) ) {
+                continue;
+            }
+
+            //se é um agendamento de torneio passa batido
+            if ( isset($agendamento['Agendamento']['torneio_id']) && $agendamento['Agendamento']['torneio_id'] != null ) {
+                $agendamentos[$key]['Agendamento']['status'] = 'confirmed';
+                $agendamentos[$key]['Agendamento']['motive'] = '';
                 continue;
             }
 

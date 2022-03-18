@@ -16,6 +16,9 @@ class Agendamento extends AppModel {
 		'ClienteServico' => array(
 			'foreignKey' => 'servico_id'
         ),
+		'Torneio' => array(
+			'foreignKey' => 'torneio_id'
+        ),
     );
 
     public $hasMany = array(
@@ -207,7 +210,12 @@ class Agendamento extends AppModel {
             $agendamentos_de_convites = $this->montaArrayHorariosConvite($agendamentos_de_convites);
         }
 
-        return array_merge($agendamentos_basicos, $fixo_semanal, $fixo_mensal, $agendamentos_de_convites);
+        $agendamentos_de_torneios = $this->buscaAgendamentoDeTorneio($cliente_cliente_ids);
+        if ( count($agendamentos_de_torneios) > 0 ) {
+            $agendamentos_de_torneios = $this->montaArrayHorariosTorneio($agendamentos_de_torneios);
+        }
+
+        return array_merge($agendamentos_basicos, $fixo_semanal, $fixo_mensal, $agendamentos_de_convites, $agendamentos_de_torneios);
     }
 
     public function buscaAgendamentoUsuarioFixoSemanal($cliente_cliente_ids = []) {
@@ -322,6 +330,58 @@ class Agendamento extends AppModel {
 
     }
 
+    public function buscaAgendamentoDeTorneio($cliente_cliente_ids = []) {
+
+        return $this->find('all',[
+            'fields' => [
+                'Cliente.id',
+                'Cliente.nome',
+                'Cliente.telefone',
+                'Cliente.wp', 
+                'Cliente.estado', 
+                'Cliente.logo', 
+                'Cliente.endereco',
+                'Cliente.endereco_n',
+                'Cliente.bairro',
+                'Cliente.prazo_maximo_para_canelamento',
+                'Agendamento.*', 
+                'TorneioJogo.*', 
+                'Localidade.loc_no',
+                'Localidade.ufe_sg',
+                'ClienteServico.nome',
+                //'ClienteServico.descricao',
+                //'ClienteServico.valor',
+                'ClienteCliente.nome',
+                'Usuario.img'
+            ],
+            'conditions' => [
+                'Agendamento.horario >=' => date('Y-m-d 00:00:00'),
+                'Agendamento.cancelado' => "N",
+                'or' => [
+                    'TorneioJogo.time_1' => $cliente_cliente_ids,
+                    'TorneioJogo.time_2' => $cliente_cliente_ids,
+                ],
+            ],
+            'order' => [
+                'Agendamento.horario'
+            ],
+            'link' => [
+                'ClienteCliente' => [
+                    'Usuario'
+                ], 
+                'Cliente' => [
+                    'Localidade'
+                ], 
+                'TorneioJogo' => [
+                    'TorneioQuadra' => [
+                        'ClienteServico'
+                    ]
+                ]
+            ]
+        ]);
+
+    }
+
     public function buscaAgendamentoEmpresa($cliente_id, $type, $data, $year_week) {
 
         
@@ -330,6 +390,7 @@ class Agendamento extends AppModel {
                 'Agendamento.cliente_id' => $cliente_id,
                 'MONTH(Agendamento.horario)' => date('m',strtotime($data)),
                 'Agendamento.dia_semana' => null,
+                'Agendamento.torneio_id' => null,
                 'Agendamento.dia_mes' => null,
                 'not' => [
                     'Agendamento.cancelado' => 'Y'
@@ -341,6 +402,7 @@ class Agendamento extends AppModel {
                 'Agendamento.cliente_id' => $cliente_id,
                 'Agendamento.dia_semana' => null,
                 'Agendamento.dia_mes' => null,
+                'Agendamento.torneio_id' => null,
                 'YEARWEEK(Agendamento.horario, 4)' => $year_week,
                 'not' => [
                     'Agendamento.cancelado' => 'Y'
@@ -383,7 +445,13 @@ class Agendamento extends AppModel {
             $limitDate = strtotime(date("Y-m-t", strtotime($data_selecionada)));            
             $fixo_mensal = $this->montaArrayHorariosFixoMensal($fixo_mensal, $limitDate, $inicio_mes);
         }
-        return array_merge($agendamentos_basicos, $fixo_semanal, $fixo_mensal);
+
+        $agendamentos_de_torneios = $this->buscaAgendamentoEmpresaDeTorneio($cliente_id);
+        if ( count($agendamentos_de_torneios) > 0 ) {
+            $agendamentos_de_torneios = $this->montaArrayHorariosTorneio($agendamentos_de_torneios);
+        }
+
+        return array_merge($agendamentos_basicos, $fixo_semanal, $fixo_mensal, $agendamentos_de_torneios);
     }
     
     public function buscaAgendamentoEmpresaFixoSemanal($cliente_id) {
@@ -446,6 +514,43 @@ class Agendamento extends AppModel {
                 'Agendamento.horario'
             ],
             'link' => ['ClienteCliente', 'ClienteServico']
+        ]);
+
+    }
+
+    public function buscaAgendamentoEmpresaDeTorneio($cliente_id) {
+
+        return $this->find('all',[
+            'fields' => [
+                'Agendamento.id',
+                'Agendamento.torneio_id',
+                'Agendamento.horario',
+                'Agendamento.duracao',
+                'Agendamento.dia_semana',
+                'Agendamento.dia_mes',
+                'Agendamento.endereco',
+                'ClienteServico.nome',
+                'Agendamento.cliente_id',
+                'Torneio.img',
+            ],
+            'conditions' => [
+                'Agendamento.cliente_id' => $cliente_id,
+                'Agendamento.cancelado' => "N",
+                'not' => [
+                    'Agendamento.torneio_id' => null,
+                ]
+            ],
+            'order' => [
+                'Agendamento.horario'
+            ],
+            'link' => [
+                'Torneio',
+                'TorneioJogo' => [
+                    'TorneioQuadra' => [
+                        'ClienteServico'
+                    ]
+                ]
+            ]
         ]);
 
     }
@@ -537,6 +642,26 @@ class Agendamento extends AppModel {
         foreach( $agendamentos as $key => $age ) {
             $age['Agendamento']['horario'] = $age['AgendamentoConvite']['horario'];
             //unset($age['AgendamentoConvite']);
+            $dados_retornar[] = $age;
+
+        }
+
+        return $dados_retornar;
+    }
+
+    public function montaArrayHorariosTorneio($agendamentos = []) {
+        
+        if ( count($agendamentos) == 0 ) {
+            return [];
+        }
+
+        $dados_retornar = [];
+        foreach( $agendamentos as $key => $age ) {
+
+            if ( $age['ClienteServico']['nome'] == null ) {
+                $age['ClienteServico']['nome'] = $age['TorneioQuadra']['nome'];
+            }
+
             $dados_retornar[] = $age;
 
         }

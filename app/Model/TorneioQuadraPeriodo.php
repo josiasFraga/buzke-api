@@ -78,4 +78,33 @@ class TorneioQuadraPeriodo extends AppModel {
         return $horarios;
 
 	}
+
+    public function verificaJogo($quadra = null, $data = null, $hora = null, $duracao = null){
+        if ( $quadra == null || $data == null || $hora == null || $duracao == null )
+            return false;
+
+        list($horas,$minutos,$segundos) = explode(':',$duracao);
+        $inicio_agendamento = $data." ".$hora;
+        $fim_agendamento = date('Y-m-d H:i:s' , strtotime($inicio_agendamento . ' + ' . $horas . ' hours'));
+        $fim_agendamento = date('Y-m-d H:i:s', strtotime($fim_agendamento . ' + ' . $minutos . ' minutes'));
+        
+        $verifica =  $this->find('count',[
+                'fields' => ['*'],
+                'conditions' => [
+                    'TorneioQuadra.servico_id' => $quadra,
+                    'or' => [
+                        [
+                            'TorneioQuadraPeriodo.inicio <=' => $inicio_agendamento,
+                            'TorneioQuadraPeriodo.fim >' => $inicio_agendamento,
+                        ],[
+                            'TorneioQuadraPeriodo.inicio <' => $fim_agendamento,
+                            'TorneioQuadraPeriodo.fim >' => $fim_agendamento,
+                        ]
+                    ]
+                ],
+                'link' => ['TorneioQuadra']
+        ]) > 0;
+        
+        return $verifica;
+    }
 }

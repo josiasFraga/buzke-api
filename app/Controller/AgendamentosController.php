@@ -156,6 +156,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('AgendamentoFixoCancelado');
         $this->loadModel('ClienteSubcategoria');
         $this->loadModel('AgendamentoConvite');
+
         $agendamentos = $this->Agendamento->buscaAgendamentoUsuario($meus_ids_de_cliente);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
@@ -173,7 +174,14 @@ class AgendamentosController extends AppController {
                 $agendamentos[$key]['Agendamento']['data'] = date('d/m/Y',strtotime($agendamento['Agendamento']['horario']));
                 $agendamentos[$key]['Agendamento']['hora'] = date('H:i',strtotime($agendamento['Agendamento']['horario']));
                 $agendamentos[$key]['Agendamento']['tipo'] = 'padrao';
-                $agendamentos[$key]['ClienteServico']['valor_br'] = number_format($agendamentos[$key]['ClienteServico']['valor'], 2, ',', '.');
+                
+                if ( isset($agendamento['Agendamento']['torneio_id']) && $agendamento['Agendamento']['torneio_id'] != null ) 
+                    $agendamentos[$key]['Agendamento']['tipo'] = 'tournament';
+
+                if ( isset($agendamentos[$key]['ClienteServico']['valor']) )
+                    $agendamentos[$key]['ClienteServico']['valor_br'] = number_format($agendamentos[$key]['ClienteServico']['valor'], 2, ',', '.');
+                else
+                    $agendamentos[$key]['ClienteServico']['valor_br'] = number_format(0, 2, ',', '.');
                 $agendamentos[$key]['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($agendamento['Cliente']['id']);
 
                 if ( isset($agendamento['AgendamentoConvite']) ) {
@@ -190,9 +198,15 @@ class AgendamentosController extends AppController {
                 $agendamentos[$key]['Agendamento']['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($agendamento['Agendamento']['id'], $this->images_path.'/usuarios/', $agendamento['Agendamento']['horario']);
 
                 if ($cancelable === null) {
-                    $cancelable_return = $this->checkIsCancelable($agendamento['Agendamento']['horario'], $agendamento['Cliente']['prazo_maximo_para_canelamento'],$agendamentos[$key]['Agendamento']['tipo']);
+                    if ( $agendamentos[$key]['Agendamento']['tipo'] == 'tournament' ) 
+                        $cancelable_return = false;
+                    else 
+                        $cancelable_return = $this->checkIsCancelable($agendamento['Agendamento']['horario'], $agendamento['Cliente']['prazo_maximo_para_canelamento'],$agendamentos[$key]['Agendamento']['tipo']);
                 } else {
-                    $cancelable_return = true;
+                    if ( $agendamentos[$key]['Agendamento']['tipo'] == 'tournament' ) 
+                        $cancelable_return = false;
+                    else
+                        $cancelable_return = true;
                 }
 
                 $agendamentos[$key]['Agendamento']['cancelable'] = $cancelable_return;
@@ -310,19 +324,34 @@ class AgendamentosController extends AppController {
                     $duracao = $timeBase->format('H:i');
                 }
 
+                $tipo = "Padrão";
+                $imagem = $this->images_path;
+    
+                if ( $agend['Agendamento']['dia_semana'] != null ||  $agend['Agendamento']['dia_mes'] != null ) {
+                    $tipo = "Fixo";
+                }
+
+                if ( isset($agend['Agendamento']['torneio_id']) && $agend['Agendamento']['torneio_id'] != null ) {
+                    $tipo = "Torneio";
+                    $agend['ClienteCliente']['nome'] = "Jogo de Torneio";
+                    $imagem .= "torneios/".$agend['Torneio']['img'];
+                } else {
+                    $imagem .= 'clientes_clientes/'.$agend['ClienteCliente']['img'];
+                }
+
                 $arr_dados = [
                     'name' => $hora, 
                     'height' => $agend['Agendamento']['endereco'] == '' || $agend['Agendamento']['endereco'] == '' ? 100 : 130, 
                     'usuario' => $agend['ClienteCliente']['nome'], 
                     'id' => $agend['Agendamento']['id'], 
                     'termino' => $duracao,
-                    'img' => $this->images_path.'clientes_clientes/'.$agend['ClienteCliente']['img'],
+                    'img' => $imagem,
                     'servico' => $agend['ClienteServico']['nome'], 
                     'status' => $agend['Agendamento']['status'], 
                     'motive' => $agend['Agendamento']['motive'], 
                     'horario' => $agend['Agendamento']['horario'], 
                     'endereco' => $agend['Agendamento']['endereco'], 
-                    'tipo_str' => $agend['Agendamento']['dia_semana'] != null ||  $agend['Agendamento']['dia_mes'] != null ? 'Fixo' : 'Padrão',
+                    'tipo_str' => $tipo,
                 ];
 
                 if ( $data != $last_data ) {
@@ -424,6 +453,8 @@ class AgendamentosController extends AppController {
         $this->loadModel('Cliente');
         $this->loadModel('Usuario');
         $this->loadModel('UsuarioLocalizacao');
+        $this->loadModel('ClienteHorarioAtendimento');
+        $this->loadModel('TorneioQuadraPeriodo');
 
         //busca os dados da empresa
         $dados_cliente = $this->Cliente->find('first',[
@@ -492,17 +523,9 @@ class AgendamentosController extends AppController {
         $n_agendamentos_cancelados_cliente = $this->AgendamentoFixoCancelado->nAgendamentosFixosCanceladosCliente($dados->cliente_id, $data_selecionada, $horario_selecionado);
 
         $n_agendamentos_cliente = $n_agendamentos_cliente-$n_agendamentos_cancelados_cliente;
-    
-        $this->loadModel('ClienteHorarioAtendimento');
 
         //conta quantas vagas existem para o dia e horário escolhidos
         $vagas_restantes = $this->ClienteHorarioAtendimento->contaVagaRestantesHorario($dados->cliente_id, $data_selecionada, $horario_selecionado, $n_agendamentos_cliente);
-
-        //$this->log($dados->cliente_id,'debug');
-        //$this->log($data_selecionada,'debug');
-        //$this->log($horario_selecionado,'debug');
-        //$this->log($n_agendamentos_cliente,'debug');
-        //$this->log($dados,'debug');
 
         if ( !$vagas_restantes ) {
 
@@ -560,6 +583,13 @@ class AgendamentosController extends AppController {
 
             if ( !$checkServiceIsAvaliableOnDateTime ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Infelizmente a quadra está ocupada neste dia e horário'))));
+            }
+
+            //verifica se existe um jogo de torneio marcado no dia e hora que o usuario esta tentando
+            $verifica_jogo_torneio = $this->TorneioQuadraPeriodo->verificaJogo($dados->servico, $data_selecionada, $horario_selecionado, $duracao);
+
+            if ( $verifica_jogo_torneio ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Infelizmente a quadra estará ocupada com um torneio no dia e horário selecionados!'))));
             }
 
         }

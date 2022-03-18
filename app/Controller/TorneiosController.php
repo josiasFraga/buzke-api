@@ -77,6 +77,8 @@ class TorneiosController extends AppController {
                 ' até '.date('d/m',strtotime($trn['Torneio']['fim']));
             $torneios[$key]['Torneio']['img'] = $this->images_path."torneios/".$trn['Torneio']['img'];
             $torneios[$key]['Torneio']['_owner'] = $owner;
+            $torneios[$key]['Torneio']['_old'] = ($trn['Torneio']['fim'] < date('Y-m-d'));
+
         }
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $torneios))));
@@ -201,7 +203,7 @@ class TorneiosController extends AppController {
 
         $dados['TorneioCategoria'] = $categorias;
         $dados['TorneioData'] = $this->TorneioData->getByTournamentId($dados['Torneio']['id']);
-        $dados['Torneio']['_subscribed'] = $this->TorneioInscricaoJogador->checkSubscribed($meus_ids_de_cliente);
+        $dados['Torneio']['_subscribed'] = $this->TorneioInscricaoJogador->checkSubscribed($dados['Torneio']['id'], $meus_ids_de_cliente);
         $dados['Torneio']['_subscriptions_finished'] = $this->Torneio->checkIsSubscriptionsFinished($dados['Torneio']['id']);
         $dados['Torneio']['_all_group_generated'] = $all_group_generated;
         $dados['Torneio']['_some_group_generated'] = $some_group_generated;
@@ -366,10 +368,6 @@ class TorneiosController extends AppController {
         if ( !isset($dados->fim) || $dados->fim == "" ) {
             throw new BadRequestException('Fim não informado!', 401);
         }
-
-        //if ( !isset($dados->duracao) || $dados->duracao == "" ) {
-        //    throw new BadRequestException('Fim não informado!', 401);
-        //}
         
         if ( !isset($dados->inscricoes_de) || $dados->inscricoes_de == "" ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data inicial das inscrições não informada'))));
@@ -390,7 +388,6 @@ class TorneiosController extends AppController {
         if ( !isset($dados->torneio_quadras) || $dados->torneio_quadras == "" || !is_array($dados->torneio_quadras) || count($dados->torneio_quadras) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar ao menos uma quadra para cadastrar um torneio'))));
         }
-        
 
         $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
         if ( !$dados_usuario ) {
@@ -400,10 +397,6 @@ class TorneiosController extends AppController {
         if ( $dados_usuario['Usuario']['cliente_id'] == null || $dados_usuario['Usuario']['cliente_id'] == '' ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
-
-        //if ( !isset($dados->torneio_data) || $dados->torneio_data == "" || !is_array($dados->torneio_data) || count($dados->torneio_data) == 0 ) {
-        //    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar ao menos um período de realização de jogos para cadastrar um torneio'))));
-        //}
 
         //categorias do torneio
         foreach( $dados->torneio_categoria as $key => $categoria ){
@@ -1245,6 +1238,7 @@ class TorneiosController extends AppController {
                     foreach( $integrantes as $key_integrante => $integrante) {
                         $integrantes[$key_integrante]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($integrante['TorneioInscricao']['id']);
                         $integrantes[$key_integrante]['TorneioInscricao']['_vitorias'] = $this->TorneioJogo->buscaNVitorias($integrante['TorneioInscricao']['id'], 1);
+                        $integrantes[$key_integrante]['TorneioInscricao']['_sets'] = $this->TorneioJogo->buscaNSets($integrante['TorneioInscricao']['id'], 1);
                         $integrantes[$key_integrante]['TorneioInscricao']['_games'] = $this->TorneioJogo->buscaNGames($integrante['TorneioInscricao']['id'], 1);
                         //$dados[$key]['TorneioInscricao']['_owner'] = $owner;
                     }
@@ -1926,7 +1920,7 @@ class TorneiosController extends AppController {
 
     }
 
-    private function ordena_times($teams = [], $orderBy = ['_vitorias' => 'desc', '_games' => 'desc']) {
+    private function ordena_times($teams = [], $orderBy = ['_vitorias' => 'desc', '_sets' => 'desc', '_games' => 'desc']) {
         usort($teams, function ($a, $b) use ($orderBy) {
             $ReturnValues = [true => -1, false => 1];
             $bIsBigger = true;

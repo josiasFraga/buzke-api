@@ -11,14 +11,23 @@ class TorneioInscricaoJogador extends AppModel {
         ),
 	);
 
-    public function checkSubscribed($ids = []){
+    public function checkSubscribed($torneio_id = null, $ids = []){
+
         if ( count($ids) == 0 ) {
+            return false;
+        }
+
+        if ( $torneio_id == null ) {
             return false;
         }
         
         return $this->find('count',[
             'conditions' => [
-                'TorneioInscricaoJogador.cliente_cliente_id' => $ids
+                'TorneioInscricaoJogador.cliente_cliente_id' => $ids,
+                'TorneioInscricao.torneio_id' => $torneio_id,
+            ],
+            'link' => [
+                'TorneioInscricao'
             ]
         ]) > 0;
     }
