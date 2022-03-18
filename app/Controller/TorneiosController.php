@@ -1228,7 +1228,7 @@ class TorneiosController extends AppController {
 
         $grupos_retornar = [];
         if ( count($grupos) > 0 ) {
-            foreach( $grupos as $key => $grupo ){
+            foreach( $grupos as $id => $grupo ){
                 $integrantes = $this->TorneioInscricao->find('all',[
                     'conditions' => [
                         'TorneioInscricao.torneio_categoria_id' => $dados['torneio_categoria_id'],
@@ -1255,6 +1255,7 @@ class TorneiosController extends AppController {
     
                 $grupos_retornar[] = [
                     '_nome' => $grupo,
+                    //'_id' => $id,
                     '_integrantes' => $integrantes,
                 ];
             }
@@ -2181,7 +2182,8 @@ class TorneiosController extends AppController {
                 if ( $this->TorneioJogo->checaJogoNoHorario($dados['torneio_quadra_id'], $horario['horario']) ) {
                     $texto_horario = ' *';
                 }
-                $horarios_retornar[]['horario'] = $horario['horario'].$texto_horario;
+                $horarios_retornar[$key]['horario'] = date('H:i:s',strtotime($horario['horario']));
+                $horarios_retornar[$key]['complemento'] = $texto_horario;
             }
         }
 
