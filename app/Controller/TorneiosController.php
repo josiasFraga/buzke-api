@@ -1641,7 +1641,8 @@ class TorneiosController extends AppController {
                                 'torneio_quadra_id' => $confronto['horario']['torneio_quadra_id'],
                                 'time_1' => $confronto[0]['inscricao_id'],
                                 'time_2' => $confronto[1]['inscricao_id'],
-                                'fase' => 1
+                                'fase' => 1,
+                                'grupo' => $dados_confronto['grupo_nome'],
                             ]
                         ]
                     ];
@@ -1812,7 +1813,7 @@ class TorneiosController extends AppController {
 
 
         if ( isset($jogo['time_' . $time . '_posicao']) ) {
-            return $jogo['time_' . $time . '_posicao'] . 'º da Chave ' . strtoupper($chars[$jogo['time_' . $time . '_grupo']]);
+            return $jogo['time_' . $time . '_posicao'] . 'º da Chave ' . strtoupper($chars[($jogo['time_' . $time . '_grupo']-1)]);
         }
 
 
@@ -2125,6 +2126,8 @@ class TorneiosController extends AppController {
 
         $this->loadModel('TorneioJogo');
         $this->loadModel('TorneioJogoPlacar');
+        $this->loadModel('TorneioInscricao');
+        $this->loadModel('TorneioInscricaoJogador');
 
         $dados_jogo = $this->TorneioJogo->find('first',[
             'fields' => ['*'],
@@ -2138,11 +2141,82 @@ class TorneiosController extends AppController {
         if ( count($dados_jogo) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do jogo não encontrados.'))));
         }
+ 
+        if ( $dados_jogo['TorneioJogo']['time_1'] == null || $dados_jogo['TorneioJogo']['time_2'] == null ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Os times desta fase ainda não foram definidos.'))));
+        }
 
         $this->TorneioJogoPlacar->deleteAll(['TorneioJogoPlacar.torneio_jogo_id' => $dados->id]);
  
         if (!$this->TorneioJogoPlacar->saveMany($placares)) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar o resultado do jogo.'))));
+        }
+
+        $fase_jogo = $dados_jogo['TorneioJogo']['fase'];
+
+        //se ta na fase de grupos
+        if ( $fase_jogo == 1 ) {
+            
+            $grupo = $dados_jogo['TorneioJogo']['grupo'];
+            $jogos_sem_resultados = $this->TorneioJogo->getMatchesWithoutScore($dados_jogo['Torneio']['id'], $dados_jogo['TorneioJogo']['torneio_categoria_id'], $grupo);
+
+            //não existe partida sem resultado lançado
+            if ( count($jogos_sem_resultados) == 0 ) {
+                
+                $integrantes = $this->TorneioInscricao->find('all',[
+                    'conditions' => [
+                        'TorneioInscricao.torneio_categoria_id' => $dados_jogo['TorneioJogo']['torneio_categoria_id'],
+                        'TorneioGrupo.nome' => $grupo,
+                        'not' => [
+                            'TorneioInscricao.confirmado' => 'R',
+                        ]
+                    ],
+                    'link' => ['TorneioGrupo']
+                ]);
+                
+                if ( count($integrantes) == 0 ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Não foram encontrados integrantes no grupo.'))));
+                }
+
+                foreach( $integrantes as $key_integrante => $integrante) {
+                    $integrantes[$key_integrante]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($integrante['TorneioInscricao']['id']);
+                    $integrantes[$key_integrante]['TorneioInscricao']['_vitorias'] = $this->TorneioJogo->buscaNVitorias($integrante['TorneioInscricao']['id'], 1);
+                    $integrantes[$key_integrante]['TorneioInscricao']['_sets'] = $this->TorneioJogo->buscaNSets($integrante['TorneioInscricao']['id'], 1);
+                    $integrantes[$key_integrante]['TorneioInscricao']['_games'] = $this->TorneioJogo->buscaNGames($integrante['TorneioInscricao']['id'], 1);
+                }
+
+                $integrantes = $this->ordena_times($integrantes);
+                $grupo_letra = substr($grupo, -1);
+                $alphabet = range('A', 'Z');
+                $letter_number = array_search($grupo_letra, $alphabet);
+                $grupo_id = $letter_number + 1;
+
+                $seta_times = $this->TorneioJogo->setTeams($dados_jogo['Torneio']['id'], $dados_jogo['TorneioJogo']['torneio_categoria_id'], $grupo_id, $integrantes);
+
+                if ( !$seta_times ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Ocorreu um erro ao gerar as próximas fases.'))));
+                }
+            }
+        } else {
+
+            $resultados = $this->TorneioJogoPlacar->busca_resultados($dados_jogo['TorneioJogo']['id']);
+
+            if ( count($resultados) == 0 ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao buscar os resultados.'))));
+            }
+
+            $vencedor = $this->TorneioJogoPlacar->busca_vencedor_por_resultados($resultados);
+
+            if ( !$vencedor ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível definir o vencedor.'))));
+            }
+
+            $seta_times = $this->TorneioJogo->setTeams($dados_jogo['Torneio']['id'], $dados_jogo['TorneioJogo']['torneio_categoria_id'], null, $dados_jogo['TorneioJogo']['_id'], [], $dados_jogo['TorneioJogo'][$vencedor]);
+
+            if ( !$seta_times ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Ocorreu um erro ao gerar as próximas fases.'))));
+            }
+
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Resultado cadastrado com sucesso!'))));

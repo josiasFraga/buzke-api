@@ -190,4 +190,129 @@ class TorneioJogo extends AppModel {
 		
 		return false;
 	}
+	
+	public function getMatchesWithoutScore( $torneio_id = null, $torneio_categoria_id = null, $grupo = null ){
+
+		if ( $torneio_id == null || $torneio_categoria_id == null ){
+			return false;
+		}
+
+		$conditions = [
+			'TorneioJogoPlacar.id' => null,
+			'TorneioQuadra.torneio_id' => $torneio_id,
+			'TorneioJogo.torneio_categoria_id' => $torneio_categoria_id
+		];
+
+		if ( $grupo != null ) {
+			$conditions = array_merge($conditions, [
+				'TorneioJogo.grupo' => $grupo
+			]);
+		}
+		
+		return $this->find('all',[
+			'conditions' => $conditions,
+			'link' => [
+				'TorneioJogoPlacar',
+				'TorneioQuadra'
+			]
+		]);
+	}
+
+	public function setTeams( $torneio_id = null, $torneio_categoria_id = null, $grupo_id = null, $jogo_id = null, $teams = [], $vencedor = null) {
+
+		if ( $torneio_id == null || $torneio_categoria_id == null ) {
+			return false;
+		}
+
+		if ( $grupo_id != null ) {
+
+			if ( count($teams) == 0 ) {
+				return false;
+			}
+
+			foreach( $teams as $key => $team ){
+				$posicao = ($key+1);
+				$dados_jogo = $this->find('first', [
+					'conditions' => [
+						'TorneioJogo.torneio_categoria_id' => $torneio_categoria_id,
+						'TorneioQuadra.torneio_id' => $torneio_id,
+						'or' => [
+							[
+								'TorneioJogo.time_1_grupo' => $grupo_id,
+								'TorneioJogo.time_1_posicao' => $posicao,
+							],
+							[
+								'TorneioJogo.time_2_grupo' => $grupo_id,
+								'TorneioJogo.time_2_posicao' => $posicao,
+							]
+						]
+					],
+					'link' => ['TorneioQuadra']
+				]);
+
+				if ( count($dados_jogo) > 0 ) {
+
+					if ( $dados_jogo['TorneioJogo']['time_2_grupo'] == $grupo_id && $dados_jogo['TorneioJogo']['time_2_posicao'] == $posicao ) {
+						$dados_salvar = [
+							'id' => $dados_jogo['TorneioJogo']['id'],
+							'time_2' => $team['TorneioInscricao']['id'],
+						];
+					} else {
+						$dados_salvar = [
+							'id' => $dados_jogo['TorneioJogo']['id'],
+							'time_1' => $team['TorneioInscricao']['id'],
+						];
+					}
+
+					$this->set($dados_salvar);
+					$this->save($dados_salvar);
+				}
+	
+			}
+
+			return true;
+
+		} else {
+
+			if ( $vencedor == null || $jogo_id == null ) {
+				return false;
+			}
+
+			$dados_jogo = $this->find('first', [
+				'conditions' => [
+					'TorneioJogo.torneio_categoria_id' => $torneio_categoria_id,
+					'TorneioQuadra.torneio_id' => $torneio_id,
+					'or' => [
+						'TorneioJogo.time_1_jogo' => $jogo_id,
+						'TorneioJogo.time_2_jogo' => $jogo_id,
+					]
+				],
+				'link' => ['TorneioQuadra']
+			]);
+			
+
+			if ( count($dados_jogo) > 0 ) {
+
+				if ( $dados_jogo['TorneioJogo']['time_1_jogo'] == $jogo_id ) {
+					$dados_salvar = [
+						'id' => $dados_jogo['TorneioJogo']['id'],
+						'time_1' => $vencedor,
+					];
+				} else {
+					$dados_salvar = [
+						'id' => $dados_jogo['TorneioJogo']['id'],
+						'time_2' => $vencedor,
+					];
+				}
+
+				$this->set($dados_salvar);
+				$this->save($dados_salvar);
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
 }
