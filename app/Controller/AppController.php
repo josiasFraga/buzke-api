@@ -43,6 +43,844 @@ class AppController extends Controller {
     public $dias_mes_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
     public $meses_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
     public $quadra_de_padel_subcategoria = 7;
+    public $proximas_fases = [
+        1 => [
+            'fases'=> [
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_grupo' => 1,
+                            'time_1_posicao' => 2,
+                            'time_2_posicao' => 3
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 2,
+                            'time_1_grupo' => 1,
+                            'time_1_posicao' => 1,
+                            'time_2_jogo' => 1,
+                        ]
+                    ]
+                ],
+            ],
+        ],
+        2 => [
+            'fases'=> [
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_grupo' => 1,
+                            'time_1_posicao' => 1,
+                            'time_2_posicao' => 2
+                        ],
+                        [
+                            'id' => 2,
+                            'time_1_grupo' => 2,
+                            'time_2_grupo' => 2,
+                            'time_1_posicao' => 1,
+                            'time_2_posicao' => 2
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 3,
+                            'time_1_jogo' => 1,
+                            'time_2_jogo' => 2
+                        ]
+                    ]
+                ],
+            ],
+        ],
+        3 => [
+            'fases'=> [
+                [
+                    'nome' => "Quartas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 2,
+                            'time_2_posicao' => 1,
+                            'time_2_grupo' => 3,
+                        ],
+                        [
+                            'id' => 2,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 3,
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 3,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_jogo' => 1
+                        ],
+                        [
+                            'id' => 4,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 2,
+                            'time_2_jogo' => 2
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 5,
+                            'time_1_jogo' => 3,
+                            'time_2_jogo' => 4
+                        ]
+                    ]
+                ],
+            ],
+        ],
+        4 => [
+            'fases'=> [
+                [
+                    'nome' => "Quartas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 4,
+                        ],
+                        [
+                            'id' => 2,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 2,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 3,
+                        ],
+                        [
+                            'id' => 3,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 3,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 2,
+                        ],
+                        [
+                            'id' => 4,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 4,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 1,
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 5,
+                            'time_1_jogo' => 1,
+                            'time_2_jogo' => 4
+                        ],
+                        [
+                            'id' => 6,
+                            'time_1_jogo' => 2,
+                            'time_2_jogo' => 3
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 7,
+                            'time_1_jogo' => 5,
+                            'time_2_jogo' => 6
+                        ]
+                    ]
+                ],
+            ],
+        ],
+        5 => [
+            'fases'=> [
+                [
+                    'nome' => "Oitavas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 2,
+                        ],
+                        [
+                            'id' => 2,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 3,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 4,
+                        ],
+                    ]
+                ],
+                [
+                    'nome' => "Quartas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 3,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 5,
+                        ],
+                        [
+                            'id' => 4,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 2,
+                            'time_2_jogo' => 1,
+                        ],
+                        [
+                            'id' => 5,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 3,
+                            'time_2_jogo' => 2,
+                        ],
+                        [
+                            'id' => 6,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 4,
+                            'time_2_posicao' => 1,
+                            'time_2_grupo' => 5,
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 7,
+                            'time_1_jogo' => 3,
+                            'time_2_jogo' => 4
+                        ],
+                        [
+                            'id' => 8,
+                            'time_1_jogo' => 5,
+                            'time_2_jogo' => 6
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 9,
+                            'time_1_jogo' => 7,
+                            'time_2_jogo' => 8
+                        ]
+                    ]
+                ],
+            ],
+        ],
+        6 => [
+            'fases'=> [
+                [
+                    'nome' => "Oitavas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 6,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 1,
+                        ],
+                        [
+                            'id' => 2,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 5,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 2,
+                        ],
+                        [
+                            'id' => 3,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 4,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 3,
+                        ],
+                        [
+                            'id' => 4,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 5,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 6,
+                        ],
+                    ]
+                ],
+                [
+                    'nome' => "Quartas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 5,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_jogo' => 4,
+                        ],
+                        [
+                            'id' => 6,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 2,
+                            'time_2_jogo' => 3,
+                        ],
+                        [
+                            'id' => 7,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 3,
+                            'time_2_jogo' => 2,
+                        ],
+                        [
+                            'id' => 8,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 4,
+                            'time_2_jogo' => 1,
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 9,
+                            'time_1_jogo' => 5,
+                            'time_2_jogo' => 6
+                        ],
+                        [
+                            'id' => 10,
+                            'time_1_jogo' => 7,
+                            'time_2_jogo' => 8
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 11,
+                            'time_1_jogo' => 9,
+                            'time_2_jogo' => 10
+                        ]
+                    ]
+                ],
+            ],
+        ],
+        7 => [
+            'fases'=> [
+                [
+                    'nome' => "Oitavas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 7,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 1,
+                        ],
+                        [
+                            'id' => 2,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 6,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 2,
+                        ],
+                        [
+                            'id' => 3,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 5,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 3,
+                        ],
+                        [
+                            'id' => 4,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 4,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 4,
+                        ],
+                        [
+                            'id' => 5,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 3,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 5,
+                        ],
+                        [
+                            'id' => 6,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 7,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 6,
+                        ],
+                    ]
+                ],
+                [
+                    'nome' => "Quartas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 7,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_jogo' => 6,
+                        ],
+                        [
+                            'id' => 8,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 2,
+                            'time_2_jogo' => 5,
+                        ],
+                        [
+                            'id' => 9,
+                            'time_1_jogo' => 4,
+                            'time_2_jogo' => 3,
+                        ],
+                        [
+                            'id' => 10,
+                            'time_1_jogo' => 2,
+                            'time_2_jogo' => 1,
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 11,
+                            'time_1_jogo' => 7,
+                            'time_2_jogo' => 8
+                        ],
+                        [
+                            'id' => 12,
+                            'time_1_jogo' => 9,
+                            'time_2_jogo' => 10
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 13,
+                            'time_1_jogo' => 11,
+                            'time_2_jogo' => 12
+                        ]
+                    ]
+                ],
+            ],
+        ],
+        8 => [
+            'fases'=> [
+                [
+                    'nome' => "Oitavas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 8,
+                        ],
+                        [
+                            'id' => 2,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 2,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 7,
+                        ],
+                        [
+                            'id' => 3,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 3,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 6,
+                        ],
+                        [
+                            'id' => 4,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 4,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 5,
+                        ],
+                        [
+                            'id' => 5,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 5,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 4,
+                        ],
+                        [
+                            'id' => 6,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 6,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 3,
+                        ],
+                        [
+                            'id' => 7,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 7,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 2,
+                        ],
+                        [
+                            'id' => 8,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 8,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 1,
+                        ],
+                    ]
+                ],
+                [
+                    'nome' => "Quartas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 9,
+                            'time_1_jogo' => 1,
+                            'time_2_jogo' => 8,
+                        ],
+                        [
+                            'id' => 10,
+                            'time_1_jogo' => 2,
+                            'time_2_jogo' => 7,
+                        ],
+                        [
+                            'id' => 11,
+                            'time_1_jogo' => 3,
+                            'time_2_jogo' => 6,
+                        ],
+                        [
+                            'id' => 12,
+                            'time_1_jogo' => 4,
+                            'time_2_jogo' => 5,
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 13,
+                            'time_1_jogo' => 7,
+                            'time_2_jogo' => 8
+                        ],
+                        [
+                            'id' => 14,
+                            'time_1_jogo' => 9,
+                            'time_2_jogo' => 10
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 15,
+                            'time_1_jogo' => 13,
+                            'time_2_jogo' => 14
+                        ]
+                    ]
+                ],
+            ],
+        ],
+        9 => [
+            'fases'=> [
+                [
+                    'nome' => "Décima Sextas",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 9,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 6,
+                        ],
+                        [
+                            'id' => 2,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 8,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 7,
+                        ],
+                    ]
+                ],
+                [
+                    'nome' => "Oitavas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 3,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 5,
+                        ],
+                        [
+                            'id' => 4,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 2,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 4,
+                        ],
+                        [
+                            'id' => 5,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 3,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 3,
+                        ],
+                        [
+                            'id' => 6,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 4,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 2,
+                        ],
+                        [
+                            'id' => 7,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 5,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 1,
+                        ],
+                        [
+                            'id' => 8,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 6,
+                            'time_2_jogo' => 1,
+                        ],
+                        [
+                            'id' => 9,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 7,
+                            'time_2_jogo' => 2,
+                        ],
+                        [
+                            'id' => 10,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 8,
+                            'time_2_posicao' => 1,
+                            'time_2_grupo' => 9,
+                        ],
+                    ]
+                ],
+                [
+                    'nome' => "Quartas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 11,
+                            'time_1_jogo' => 3,
+                            'time_2_jogo' => 10,
+                        ],
+                        [
+                            'id' => 12,
+                            'time_1_jogo' => 4,
+                            'time_2_jogo' => 9,
+                        ],
+                        [
+                            'id' => 13,
+                            'time_1_jogo' => 5,
+                            'time_2_jogo' => 8,
+                        ],
+                        [
+                            'id' => 14,
+                            'time_1_jogo' => 6,
+                            'time_2_jogo' => 7,
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 15,
+                            'time_1_jogo' => 11,
+                            'time_2_jogo' => 14
+                        ],
+                        [
+                            'id' => 16,
+                            'time_1_jogo' => 12,
+                            'time_2_jogo' => 13
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 17,
+                            'time_1_jogo' => 15,
+                            'time_2_jogo' => 16
+                        ]
+                    ]
+                ],
+            ],
+        ],
+        10 => [
+            'fases'=> [
+                [
+                    'nome' => "Décima Sextas",
+                    'jogos' => [
+                        [
+                            'id' => 1,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 8,
+                        ],
+                        [
+                            'id' => 2,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 2,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 7,
+                        ],
+                        [
+                            'id' => 3,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 3,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 6,
+                        ],
+                        [
+                            'id' => 4,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 4,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 5,
+                        ],
+                    ]
+                ],
+                [
+                    'nome' => "Oitavas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 5,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 10,
+                        ],
+                        [
+                            'id' => 6,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 2,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 9,
+                        ],
+                        [
+                            'id' => 7,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 3,
+                            'time_2_jogo' => 1
+                        ],
+                        [
+                            'id' => 8,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 4,
+                            'time_2_jogo' => 2
+                        ],
+                        [
+                            'id' => 9,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 5,
+                            'time_2_jogo' => 3
+                        ],
+                        [
+                            'id' => 10,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 6,
+                            'time_2_jogo' => 4,
+                        ],
+                        [
+                            'id' => 11,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 7,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 8,
+                        ],
+                        [
+                            'id' => 12,
+                            'time_1_posicao' => 1,
+                            'time_1_grupo' => 9,
+                            'time_2_posicao' => 1,
+                            'time_2_grupo' => 10,
+                        ],
+                    ]
+                ],
+                [
+                    'nome' => "Quartas de Final",
+                    'jogos' => [
+                        [
+                            'id' => 13,
+                            'time_1_jogo' => 5,
+                            'time_2_jogo' => 12,
+                        ],
+                        [
+                            'id' => 14,
+                            'time_1_jogo' => 6,
+                            'time_2_jogo' => 11,
+                        ],
+                        [
+                            'id' => 15,
+                            'time_1_jogo' => 7,
+                            'time_2_jogo' => 10,
+                        ],
+                        [
+                            'id' => 16,
+                            'time_1_jogo' => 8,
+                            'time_2_jogo' => 9,
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Semi Final",
+                    'jogos' => [
+                        [
+                            'id' => 17,
+                            'time_1_jogo' => 13,
+                            'time_2_jogo' => 16
+                        ],
+                        [
+                            'id' => 18,
+                            'time_1_jogo' => 14,
+                            'time_2_jogo' => 15
+                        ]
+                    ]
+                ],
+                [
+                    'nome' => "Final",
+                    'jogos' => [
+                        [
+                            'id' => 19,
+                            'time_1_jogo' => 17,
+                            'time_2_jogo' => 18
+                        ]
+                    ]
+                ],
+            ],
+        ]
+    ];
     
     public function beforeFilter() {
         parent::beforeFilter();

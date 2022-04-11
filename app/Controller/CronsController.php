@@ -116,7 +116,7 @@ class CronsController extends AppController {
                 
             }
 
-            if ( $avisar_alguem ) {
+            /*if ( $avisar_alguem ) {
                 $Email = new CakeEmail('smtp_aplicativo');
                 $Email->from(array('aplicativo@buzke.com.br' => 'Buzke'));
                 $Email->emailFormat('html');
@@ -125,7 +125,7 @@ class CronsController extends AppController {
                 $Email->subject('Sugestao - Buzke');
                 $Email->viewVars(array('nome_usuario'=>'notificação de horario', 'sugestao' => $n_avisos ));//variable will be replaced from template
                 $Email->send();
-            }
+            }*/
 
         }
 

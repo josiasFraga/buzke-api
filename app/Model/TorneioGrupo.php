@@ -30,4 +30,19 @@ class TorneioGrupo extends AppModel {
 		return $grupo['TorneioGrupo']['nome'];
 		
 	}
+
+	public function countGroupsByCategory( $array = [] ) {
+		if ( count($array) == 0 )
+			return [];
+
+		$retornar = [];
+		$count_grupos = [];
+		foreach( $array as $key => $value ){
+			@$count_grupos[$value['torneio_categoria_id']]++;
+		}
+
+		
+		return $count_grupos;
+
+	}
 }

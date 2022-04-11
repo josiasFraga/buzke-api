@@ -377,6 +377,10 @@ class TorneiosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data limite das inscrições não informada'))));
         }
 
+        if ( !isset($dados->max_inscricoes_por_jogador) || $dados->max_inscricoes_por_jogador == "" ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Limite de inscrições por usuário não informada'))));
+        }
+
         if ( !isset($dados->valor_inscricao) || $dados->valor_inscricao == "" ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Valor da inscrição não informado'))));
         }
@@ -416,6 +420,7 @@ class TorneiosController extends AppController {
         $quadras = [];
         $periodos = [];
         $periodos_temp = [];
+
         foreach( $dados->torneio_quadras as $key => $torneio_quadra ){
 
             if ( !isset($torneio_quadra->quadra_periodos) || !is_array($torneio_quadra->quadra_periodos) || count($torneio_quadra->quadra_periodos) == 0 ) {
@@ -535,6 +540,7 @@ class TorneiosController extends AppController {
                 'fim' => $dados->fim,
                 'inscricoes_de' => $dados->inscricoes_de,
                 'inscricoes_ate' => $dados->inscricoes_ate,
+                'max_inscricoes_por_jogador' => $dados->max_inscricoes_por_jogador,
                 'impedimentos' => isset($dados->impedimentos) && $dados->impedimentos > 0 ? $dados->impedimentos : 0,
                 'valor_inscricao' => $dados->valor_inscricao,
             ],
@@ -662,7 +668,6 @@ class TorneiosController extends AppController {
         }elseif ( gettype($dados) == 'array' ) {
             $dados = json_decode(json_encode($dados), false);
         }
-
        
         if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
@@ -778,7 +783,7 @@ class TorneiosController extends AppController {
                     if ( count($dados_cliente_cliente_dupla) > 0 ){
     
                         //verifico se o usuário da dupla já nao esta cadastrado no torneio antes de atualizar os dados
-                        $check_inscricao = $this->TorneioInscricao->checkSubscription($dados_cliente_cliente_dupla, $dados->torneio_id);
+                        $check_inscricao = $this->TorneioInscricao->checkSubscription($dados_cliente_cliente_dupla, $dados_torneio, $dados->torneio_categoria_id);
             
                         if ( $check_inscricao !== false ){
                             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
@@ -814,7 +819,7 @@ class TorneiosController extends AppController {
                 if ( isset($dados_cliente_cliente_dupla) && count($dados_cliente_cliente_dupla) > 0 ){
 
                     //verifico se o usuário da dupla já nao esta cadastrado no torneio antes de atualizar os dados
-                    $check_inscricao = $this->TorneioInscricao->checkSubscription($dados_cliente_cliente_dupla, $dados->torneio_id);
+                    $check_inscricao = $this->TorneioInscricao->checkSubscription($dados_cliente_cliente_dupla, $dados_torneio, $dados->torneio_categoria_id);
             
                     if ( $check_inscricao !== false ){
                         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
@@ -867,13 +872,14 @@ class TorneiosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você só pode selecionar até '.$dados_torneio['Torneio']['impedimentos'].' impedimentos.'))));
         }
 
-        $check_inscricao = $this->TorneioInscricao->checkSubscription($v_cadastro_jogador_1, $dados->torneio_id);
+        $check_inscricao = $this->TorneioInscricao->checkSubscription($v_cadastro_jogador_1, $dados_torneio, $dados->torneio_categoria_id);
 
         if ( $check_inscricao !== false ){
+
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 1 já está inscrito no torneio'))));
         }
 
-        $check_inscricao = $this->TorneioInscricao->checkSubscription($v_cadastro_jogador_2, $dados->torneio_id);
+        $check_inscricao = $this->TorneioInscricao->checkSubscription($v_cadastro_jogador_2, $dados_torneio, $dados->torneio_categoria_id);
 
         if ( $check_inscricao !== false ){
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
@@ -1106,7 +1112,7 @@ class TorneiosController extends AppController {
         if ( count($dados_torneio_categoria) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Categoria não encontrada.'))));
         }
-    
+
         $inscricoes = $this->TorneioInscricao->find('all',[
             'fields' => ['*'],
             'conditions' => [
@@ -1571,10 +1577,17 @@ class TorneiosController extends AppController {
         ]);
 
         //gera os confrontos por grupos
-        $confrontos = $this->geraConfrontos($grupos);
+        $confrontos = $this->geraConfrontosGrupos($grupos);
 
         if ( !$confrontos || count($confrontos) == 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível gerar os confronto.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível gerar os confrontos.'))));
+        }
+
+        //conta quantos grupos há em cada categoria
+        $grupos_por_categoria = $this->TorneioGrupo->countGroupsByCategory($confrontos);
+
+        if ( !$grupos_por_categoria  ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível gerar os confrontos das próximas fases.'))));
         }
 
         //gera os horatios do torneio
@@ -1586,6 +1599,25 @@ class TorneiosController extends AppController {
 
         //atribui os horarios gerados aos confrontos
         $confrontos = $this->atribui_horarios_confrontos($confrontos,$horarios);
+
+        //busca os horarios máximos gerados por categoria para poder, a partir daí, gerar os hoarios do jogos das próximas fases
+        $max_horarios_gerados = $this->getMaxTimeGeneratedByCategory($confrontos, $horarios);
+
+        //busca os próximos horários disponíveis por categoria
+        $proximos_horarios = $this->getNextAvailableTimes($max_horarios_gerados, $horarios);
+
+        //busca os dados dos confrontos das próximas fases
+        $confrontos_proximas_fases = $this->buscaDadosProximasFases($grupos_por_categoria);
+
+        //gera os jogos das próximas fases
+        $confrontos_proximas_fases = $this->geraJogosProximasFases($confrontos_proximas_fases);
+
+        //atribui os horarios disponíveis aos jogos das próximas fases
+        $confrontos_proximas_fases = $this->atribui_horarios_confrontos_proximas_fases($confrontos_proximas_fases, $proximos_horarios);
+
+        if ( !$confrontos_proximas_fases || count($confrontos_proximas_fases) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Horários insuficientes para gerar todos os jogos.'))));
+        }
 
         if ( !$confrontos || count($confrontos) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível gerar os jogos.'))));
@@ -1617,8 +1649,45 @@ class TorneiosController extends AppController {
                 }
             }
         }
+        foreach( $confrontos_proximas_fases as $key => $dados_confronto ){
+            if ( isset($dados_confronto['confrontos']) && is_array($dados_confronto['confrontos']) && count($dados_confronto['confrontos']) ){
+
+                foreach($dados_confronto['confrontos'] as $key_confronto => $confronto ){
+                    $dados_salvar[] = [
+                        'Agendamento' => [
+                            'cliente_id' => $dados_usuario['Usuario']['cliente_id'],
+                            'torneio_id' => $dados->torneio_id,
+                            'horario' => $confronto['horario']['horario'],
+                            'duracao' => $confronto['horario']['duracao']
+                        ],
+                        'TorneioJogo' => [
+                            [
+                                'torneio_categoria_id' => $dados_confronto['torneio_categoria_id'],
+                                'torneio_quadra_id' => $confronto['horario']['torneio_quadra_id'],
+                                'time_1' => null,
+                                'time_2' => null,
+                                'time_1_proximas_fases' => $confronto['time_1_proximas_fases'],
+                                'time_1_grupo' => $confronto['time_1_grupo'],
+                                'time_1_posicao' => $confronto['time_1_posicao'],
+                                'time_1_jogo' => $confronto['time_1_jogo'],
+                                'time_2_proximas_fases' => $confronto['time_2_proximas_fases'],
+                                'time_2_grupo' => $confronto['time_2_grupo'],
+                                'time_2_posicao' => $confronto['time_2_posicao'],
+                                'time_2_jogo' => $confronto['time_2_jogo'],
+                                '_id' => $confronto['_id'],
+                                'fase' => $confronto['fase'],
+                                'fase_nome' => $confronto['fase_nome'],
+                                'nome' => 'Jogo ' . $confronto['_id'],
+                            ]
+                        ]
+                    ];
+
+                }
+            }
+        }
 
         $this->Agendamento->deleteAll(['Agendamento.torneio_id' => $dados->torneio_id]);
+
         if (!$this->Agendamento->saveAll($dados_salvar, ['deep' => true])) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar os jogos.'))));
         }
@@ -1626,7 +1695,7 @@ class TorneiosController extends AppController {
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Jogos gerados com sucesso!'))));
     }
 
-    private function geraConfrontos ($grupos = []){
+    private function geraConfrontosGrupos ($grupos = []){
         $arr_retornar = [];
         if ( count($grupos) == 0 ) {
             return $arr_retornar;
@@ -1652,6 +1721,186 @@ class TorneiosController extends AppController {
         }
 
         return $arr_retornar;
+
+    }
+
+    private function buscaDadosProximasFases ($grupos_por_categoria = []){
+        $arr_retornar = [];
+        if ( count($grupos_por_categoria) == 0 ) {
+            return $arr_retornar;
+        }
+
+        $dados = [];
+
+        $index = 0;
+        foreach($grupos_por_categoria as $categoria_id  => $n_grupos){
+
+            $n_duplas_classificadas = 0;
+            if ( $n_grupos == 1 ) {
+                $n_duplas_classificadas = 3;
+            }
+            else if ( $n_grupos == 2 ) {
+                $n_duplas_classificadas = 4;
+            } else {
+                $n_duplas_classificadas = 4;
+                for( $i = 3; $i <= $n_grupos; $i++ ){
+                    $n_duplas_classificadas += 2;
+                }
+
+            }
+
+            $dados[$index] = ['categoria_id' => $categoria_id, 'n_duplas_classificadas' => $n_duplas_classificadas];
+
+            if ( !isset($this->proximas_fases[$n_grupos]) ) {
+                return false;
+            }
+
+            $dados_proximas_fases = $this->proximas_fases[$n_grupos];
+            $dados[$index] = array_merge($dados[$index],$dados_proximas_fases);
+            $index++;
+        }
+
+        return $dados;
+
+    }
+
+    private function geraJogosProximasFases ($dados_proximas_fases = []){
+        $arr_retornar = [];
+        if ( count($dados_proximas_fases) == 0 ) {
+            return $arr_retornar;
+        }
+
+        $index = 0;
+
+        foreach( $dados_proximas_fases as $key => $proxima_fase ) {
+            $arr_retornar[$index] = [
+                'torneio_categoria_id' => $proxima_fase['categoria_id'],
+                'confrontos' => []
+            ];
+
+            foreach( $proxima_fase['fases'] as $key_fase => $fase ) {
+                foreach( $fase['jogos'] as $key_jogo => $jogo ) {
+                    $arr_retornar[$index]['confrontos'][] = [
+                        '_id' => $jogo['id'],
+                        'fase_nome' => $fase['nome'],
+                        'fase' => $key_fase+2,
+                        'time_1_proximas_fases' => $this->getTeamNextLevelName($jogo, 1),
+                        'time_1_grupo' => @$jogo['time_1_grupo'],
+                        'time_1_posicao' => @$jogo['time_1_posicao'],
+                        'time_1_jogo' => @$jogo['time_1_jogo'],
+                        'time_2_proximas_fases' => $this->getTeamNextLevelName($jogo, 2),
+                        'time_2_grupo' => @$jogo['time_2_grupo'],
+                        'time_2_posicao' => @$jogo['time_2_posicao'],
+                        'time_2_jogo' => @$jogo['time_2_jogo'],
+                    ];
+                }
+            }
+
+            $index++;
+        }
+
+        return $arr_retornar;
+
+    }
+
+    private function getTeamNextLevelName($jogo = [], $time = null) {
+        $chars = range('a', 'z');
+
+        if( count($jogo) == 0 || $time == null ) {
+            return '';
+        }
+
+
+        if ( isset($jogo['time_' . $time . '_posicao']) ) {
+            return $jogo['time_' . $time . '_posicao'] . 'º da Chave ' . strtoupper($chars[$jogo['time_' . $time . '_grupo']]);
+        }
+
+
+        if ( isset($jogo['time_' . $time . '_jogo']) ) {
+            return 'Vencedor do jogo ' . $jogo['time_' . $time . '_jogo'];
+
+        }
+
+        return '';
+
+    }
+
+    private function getMaxTimeGeneratedByCategory( $confrontos = [], $horarios = [] ) {
+        if ( count($confrontos) == 0 || count($horarios) == 0 ) {
+            return [];
+        }
+
+        $arr_retornar = [];
+        $max_horarios_gerados = [];
+
+        foreach( $confrontos as $key => $confronto ) {
+
+            $categoria_id = $confronto['torneio_categoria_id'];
+            if ( !isset($max_horarios_gerados[$categoria_id]) )
+                $max_horarios_gerados[$categoria_id] = '1990-01-01 00:00:00';
+
+            foreach( $confronto['confrontos'] as $key_confronto => $jogo ) {
+                if ( strtotime($max_horarios_gerados[$categoria_id]) < strtotime($jogo['horario']['horario']) ) {
+                    $max_horarios_gerados[$categoria_id] = $jogo['horario']['horario'];
+                }
+            }
+        }
+
+        return $max_horarios_gerados;
+
+    }
+
+    public function getNextAvailableTimes( $max_horarios_gerados = [], $horarios = [] ) {
+        if ( count($max_horarios_gerados) == 0 || count($horarios) == 0 ) {
+            return false;
+        }
+
+        $arr_retornar = [];
+        foreach( $max_horarios_gerados as $categoria_id => $max_horario ) {
+            foreach( $horarios as $key_horario => $horario ) {
+                if ( strtotime($max_horario) < strtotime($horario['horario']) ) {
+                    $arr_retornar[$categoria_id][] = $horario;
+                }
+            }
+        }
+
+        return $arr_retornar;
+    }
+
+    private function atribui_horarios_confrontos_proximas_fases( $confrontos = [], $horarios = [] ) {
+    
+        if ( count($confrontos) == 0 || $horarios == 0 ) {
+            return false;
+        }
+
+        foreach( $confrontos as $key => $confronto ) {
+
+            $categoria_id = $confronto['torneio_categoria_id'];
+
+            if ( count($horarios[$categoria_id]) < count($confronto['confrontos'])) {
+                return false;
+            }
+
+            foreach( $confronto['confrontos'] as $key_confronto => $jogo ) {
+
+                if ( !isset($horarios[$categoria_id][0]) )
+                    return false;
+         
+                $horario = $horarios[$categoria_id][0];
+                $confrontos[$key]['confrontos'][$key_confronto]['horario'] = $horario;
+
+                $horarios = array_map(function($_horarios) use ($horario) {
+                    $retornar =  array_filter($_horarios, function($_horario) use ($horario) {
+                        return $_horario['horario'] != $horario['horario'];
+                    });
+                    return array_values($retornar);
+                }, $horarios);
+
+            }
+
+        }
+
+        return $confrontos;
 
     }
 
@@ -1778,8 +2027,17 @@ class TorneiosController extends AppController {
                         continue;
                     }
                 }
-                $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_1']);
-                $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_2']);
+
+                if ( $jogo['TorneioJogo']['time_1'] != null )
+                    $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_1']);
+                else
+                    $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $jogo['TorneioJogo']['time_1_proximas_fases'];
+
+                if ( $jogo['TorneioJogo']['time_2'] != null )
+                    $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_2']);
+                else
+                    $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $jogo['TorneioJogo']['time_2_proximas_fases'];
+
                 $jogos[$key]['TorneioJogo']['_hora'] = date('H:i',strtotime($jogo['Agendamento']['horario']));
                 $jogos[$key]['TorneioJogo']['_data'] = date('d/m/Y',strtotime($jogo['Agendamento']['horario']));
                 $jogos[$key]['TorneioJogo']['_resultados'] = $this->TorneioJogoPlacar->busca_resultados($jogo['TorneioJogo']['id']);

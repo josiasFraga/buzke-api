@@ -23,14 +23,15 @@ class TorneioInscricao extends AppModel {
         ),
 	);
 
-	public function checkSubscription($dados_cliente_cliente = [], $torneio_id = null) {
+	public function checkSubscription($dados_cliente_cliente = [], $dados_torneio = [], $categoria_id = null) {
 
-		if ( count($dados_cliente_cliente) == 0 || $torneio_id == null ){
+		if ( count($dados_cliente_cliente) == 0 || count($dados_torneio) == 0 || $categoria_id == null ){
 			return false;
 		}
 
+		$torneio_id = $dados_torneio['Torneio']['id'];
 
-		$first_check = $this->find('first',[
+		$first_check = $this->find('all',[
 			'conditions' => [
 				'TorneioInscricao.torneio_id' => $torneio_id,
 				'TorneioInscricaoJogador.cliente_cliente_id' => $dados_cliente_cliente['ClienteCliente']['id'],
@@ -41,13 +42,25 @@ class TorneioInscricao extends AppModel {
 			'link' => ['TorneioInscricaoJogador']
 		]);
 
-		if ( count($first_check) > 0 )
-			return $first_check;
+		if ( count($first_check) > 0 ) {
+
+			foreach( $first_check as $key => $inscricao ) {
+
+				if ( $inscricao['TorneioInscricao']['torneio_categoria_id'] == $categoria_id ) {
+					return $inscricao;
+				}
+
+			}
+
+			if ( $dados_torneio['Torneio']['max_inscricoes_por_jogador'] <= count($first_check) ) {
+				return $first_check[0];
+			}
+		}
 
 		if ($dados_cliente_cliente['ClienteCliente']['usuario_id'] == null) 
 			return false;
 
-		$second_check = $this->find('first',[
+		$second_check = $this->find('all',[
 			'conditions' => [
 				'TorneioInscricao.torneio_id' => $torneio_id,
 				'ClienteCliente.usuario_id' => $dados_cliente_cliente['ClienteCliente']['usuario_id'],
@@ -57,6 +70,22 @@ class TorneioInscricao extends AppModel {
 			],
 			'link' => ['TorneioInscricaoJogador' => ['ClienteCliente']]
 		]);
+
+		if ( count($second_check) > 0 ) {
+
+			foreach( $second_check as $key => $inscricao ) {
+
+				if ( $inscricao['TorneioInscricao']['torneio_categoria_id'] == $categoria_id ) {
+					return $inscricao;
+				}
+
+			}
+
+			if ( $dados_torneio['Torneio']['max_inscricoes_por_jogador'] <= count($second_check) ) {
+				return $second_check[0];
+			}
+
+		}
 
 		if ( count($second_check) > 0 )
 			return $second_check;
