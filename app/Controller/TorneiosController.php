@@ -2028,7 +2028,7 @@ class TorneiosController extends AppController {
                     }
                 }
 
-                if ( $jogo['TorneioJogo']['time_1'] != null )
+                if ( $jogo['TorneioJogo']['time_1'] != null ) 
                     $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_1']);
                 else
                     $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $jogo['TorneioJogo']['time_1_proximas_fases'];
@@ -2037,6 +2037,12 @@ class TorneiosController extends AppController {
                     $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_2']);
                 else
                     $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $jogo['TorneioJogo']['time_2_proximas_fases'];
+                
+                $jogos[$key]['TorneioJogo']['_enable_set_score'] = true;
+
+                if ( $jogo['TorneioJogo']['time_1'] == null || $jogo['TorneioJogo']['time_2'] == null ) {
+                    $jogos[$key]['TorneioJogo']['_enable_set_score'] = false;
+                }
 
                 $jogos[$key]['TorneioJogo']['_hora'] = date('H:i',strtotime($jogo['Agendamento']['horario']));
                 $jogos[$key]['TorneioJogo']['_data'] = date('d/m/Y',strtotime($jogo['Agendamento']['horario']));
