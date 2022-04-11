@@ -1995,6 +1995,7 @@ class TorneiosController extends AppController {
 
         $conditions = [
             'Agendamento.torneio_id' => $dados['torneio_id'],
+            'Torneio.jogos_liberados_ao_publico' => 'Y',
             'TorneioJogo.torneio_categoria_id' => $dados['torneio_categoria_id'],
         ];
     
@@ -2005,7 +2006,7 @@ class TorneiosController extends AppController {
             'conditions' => $conditions,
             'order' => ['Agendamento.horario'],
             'link' => [
-                'Agendamento',
+                'Agendamento' => ['Torneio'],
                 'TorneioQuadra' => [
                     'ClienteServico'
                 ],
@@ -2556,6 +2557,63 @@ class TorneiosController extends AppController {
         ]);
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $quadras))));
+    }
+
+    public function libera_jogos_ao_publico(){
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), false);
+        }elseif ( gettype($dados) == 'array' ) {
+            $dados = json_decode(json_encode($dados), false);
+        }
+
+
+        if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados->torneio_id) || $dados->torneio_id == '' || $dados->torneio_id == null ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Torneio não informado.'))));
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+        
+        //se é uma empresa cadastrando
+        if ( $dados_usuario['Usuario']['nivel_id'] != 2 ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Sem permissão para trocar inscritos de grupo.'))));
+        }
+
+        $this->loadModel('Torneio');
+ 
+        $dados_torneio = $this->Torneio->find('first',[
+            'fields' => ['Torneio.id'],
+            'conditions' => [
+                'Torneio.id' => $dados->torneio_id,
+                'Torneio.cliente_id' => $dados_usuario['Usuario']['cliente_id'],
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_torneio) == 0 ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Torneio não econtrado.'))));
+        }
+
+        $dados_salvar = [
+            'id' => $dados_torneio['Torneio']['id'],
+            'jogos_liberados_ao_publico' => 'Y',            
+        ];
+
+        if ( !$this->Torneio->save($dados_salvar) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao liberar os jogos ao público'))));
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Jogos liberados com sucesso!'))));
     }
 
 }
