@@ -95,4 +95,20 @@ class TorneioInscricao extends AppModel {
 		
 
 	}
+
+    public function countSubscriptionsByCategory($categoria_id = null){
+        if ( $categoria_id == null ){
+            return false;
+        }
+
+        return $this->find('count',[
+            'conditions' => [
+                'TorneioInscricao.torneio_categoria_id' => $categoria_id,
+				'not' => [
+					'TorneioInscricao.confirmado' => 'R'
+				]
+            ]
+        ]);
+
+    }
 }

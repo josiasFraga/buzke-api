@@ -721,8 +721,6 @@ class TorneiosController extends AppController {
             }
         }
 
-  
-
         $this->loadModel('ClienteCliente');
         $this->loadModel('TorneioInscricao');
         $this->loadModel('Torneio');
@@ -738,14 +736,21 @@ class TorneiosController extends AppController {
             'fields' => ['*'],
             'conditions' => [
                 'Torneio.id' => $dados->torneio_id,
+                'TorneioCategoria.id' => $dados->torneio_categoria_id,
                 'Torneio.inscricoes_de <=' => date('Y-m-d'),
                 'Torneio.inscricoes_ate >=' => date('Y-m-d'),
             ],
-            'link' => [],
+            'link' => ['TorneioCategoria'],
         ]);
 
         if ( count($dados_torneio) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do torneio não encontrados.'))));
+        }
+
+        $n_inscritos_categoria = $this->TorneioInscricao->countSubscriptionsByCategory($dados->torneio_categoria_id);
+
+        if ( $n_inscritos_categoria >= $dados_torneio['TorneioCategoria']['limite_duplas'] ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O limite de duplas inscritas nessa categoria já foi atingido.'))));
         }
 
         //se é uma empresa cadastrando
@@ -909,9 +914,6 @@ class TorneiosController extends AppController {
         if ( $check_inscricao !== false ){
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
         }
-        
-        //$dados_cliente_cliente = $this->ClienteCliente->buscaDadosSemVinculo($inscricao_usuario_id, true);
-        //$dados_cliente_cliente = array_values($dados_cliente_cliente);
 
         $jogadores_salvar = [
             [                    
