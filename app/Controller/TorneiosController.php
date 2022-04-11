@@ -680,11 +680,12 @@ class TorneiosController extends AppController {
         if ( !isset($dados->torneio_categoria_id) || $dados->torneio_categoria_id == '' || $dados->torneio_categoria_id == null ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar a categoria para realizar sua inscrição em um torneio.'))));
         }
+
        
         //impedimentos da dupla
-        $impedimentos = [];
-        if ( isset($dados->impedimentos) && count($dados->impedimentos) > 0 ) {
-            foreach( $dados->impedimentos as $key => $impedimento ){
+        $impedimentos_jogador_1 = [];
+        if ( isset($dados->impedimentos_jogador_1) && count($dados->impedimentos_jogador_1) > 0 ) {
+            foreach( $dados->impedimentos_jogador_1 as $key => $impedimento ){
     
                 if ( !isset($impedimento->data) || $impedimento->data == ""  ) {
                     return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data do impedimento não informado'))));
@@ -695,18 +696,38 @@ class TorneiosController extends AppController {
                 if ( !isset($impedimento->ate_as) || $impedimento->ate_as == ""  ) {
                     return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora limite do impedimento não informado'))));
                 }
-                $impedimentos[$key]['inicio'] = $this->dateBrEn($impedimento->data).' '.$impedimento->das;
-                $impedimentos[$key]['fim'] = $this->dateBrEn($impedimento->data).' '.$impedimento->ate_as;
+                $impedimentos_jogador_1[$key]['inicio'] = $this->dateBrEn($impedimento->data).' '.$impedimento->das;
+                $impedimentos_jogador_1[$key]['fim'] = $this->dateBrEn($impedimento->data).' '.$impedimento->ate_as;
     
             }
-
         }
+    
+        $impedimentos_jogador_2 = [];
+        if ( isset($dados->impedimentos_jogador_2) && count($dados->impedimentos_jogador_2) > 0 ) {
+            foreach( $dados->impedimentos_jogador_2 as $key => $impedimento ){
+    
+                if ( !isset($impedimento->data) || $impedimento->data == ""  ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Data do impedimento não informado'))));
+                }
+                if ( !isset($impedimento->das) || $impedimento->das == ""  ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora início do impedimento não informado'))));
+                }
+                if ( !isset($impedimento->ate_as) || $impedimento->ate_as == ""  ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Hora limite do impedimento não informado'))));
+                }
+                $impedimentos_jogador_2[$key]['inicio'] = $this->dateBrEn($impedimento->data).' '.$impedimento->das;
+                $impedimentos_jogador_2[$key]['fim'] = $this->dateBrEn($impedimento->data).' '.$impedimento->ate_as;
+    
+            }
+        }
+
+  
 
         $this->loadModel('ClienteCliente');
         $this->loadModel('TorneioInscricao');
         $this->loadModel('Torneio');
         $this->loadModel('Usuario');
-        //$this->loadModel('TorneioCategoria');
+        $this->loadModel('TorneioInscricaoJogadorImpedimento');
 
         $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
         if ( !$dados_usuario ) {
@@ -868,8 +889,12 @@ class TorneiosController extends AppController {
 
         }
 
-        if ( $dados_torneio['Torneio']['impedimentos'] < count($impedimentos) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você só pode selecionar até '.$dados_torneio['Torneio']['impedimentos'].' impedimentos.'))));
+        if ( $dados_torneio['Torneio']['impedimentos'] < count($impedimentos_jogador_1) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você só pode selecionar até '.$dados_torneio['Torneio']['impedimentos'].' por jogador. O Jogador 1 ultrapassou esta cota..'))));
+        }
+
+        if ( $dados_torneio['Torneio']['impedimentos'] < count($impedimentos_jogador_2) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você só pode selecionar até '.$dados_torneio['Torneio']['impedimentos'].' por jogador. O Jogador 2 ultrapassou esta cota..'))));
         }
 
         $check_inscricao = $this->TorneioInscricao->checkSubscription($v_cadastro_jogador_1, $dados_torneio, $dados->torneio_categoria_id);
@@ -887,6 +912,39 @@ class TorneiosController extends AppController {
         
         //$dados_cliente_cliente = $this->ClienteCliente->buscaDadosSemVinculo($inscricao_usuario_id, true);
         //$dados_cliente_cliente = array_values($dados_cliente_cliente);
+
+        $jogadores_salvar = [
+            [                    
+                'cliente_cliente_id' => $v_cadastro_jogador_1['ClienteCliente']['id'],
+            ],
+            [
+                'cliente_cliente_id' => $v_cadastro_jogador_2['ClienteCliente']['id'],
+            ]
+        ];
+
+        if ( count($impedimentos_jogador_1) > 0 ) {
+
+            $n_impedimentos_jogador = $this->TorneioInscricaoJogadorImpedimento->countByPlayer($v_cadastro_jogador_1['ClienteCliente']['id'], $dados->torneio_id);
+            $total_impedimentos_jogador = $n_impedimentos_jogador + count($impedimentos_jogador_1);
+
+            if ( $dados_torneio['Torneio']['impedimentos'] < $total_impedimentos_jogador ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você só pode selecionar até '.$dados_torneio['Torneio']['impedimentos'].' por jogador. O Jogador 1 ultrapassou esta cota..'))));
+            }
+
+            $jogadores_salvar[0]['TorneioInscricaoJogadorImpedimento'] = $impedimentos_jogador_1;
+        }
+
+        if ( count($impedimentos_jogador_2) > 0 ) {
+
+            $n_impedimentos_jogador = $this->TorneioInscricaoJogadorImpedimento->countByPlayer($v_cadastro_jogador_2['ClienteCliente']['id'], $dados->torneio_id);
+            $total_impedimentos_jogador = $n_impedimentos_jogador + count($impedimentos_jogador_2);            
+
+            if ( $dados_torneio['Torneio']['impedimentos'] < $total_impedimentos_jogador ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você só pode selecionar até '.$dados_torneio['Torneio']['impedimentos'].' por jogador. O Jogador 2 ultrapassou esta cota..'))));
+            }
+    
+            $jogadores_salvar[1]['TorneioInscricaoJogadorImpedimento'] = $impedimentos_jogador_2;
+        }
         
         $dados_salvar = [
             'TorneioInscricao' => [
@@ -896,20 +954,9 @@ class TorneiosController extends AppController {
                 'torneio_categoria_id' => $dados->torneio_categoria_id,
                 'confirmado' => 'N',
             ],
-            'TorneioInscricaoJogador' => [
-                [                    
-                    'cliente_cliente_id' => $v_cadastro_jogador_1['ClienteCliente']['id'],
-                ],
-                [
-                    'cliente_cliente_id' => $v_cadastro_jogador_2['ClienteCliente']['id'],
-                ]
-            ]
+            'TorneioInscricaoJogador' => $jogadores_salvar,
 
         ];
-
-        if ( count($impedimentos) > 0 ) {
-            $dados_salvar['TorneioInscricaoImpedimento'] = $impedimentos;
-        }
 
         //debug($dados_salvar); die();
 
@@ -1995,9 +2042,14 @@ class TorneiosController extends AppController {
 
         $conditions = [
             'Agendamento.torneio_id' => $dados['torneio_id'],
-            'Torneio.jogos_liberados_ao_publico' => 'Y',
             'TorneioJogo.torneio_categoria_id' => $dados['torneio_categoria_id'],
         ];
+
+        if ( $dados_usuario['Usuario']['cliente_id'] == null ){
+            $conditions = array_merge($conditions, [        
+                'Torneio.jogos_liberados_ao_publico' => 'Y',
+            ]);
+        }
     
         $this->TorneioJogo->virtualFields['_quadra_nome'] = 'CONCAT_WS("", TorneioQuadra.nome, ClienteServico.nome)';
 

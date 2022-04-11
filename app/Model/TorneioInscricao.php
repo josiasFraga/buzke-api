@@ -12,9 +12,9 @@ class TorneioInscricao extends AppModel {
 	);
 
 	public $hasMany = array(
-		'TorneioInscricaoImpedimento' => array(
+		/*'TorneioInscricaoImpedimento' => array(
 			'foreignKey' => 'torneio_inscricao_id'
-        ),
+        ),*/
 		'TorneioInscricaoJogador' => array(
 			'foreignKey' => 'torneio_inscricao_id'
         ),

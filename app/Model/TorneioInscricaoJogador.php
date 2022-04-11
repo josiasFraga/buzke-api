@@ -11,6 +11,12 @@ class TorneioInscricaoJogador extends AppModel {
         ),
 	);
 
+	public $hasMany = array(
+		'TorneioInscricaoJogadorImpedimento' => array(
+			'foreignKey' => 'torneio_inscricao_jogador_id'
+        ),
+	);
+
     public function checkSubscribed($torneio_id = null, $ids = []){
 
         if ( count($ids) == 0 ) {
