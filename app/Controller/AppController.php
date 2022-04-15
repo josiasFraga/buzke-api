@@ -1062,8 +1062,26 @@ class AppController extends Controller {
     
         $response = curl_exec($ch);
         curl_close($ch);
-		
-		return true;
+
+        $response = json_decode($response, true);
+
+        $this->loadModel('Notificacao');
+        $dados_salvar = [
+            'id_one_signal' => $response['id'],
+            'message' => $mensagem,
+            'title' => $titulo,
+            'json' => json_encode($response),
+  
+        ];
+
+        if ( count($arr_ids_app) > 0 ) {
+            foreach( $arr_ids_app as $key_player_id => $player_id ){
+                $dados_salvar['NotificacaoUsuario'][] = ['token' => $player_id];
+            }
+        }
+        
+        return $this->Notificacao->save($dados_salvar, ['deep' => true]) !== false;
+
     }
 
     public function saveInviteAndSendNotification($clientes_clientes_ids, $dados_agendamento) {
@@ -1183,6 +1201,33 @@ class AppController extends Controller {
         }
 
         return true;
+    }
+
+	public function getNotifications(){
+
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+        CURLOPT_URL => 'https://onesignal.com/api/v1/notifications?app_id=b3d28f66-5361-4036-96e7-209aea142529&limit=50&offset=51',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_SSL_VERIFYPEER => 0,
+        CURLOPT_CUSTOMREQUEST => 'GET',
+        CURLOPT_HTTPHEADER => array(
+            'Authorization: Bearer ZWM2M2YyMjQtOTQ4My00MjI2LTg0N2EtYThiZmRiNzM5N2Nk'
+        ),
+        ));
+
+        $response = curl_exec($curl);
+
+        curl_close($curl);
+
+        return json_decode($response, true);
     }
     
     public function dateHourEnBr( $data , $r_data, $r_hora ){

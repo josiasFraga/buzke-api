@@ -2246,7 +2246,7 @@ class TorneiosController extends AppController {
                 $letter_number = array_search($grupo_letra, $alphabet);
                 $grupo_id = $letter_number + 1;
 
-                $seta_times = $this->TorneioJogo->setTeams($dados_jogo['Torneio']['id'], $dados_jogo['TorneioJogo']['torneio_categoria_id'], $grupo_id, $integrantes);
+                $seta_times = $this->TorneioJogo->setTeams($dados_jogo['Torneio']['id'], $dados_jogo['TorneioJogo']['torneio_categoria_id'], $grupo_id, null, $integrantes);
 
                 if ( !$seta_times ) {
                     return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Ocorreu um erro ao gerar as próximas fases.'))));
