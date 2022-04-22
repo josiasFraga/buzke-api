@@ -125,6 +125,14 @@ class Agendamento extends AppModel {
         $dia_semana = date('w',strtotime($data));
         $dia_mes = (int)date('d',strtotime($data));
 
+        $agendamentos_fixos_cancelados = $this->find('list',[
+            'fields' => ['Agendamento.id', 'Agendamento.id'],
+            'conditions' => [
+                'AgendamentoFixoCancelado.horario' => $data.' '.$hora
+            ],
+            'link' => ['AgendamentoFixoCancelado']
+        ]);
+
         $n_agendamentos_normais = $this->find('count',[
             'conditions' => [
                 'Agendamento.cliente_id' => $cliente_id,
@@ -135,6 +143,10 @@ class Agendamento extends AppModel {
 
         $n_agendamentos_fixos_semanais = $this->find('count',[
             'conditions' => [
+                'not' => [
+                    'Agendamento.id' => $agendamentos_fixos_cancelados,
+                ],
+                'Agendamento.horario <= ' => $data.' '.$hora,
                 'Agendamento.cliente_id' => $cliente_id,
                 'TIME(Agendamento.horario)' => $hora,
                 'Agendamento.cancelado' => 'N',
@@ -144,6 +156,10 @@ class Agendamento extends AppModel {
 
         $n_agendamentos_fixos_mensais = $this->find('count',[
             'conditions' => [
+                'not' => [
+                    'Agendamento.id' => $agendamentos_fixos_cancelados,
+                ],
+                'Agendamento.horario <= ' => $data.' '.$hora,
                 'Agendamento.cliente_id' => $cliente_id,
                 'TIME(Agendamento.horario)' => $hora,
                 'Agendamento.cancelado' => 'N',
@@ -352,6 +368,7 @@ class Agendamento extends AppModel {
                 //'ClienteServico.descricao',
                 //'ClienteServico.valor',
                 'ClienteCliente.nome',
+                'TorneioQuadra.nome',
                 'Usuario.img'
             ],
             'conditions' => [
@@ -532,6 +549,7 @@ class Agendamento extends AppModel {
                 'ClienteServico.nome',
                 'Agendamento.cliente_id',
                 'Torneio.img',
+                'TorneioQuadra.nome',
             ],
             'conditions' => [
                 'Agendamento.cliente_id' => $cliente_id,

@@ -32,30 +32,6 @@ class NotificacoesController extends AppController {
 
         $ids_de_notificacao = $this->Token->getIdsNotificationsUsuario($dados_token['Usuario']['id']);
 
-        /*$notificacoes = $this->getNotifications();
-        foreach( $notificacoes['notifications'] as $key_notificacao => $notificacao ){
-            $dados_salvar[$key_notificacao] = [
-                'id_one_signal' => $notificacao['id'],
-                'message' => $notificacao['contents']['en'],
-                'title' => $notificacao['headings']['en'],
-                'json' => json_encode($notificacao),
-                'NotificacaoUsuario' => [
-                    [
-                        'token' => $notificacao['id']
-                    ]
-                ]
-            ];
-
-            if ( count($notificacao['include_player_ids']) > 0 ) {
-                foreach( $notificacao['include_player_ids'] as $key_player_id => $player_id ){
-                    $dados_salvar[$key_notificacao]['NotificacaoUsuario'][] = ['token' => $player_id];
-                }
-            }
-
-        }
-
-        $this->loadModel('Notificacao');
-        $this->Notificacao->saveAll($dados_salvar, ['deep' => true]);*/
         $this->loadModel('Notificacao');
         $notificacoes = $this->Notificacao->getByTokens($ids_de_notificacao);
 

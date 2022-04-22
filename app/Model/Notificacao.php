@@ -42,7 +42,8 @@ class Notificacao extends AppModel {
 
         return $this->find('count',[
             'conditions' => [
-                'NotificacaoUsuario.token' => $tokens
+                'NotificacaoUsuario.token' => $tokens,
+                'Notificacao.read' => 'N'
             ],
             'group' => [
                 'Notificacao.id'

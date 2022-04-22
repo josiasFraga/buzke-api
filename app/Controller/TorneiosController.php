@@ -119,6 +119,7 @@ class TorneiosController extends AppController {
         $this->loadModel('ClienteCliente');
         $this->loadModel('TorneioGrupo');
         $this->loadModel('TorneioJogo');
+        $this->loadModel('TorneioQuadra');
 
         $conditions = [];
 
@@ -203,6 +204,7 @@ class TorneiosController extends AppController {
 
         $dados['TorneioCategoria'] = $categorias;
         $dados['TorneioData'] = $this->TorneioData->getByTournamentId($dados['Torneio']['id']);
+        $dados['TorneioQuadra'] = $this->TorneioQuadra->getByTournamentId($dados['Torneio']['id']);
         $dados['Torneio']['_subscribed'] = $this->TorneioInscricaoJogador->checkSubscribed($dados['Torneio']['id'], $meus_ids_de_cliente);
         $dados['Torneio']['_subscriptions_finished'] = $this->Torneio->checkIsSubscriptionsFinished($dados['Torneio']['id']);
         $dados['Torneio']['_all_group_generated'] = $all_group_generated;
@@ -2027,10 +2029,6 @@ class TorneiosController extends AppController {
             throw new BadRequestException('Torneio não informado!', 401);
         }
 
-        if ( !isset($dados['torneio_categoria_id']) || $dados['torneio_categoria_id'] == "" || !is_numeric($dados['torneio_categoria_id']) ) {
-            throw new BadRequestException('Categoria não informada!', 401);
-        }
-
         $dados_usuario = $this->verificaValidadeToken($dados['token'], $dados['email']);
 
         if ( !$dados_usuario ) {
@@ -2044,12 +2042,23 @@ class TorneiosController extends AppController {
 
         $conditions = [
             'Agendamento.torneio_id' => $dados['torneio_id'],
-            'TorneioJogo.torneio_categoria_id' => $dados['torneio_categoria_id'],
         ];
 
         if ( $dados_usuario['Usuario']['cliente_id'] == null ){
-            $conditions = array_merge($conditions, [        
+            $conditions = array_merge($conditions, [
                 'Torneio.jogos_liberados_ao_publico' => 'Y',
+            ]);
+        }
+
+        if ( isset($dados['torneio_categoria_id']) && is_numeric($dados['torneio_categoria_id']) ) {
+            $conditions = array_merge($conditions, [
+                'TorneioJogo.torneio_categoria_id' => $dados['torneio_categoria_id'],
+            ]);
+        }
+
+        if ( isset($dados['torneio_quadra_id']) && is_numeric($dados['torneio_quadra_id']) ) {
+            $conditions = array_merge($conditions, [
+                'TorneioJogo.torneio_quadra_id' => $dados['torneio_quadra_id'],
             ]);
         }
     

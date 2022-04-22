@@ -503,7 +503,7 @@ class AgendamentosController extends AppController {
     
         }
 
-        //verfica se o cliente abrirá no dia
+        //verfica se o cliente fechará excepcionalmente nesse dia no dia
         $verificaFechamento = $this->ClienteHorarioAtendimentoExcessao->verificaExcessao($dados->cliente_id, $data_selecionada, 'F');
 
         if ( count($verificaFechamento) > 0 ) {

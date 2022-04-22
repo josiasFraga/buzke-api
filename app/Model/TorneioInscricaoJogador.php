@@ -66,5 +66,28 @@ class TorneioInscricaoJogador extends AppModel {
         $nomes_str = implode(' | ',$nomes);
         return $nomes_str;
         
-    }
+    }    
+
+	public function getBySubscriptionId($id = null) {
+
+		if ( $id == null ){
+			return [];
+		}
+
+		return $this->find('all',[
+            'fields' => [
+                'TorneioInscricaoJogador.cliente_cliente_id',
+                'ClienteCliente.*'
+            ],
+			'conditions' => [
+				'TorneioInscricaoJogador.torneio_inscricao_id' => $id,
+				'not' => [
+					'TorneioInscricao.confirmado' => 'R'
+				]
+			],
+			'link' => ['TorneioInscricao', 'ClienteCliente']
+		]);
+		
+
+	}
 }

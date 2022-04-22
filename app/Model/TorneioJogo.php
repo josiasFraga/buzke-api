@@ -315,4 +315,22 @@ class TorneioJogo extends AppModel {
 		return false;
 	}
 
+	public function getBySchedulingId($scheduling_id = null){
+
+		if ( $scheduling_id == null ) {
+			return [];
+		}
+	
+		$this->virtualFields['_quadra_nome'] = 'CONCAT_WS("", TorneioQuadra.nome, ClienteServico.nome)';
+		return $this->find('first',[
+			'fields' => ['*'],
+			'conditions' => [
+				'TorneioJogo.agendamento_id' => $scheduling_id,
+			],
+			'link'=> ['TorneioQuadra' => ['ClienteServico']],
+			'group'=> ['TorneioJogo.id']
+		]);
+
+	}
+
 }

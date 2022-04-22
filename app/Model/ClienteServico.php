@@ -87,25 +87,61 @@ class ClienteServico extends AppModel {
         $dia_semana = date('w',strtotime($data_selecionada.' '.$hora_selecionada));
         $dia_mes = (int)date('d',strtotime($data_selecionada.' '.$hora_selecionada));
 
+        //agendamentos normais
         $dados_gendamento = $this->find('first',[
             'conditions' => [
                 'ClienteServico.cliente_id' => $cliente_id,
                 'ClienteServico.id' => $servico,
                 'Agendamento.cancelado' => 'N',
-                'or' => [
-                    [
-                        'Agendamento.horario' => $data_selecionada.' '.$hora_selecionada,
-                        'Agendamento.dia_semana' => null,
-                        'Agendamento.dia_mes' => null,
-                    ],
-                    [
-                        'Agendamento.horario >=' => $data_selecionada.' '.$hora_selecionada,
-                        'or' => [
-                            'Agendamento.dia_semana' => $dia_semana,
-                            'Agendamento.dia_mes' => $dia_mes
-                        ]
+                'Agendamento.torneio_id' => null,
+                'Agendamento.horario' => $data_selecionada.' '.$hora_selecionada,
+                'Agendamento.dia_semana' => null,
+                'Agendamento.dia_mes' => null,
+            ],
+            'link' => [
+                'Agendamento'
+            ]
+        ]);
 
-                    ]
+        if ( count($dados_gendamento) >= 1 ) {
+            return false;
+        }
+
+        //agendamentos fixos
+        $ids_agendamentos_fixos_cancelados = $this->find('list',[
+            'fields' => ['Agendamento.id', 'Agendamento.id'],
+            'conditions' => [
+                'ClienteServico.cliente_id' => $cliente_id,
+                'ClienteServico.id' => $servico,
+                'Agendamento.cancelado' => 'N',
+                'Agendamento.torneio_id' => null,
+                'Agendamento.horario <=' => $data_selecionada.' '.$hora_selecionada,
+                'TIME(Agendamento.horario)' => $hora_selecionada,
+                'or' => [
+                    'Agendamento.dia_semana' => $dia_semana,
+                    'Agendamento.dia_mes' => $dia_mes
+                ],
+                'AgendamentoFixoCancelado.horario' => $data_selecionada.' '.$hora_selecionada,
+            ],
+            'link' => [
+                'Agendamento' => ['AgendamentoFixoCancelado']
+            ]
+        ]);
+
+        $dados_gendamento = $this->find('first',[
+            'conditions' => [
+                'ClienteServico.cliente_id' => $cliente_id,
+                'ClienteServico.id' => $servico,
+                'Agendamento.cancelado' => 'N',
+                'Agendamento.torneio_id' => null,
+                'Agendamento.horario <=' => $data_selecionada.' '.$hora_selecionada,
+                'TIME(Agendamento.horario)' => $hora_selecionada,
+                'or' => [
+                    'Agendamento.dia_semana' => $dia_semana,
+                    'Agendamento.dia_mes' => $dia_mes
+                ],
+                'not' => [
+                    'Agendamento.id' => $ids_agendamentos_fixos_cancelados,
                 ]
             ],
             'link' => [
@@ -113,7 +149,36 @@ class ClienteServico extends AppModel {
             ]
         ]);
 
-        if ( count($dados_gendamento) == 1 ) {
+        /*if ( $data_selecionada == '2022-04-08' && $hora_selecionada == '17:00:00' && $servico == 50 ) {
+            debug($ids_agendamentos_fixos_cancelados);
+            debug($dados_gendamento);
+            die();
+        }*/
+
+        if ( count($dados_gendamento) >= 1 ) {
+            return false;
+        }
+
+        $dados_gendamento = $this->find('first',[
+            'conditions' => [
+                'ClienteServico.cliente_id' => $cliente_id,
+                'ClienteServico.id' => $servico,
+                'Agendamento.cancelado' => 'N',
+                'Agendamento.horario' => $data_selecionada.' '.$hora_selecionada,
+                'not' => [
+                    'Agendamento.torneio_id' => null,
+                ]
+            ],
+            'link' => [
+                'TorneioQuadra' => [
+                    'TorneioJogo' => [
+                        'Agendamento'
+                    ]
+                ]
+            ]
+        ]);
+
+        if ( count($dados_gendamento) >= 1 ) {
             return false;
         }
     
@@ -121,6 +186,19 @@ class ClienteServico extends AppModel {
         
     }
 
+    public function getByClientId($cliente_id = null) {
+        
+        if ( $cliente_id == null )
+            return [];
+
+        return $this->find('all',[
+            'conditions' => [
+                'ClienteServico.cliente_id' => $cliente_id
+            ],
+            'link' => []
+        ]);
+         
+    }
 
 
 }

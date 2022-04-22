@@ -1067,20 +1067,23 @@ class AppController extends Controller {
 
         $this->loadModel('Notificacao');
         $dados_salvar = [
-            'id_one_signal' => $response['id'],
-            'message' => $mensagem,
-            'title' => $titulo,
-            'json' => json_encode($response),
+            0 => [
+                'id_one_signal' => $response['id'],
+                'message' => $mensagem,
+                'title' => $titulo,
+                'json' => json_encode($response),
+            ]
   
         ];
 
         if ( count($arr_ids_app) > 0 ) {
             foreach( $arr_ids_app as $key_player_id => $player_id ){
-                $dados_salvar['NotificacaoUsuario'][] = ['token' => $player_id];
+                $dados_salvar[0]['NotificacaoUsuario'][] = ['token' => $player_id];
             }
         }
-        
-        return $this->Notificacao->save($dados_salvar, ['deep' => true]) !== false;
+
+        $this->Notificacao->create();
+        return $this->Notificacao->saveAll($dados_salvar, ['deep' => true]) !== false;
 
     }
 
@@ -1135,6 +1138,19 @@ class AppController extends Controller {
         if( count($notifications_ids) > 0 ) {
             $mensagem = 'Só passamos para te avisar do seu agendamento em '.date('d/m/Y',strtotime($agendamento_horario)).' às '.date('H:i',strtotime($agendamento_horario)).'. na empresa '.$dados_agendamento['Cliente']['nome'].'.';
             $this->sendNotification($notifications_ids, $dados_agendamento['Agendamento']['id'], "Aviso de horário marcado", $mensagem, "sheduling_alert", '', ["en"=> '$[notif_count] Avisos de Horários Marcados']  );
+        }
+    }
+
+    public function sendTorunamentShedulingAlertNotification($usuarios_ids, $dados_agendamento, $agendamento_horario, $dados_jogo) {
+        
+        $this->loadModel('Token');
+
+        $usuarios_ids = array_values($usuarios_ids);
+        $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuarios_ids);
+
+        if( count($notifications_ids) > 0 ) {
+            $mensagem = 'Só passamos para te avisar do seu jogo de torneio em '.date('d/m/Y',strtotime($agendamento_horario)).' às '.date('H:i',strtotime($agendamento_horario)).'. na quadra '.$dados_jogo['TorneioJogo']['_quadra_nome'].'.';
+            $this->sendNotification($notifications_ids, $dados_agendamento['Agendamento']['id'], "Aviso de jogo de torneio", $mensagem, "sheduling_alert", '', ["en"=> '$[notif_count] Avisos de Horários Marcados']  );
         }
     }
 
