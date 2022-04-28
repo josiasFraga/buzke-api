@@ -563,11 +563,16 @@ class AgendamentosController extends AppController {
 
             if ( $cliente_condiguracoes['ClienteConfiguracao']['fixo_tipo'] == 'Semanal' ) {
                 $agendamento_dia_semana = date('w',strtotime($data_selecionada.' '.$horario_selecionado));
-
             }
             else if ( $cliente_condiguracoes['ClienteConfiguracao']['fixo_tipo'] == 'Mensal' ) {
                 $agendamento_dia_mes = (int)date('d',strtotime($data_selecionada.' '.$horario_selecionado));
+            }
 
+            //verifico se este agendamento fixo já não pertence a nenhum outro usuário e não foi liberado só pra essa data/hora
+            $v_agendamento_fixo = $this->Agendamento->checkFixedShchedulingBelongsOtherUser($dados->cliente_id, $agendamento_dia_semana, $agendamento_dia_mes, $horario_selecionado, (isset($dados->servico) ? $dados->servico : null));
+
+            if ( count($v_agendamento_fixo) > 0 ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Lamentamos. Este horário fixo já pertence a outro usuário, você só pode marcar NÃO FIXO.'))));
             }
         }
 
@@ -616,11 +621,11 @@ class AgendamentosController extends AppController {
             $dados_salvar = array_merge($dados_salvar, ['endereco' => $dados->endereco]);
         }
 
-        if ( is_array($dados->convites_tpj)) {
+        if ( isset($dados->convites_tpj) && is_array($dados->convites_tpj)) {
             $dados->convites_tpj = (object)$dados->convites_tpj;
         }
 
-        if ( is_array($dados->convites_grl)) {
+        if ( isset($dados->convites_grl) && is_array($dados->convites_grl)) {
             $dados->convites_grl = (object)$dados->convites_grl;
         }
 

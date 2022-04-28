@@ -263,7 +263,6 @@ class ClientesClientesController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar exluir o cliente. Por favor, tente mais tarde!'))));
         }
 
-    
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cliente excluído com sucesso!'))));
 
     }

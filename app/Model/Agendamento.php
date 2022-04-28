@@ -700,4 +700,21 @@ class Agendamento extends AppModel {
         return $this->save($dados_salvar);
     }
 
+    public function checkFixedShchedulingBelongsOtherUser ($cliente_id = null, $agendamento_dia_semana = null, $agendamento_dia_mes = null, $horario_selecionado = null, $quadra_id = null) {
+        $conditions = [
+            'Agendamento.cliente_id' => $cliente_id,
+            'Agendamento.dia_semana' => $agendamento_dia_semana,
+            'Agendamento.dia_mes' => $agendamento_dia_mes,
+            'TIME(Agendamento.horario)' => $horario_selecionado,
+            'Agendamento.cancelado' => 'N',
+            'Agendamento.servico_id' => $quadra_id,
+        ];
+
+        return $this->find('first', [
+            'conditions' => $conditions,
+            'link' => []
+        ]);
+
+    }
+
 }
