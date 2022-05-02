@@ -148,7 +148,6 @@ class UsuariosController extends AppController {
             ]
         );
 
-
         $this->Token->create();
         $this->Token->set($dados_salvar);
         $dados_token = $this->Token->save($dados_salvar);
@@ -158,6 +157,20 @@ class UsuariosController extends AppController {
             } else if ( !strpos($usuario['Usuario']['img'], 'facebook') ) {
                 $usuario['Usuario']['img'] = $this->images_path."usuarios/".$usuario['Usuario']['img'];
             }
+
+            if ( $cadastro_categorias_ok && $cadastro_horarios_ok ) {
+                $this->loadModel('ClienteAssinatura');
+                $dados_assinatura = $this->ClienteAssinatura->getLastByClientId($usuario['Usuario']['cliente_id']);
+
+                if ( count($dados_assinatura) == 0 || $dados_assinatura['ClienteAssinatura']['status'] == 'INACTIVE' ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Sua assinatura venceu, clique no botao abaixo para resolver.', 'button_text' => 'Renovar Assinatura', 'dados' => array_merge($usuario, $dados_token, ['cadastro_horarios_ok' => true, 'cadastro_categorias_ok' => true])))));
+                }
+
+                if ( $dados_assinatura['ClienteAssinatura']['status'] == 'OVERDUE' ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Você possui pendencias financeiras com o Buzke, clique no botao abaixo para resolver.', 'button_text' => 'Resolver', 'dados' => array_merge($usuario, $dados_token, ['cadastro_horarios_ok' => true, 'cadastro_categorias_ok' => true])))));
+                }
+            }
+
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => array_merge($usuario, $dados_token, ['cadastro_horarios_ok' => $cadastro_horarios_ok, 'cadastro_categorias_ok' => $cadastro_categorias_ok])))));
         } else {
             throw new BadRequestException('Erro ao salvar o Token', 500);
@@ -578,6 +591,27 @@ class UsuariosController extends AppController {
                 'bairro' => $bairro,
             ), 
         );
+
+        
+        //tenta cadastra o cliente no Asaas
+        $asaas_dados = $this->sendClientToAsaas($dados_salvar);
+
+        if ( !$asaas_dados ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro no servidor do gerenciador de pagamentos. Por favor, tente mais tarde!'))));
+        }
+
+        if ( isset($asaas_dados['errors']) ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro no servidor do gerenciador de pagamentos. ['.$asaas_dados['errors'][0]['description'].'] Por favor, tente mais tarde!'))));
+        }
+
+        $asaas_id = $asaas_dados['id'];
+    
+        if ( $this->ambiente == 1 ) {
+            $dados_salvar['Cliente']['asaas_id'] = $asaas_id;
+        }                
+        else if ( $this->ambiente == 2 ) {
+            $dados_salvar['Cliente']['asaas_homologacao_id'] = $asaas_id;
+        }
 
         $this->Usuario->set($dados_salvar);
         if ($this->Usuario->saveAssociated($dados_salvar)) {
@@ -1088,6 +1122,70 @@ class UsuariosController extends AppController {
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Senha alterada com sucesso!'))));
+
+    }
+
+    private function sendClientToAsaas( $cliente = [] ) {
+
+        if ( count($cliente) == 0 ) {
+            return false;
+        }
+
+        if ( $this->ambiente == 1 ) {
+            $asaas_url = $this->asaas_api_url;
+            $asaas_token = $this->asaas_api_token;
+        }
+        else if ( $this->ambiente == 2 ) {
+            $asaas_url = $this->asaas_sandbox_url;
+            $asaas_token = $this->asaas_sandbox_token;
+        }
+        
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+        CURLOPT_URL => $asaas_url .'/api/v3/customers',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 0,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_SSL_VERIFYPEER=> 0,
+        CURLOPT_SSL_VERIFYHOST=> 0,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'POST',
+        CURLOPT_POSTFIELDS =>'{
+            "company": "'.$cliente['Cliente']['nome'].'",
+            "name": "'.$cliente['Usuario']['nome'].'",
+            "email": "'.$cliente['Usuario']['email'].'",
+            "phone": "'.preg_replace('/[^0-9]/', '', $cliente['Cliente']['telefone']).'",
+            "mobilePhone": "'.preg_replace('/[^0-9]/', '', $cliente['Cliente']['wp']).'",
+            "cpfCnpj": "'.preg_replace('/[^0-9]/', '', $cliente['Cliente']['cpf'].$cliente['Cliente']['cnpj']).'",
+            "postalCode": "'.$cliente['Cliente']['cep'].'",
+            "address": "'.$cliente['Cliente']['endereco'].'",
+            "addressNumber": "'.$cliente['Cliente']['endereco_n'].'",
+            "complement": "",
+            "province": "'.$cliente['Cliente']['bairro'].'",
+            "notificationDisabled": false,
+        }',
+        CURLOPT_HTTPHEADER => array(
+            'Content-Type: application/json',
+            'access_token: '.$asaas_token,
+            'Cookie: AWSALBTG=Q/GCosyWu6eOIamlJWdj0vib7AnYwdStuaoqseWJCaMgc3I874kmucXg2u5N4eIT1ixBgoFHUOnSJGFGEzHh5psmE9JpwLwaD8nkuBo051w1+mj2ph25I7GDYRA9O8HOtoyqLjeti+sJwp6s9xzVNdfqfm9RKhqWXXLWX41E05oT; AWSALBTGCORS=Q/GCosyWu6eOIamlJWdj0vib7AnYwdStuaoqseWJCaMgc3I874kmucXg2u5N4eIT1ixBgoFHUOnSJGFGEzHh5psmE9JpwLwaD8nkuBo051w1+mj2ph25I7GDYRA9O8HOtoyqLjeti+sJwp6s9xzVNdfqfm9RKhqWXXLWX41E05oT'
+        ),
+        ));
+
+        $response = curl_exec($curl);
+
+        $errors = curl_error($curl);
+        curl_close($curl);
+
+        if ( !empty($errors) ) {
+            return false;
+        }
+
+        return json_decode($response, true);
+
 
     }
     

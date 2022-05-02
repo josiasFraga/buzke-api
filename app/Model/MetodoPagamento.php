@@ -1,16 +1,13 @@
 <?php 
-class Plano extends AppModel {
-    public $useTable = 'planos';
+class MetodoPagamento extends AppModel {
+    public $useTable = 'financeiro_metodos_pagamento';
 
     public $belongsTo = array(
     );
 
     public $hasMany = array(
 		'Cliente' => array(
-			'foreignKey' => 'plano_id'
-        ),
-		'ClienteAssinatura' => array(
-			'foreignKey' => 'plano_id'
+			'foreignKey' => 'metodo_pagamento_id'
         )
     );
 

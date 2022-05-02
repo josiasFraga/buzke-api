@@ -43,6 +43,11 @@ class AppController extends Controller {
     public $dias_mes_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
     public $meses_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
     public $quadra_de_padel_subcategoria = 7;
+    public $ambiente = 2; //1 = producao | 2 = homologacao
+    public $asaas_api_url = 'https://www.asaas.com';
+    public $asaas_api_token ='064ebe695a7a27c189af2ded46156e3b4db205fd6ffa1e80ddbe51617d45733f';
+    public $asaas_sandbox_url = 'https://sandbox.asaas.com';
+    public $asaas_sandbox_token ='8560b71adc7047d5f2d574bbf4620b5b0a86e714f89a6f9f90a3f1d3a4cbf727';
     public $proximas_fases = [
         1 => [
             'fases'=> [
@@ -1065,16 +1070,26 @@ class AppController extends Controller {
 
         $response = json_decode($response, true);
 
-        $this->loadModel('Notificacao');
-        $dados_salvar = [
-            0 => [
-                'id_one_signal' => $response['id'],
-                'message' => $mensagem,
-                'title' => $titulo,
-                'json' => json_encode($response),
-            ]
-  
-        ];
+        if ( isset($response['id']) && !empty($response['id']) ) {
+            $this->loadModel('Notificacao');
+            $dados_salvar = [
+                0 => [
+                    'id_one_signal' => $response['id'],
+                    'message' => $mensagem,
+                    'title' => $titulo,
+                    'json' => json_encode($response),
+                ]
+      
+            ];
+
+            $this->Notificacao->create();
+            return $this->Notificacao->saveAll($dados_salvar, ['deep' => true]) !== false;
+
+        } else {
+
+            $this->log($response, 'debug');
+
+        }
 
         if ( count($arr_ids_app) > 0 ) {
             foreach( $arr_ids_app as $key_player_id => $player_id ){
@@ -1082,8 +1097,8 @@ class AppController extends Controller {
             }
         }
 
-        $this->Notificacao->create();
-        return $this->Notificacao->saveAll($dados_salvar, ['deep' => true]) !== false;
+        return true;
+
 
     }
 
@@ -1361,5 +1376,52 @@ class AppController extends Controller {
 		return true;
 
 	}
+
+    public function getPayments( $signature_id = null) {
+        if ( $signature_id == null ) {
+            return false;
+        }
+
+        if ( $this->ambiente == 1 ) {
+            $asaas_url = $this->asaas_api_url;
+            $asaas_token = $this->asaas_api_token;
+        }
+        else if ( $this->ambiente == 2 ) {
+            $asaas_url = $this->asaas_sandbox_url;
+            $asaas_token = $this->asaas_sandbox_token;
+        }
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+          CURLOPT_URL => $asaas_url . '/api/v3/subscriptions/'.$signature_id.'/payments',
+          CURLOPT_RETURNTRANSFER => true,
+          CURLOPT_ENCODING => '',
+          CURLOPT_MAXREDIRS => 10,
+          CURLOPT_TIMEOUT => 0,
+          CURLOPT_FOLLOWLOCATION => true,
+          CURLOPT_SSL_VERIFYPEER=> 0,
+          CURLOPT_SSL_VERIFYHOST=> 0,
+          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+          CURLOPT_CUSTOMREQUEST => 'GET',
+          CURLOPT_HTTPHEADER => array(
+            'Content-Type: application/json',
+            'access_token: '.$asaas_token,
+            'Cookie: AWSALBTG=+s59gpY4Qyw+lvwBLFGRyT6TbJ4tdpLVLm/DZ+NaupzP98+2MTNvFaxzwCOW6R4RC/dAQp53B94xKiIWr1r1DPW6t8h7Nj3gDBGj9jZJYUn1x2n4WDanw5wAUre01u3H1CUg9Sookotft2BJGPWwg+Cq803/XH+zD7h9YqycJxbH; AWSALBTGCORS=+s59gpY4Qyw+lvwBLFGRyT6TbJ4tdpLVLm/DZ+NaupzP98+2MTNvFaxzwCOW6R4RC/dAQp53B94xKiIWr1r1DPW6t8h7Nj3gDBGj9jZJYUn1x2n4WDanw5wAUre01u3H1CUg9Sookotft2BJGPWwg+Cq803/XH+zD7h9YqycJxbH; JSESSIONID=F93C308F7CEE22776A3360055174DC9884315BB27580A014E3344B83254D4BC152B8F4723F5126259EC7140C7F2DDF2323077F971E2217B3F472052EACBEF379.n1'
+          ),
+        ));
+
+        $response = curl_exec($curl);
+
+        $errors = curl_error($curl);
+        curl_close($curl);
+
+        if ( !empty($errors) ) {
+            return false;
+        }
+
+        return json_decode($response, true);
+
+    }
 
 }

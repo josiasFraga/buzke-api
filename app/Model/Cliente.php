@@ -26,6 +26,12 @@ class Cliente extends AppModel {
 		'Torneio' => array(
 			'foreignKey' => 'cliente_id'
 		),
+		'ClienteCartaoCredito' => array(
+			'foreignKey' => 'cliente_id'
+		),
+		'ClienteAssinatura' => array(
+			'foreignKey' => 'cliente_id'
+		),
     );
 
     public $hasOne = array(
@@ -40,6 +46,9 @@ class Cliente extends AppModel {
 		),
 		'Plano' => array(
 			'foreignKey' => 'plano_id'
+		),
+		'MetodoPagamento' => array(
+			'foreignKey' => 'metodo_pagamento_id'
 		),
     );
     
@@ -126,6 +135,23 @@ class Cliente extends AppModel {
 			'fields' => ['Cliente.nome'],
 			'conditions' => $conidtions,
 			'link' => []
+		]);
+	}
+
+	public function findBySinatureId($signatureId = null) {
+
+		if ( $signatureId == null ){
+			return [];
+		}
+
+		$conditions = [
+			'ClienteAssinatura.external_id' => $signatureId,
+		];
+
+		return $this->find('first',[
+			'fields' => ['Cliente.id', 'Cliente.nome', 'ClienteAssinatura.id', 'ClienteAssinatura.status'],
+			'conditions' => $conditions,
+			'link' => ['ClienteAssinatura']
 		]);
 	}
 

@@ -320,6 +320,14 @@ class ClientesController extends AppController {
             throw new BadRequestException('Email não informado', 400);
         }
 
+        if (!isset($dados->plano) || $dados->plano == '') {
+            throw new BadRequestException('Plano não informado', 400);
+        }
+
+        if (!isset($dados->metodo_pagamento) || $dados->metodo_pagamento == '') {
+            throw new BadRequestException('Método de pagamento não informado', 400);
+        }
+
         if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
         }
@@ -338,6 +346,20 @@ class ClientesController extends AppController {
         }
 
         $this->loadModel('Subcategoria');
+        $this->loadModel('Plano');
+        $this->loadModel('MetodoPagamento');
+        $this->loadModel('Cliente');
+
+        $dados_cliente = $this->Cliente->find('first',[
+            'conditions' => [
+                'Cliente.id' => $dados_token['Usuario']['cliente_id']
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_cliente) == 0) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados de cliente não encontrados!'))));
+        }
 
         $subcategorias = [];
         $dados_turnos = [];
@@ -407,6 +429,91 @@ class ClientesController extends AppController {
             }
         }
 
+        $dados_plano = $this->Plano->find('first',[
+            'conditions' => [
+                'Plano.id' => $dados->plano,
+                'Plano.ativo' => 'Y',
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_plano) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Os dados do plano não foram encontrados!'))));
+        }
+
+        $dados_metodo_pagamento = $this->MetodoPagamento->find('first',[
+            'conditions' => [
+                'MetodoPagamento.id' => $dados->metodo_pagamento,
+                'MetodoPagamento.ativo' => 'Y',
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_metodo_pagamento) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Os dados do método de pagamento não foram encontrados!'))));
+        }
+
+        if ( $dados_metodo_pagamento['MetodoPagamento']['credit_card'] == 'Y' ){
+
+            if (!isset($dados->cc_number) || $dados->cc_number == '') {
+                throw new BadRequestException('Nº do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_name) || $dados->cc_name == '') {
+                throw new BadRequestException('Nome impresso no cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_expiry) || $dados->cc_expiry == '') {
+                throw new BadRequestException('Data de expiração do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_secure_code) || $dados->cc_secure_code == '') {
+                throw new BadRequestException('Código de segurança do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_holder_name) || $dados->cc_holder_name == '') {
+                throw new BadRequestException('Nome do titular do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_holder_email) || $dados->cc_holder_email == '') {
+                throw new BadRequestException('Email do titular do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_holder_telefone) || $dados->cc_holder_telefone == '') {
+                throw new BadRequestException('Telefone do titular do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_holder_cpf) || $dados->cc_holder_cpf == '') {
+                throw new BadRequestException('CPF do titular do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_holder_cep) || $dados->cc_holder_cep == '') {
+                throw new BadRequestException('CEP do titular do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_holder_bairro) || $dados->cc_holder_bairro == '') {
+                throw new BadRequestException('Bairro do titular do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_holder_endereco) || $dados->cc_holder_endereco == '') {
+                throw new BadRequestException('Endereço do titular do cartão de crédito não informado.', 400);
+            }
+
+            if (!isset($dados->cc_holder_n) || $dados->cc_holder_n == '') {
+                throw new BadRequestException('Nº do titular do cartão de crédito não informado.', 400);
+            }
+
+        }
+
+        $cria_assinatura = $this->createSignatureApi($dados_cliente, $dados, $dados_plano, $dados_metodo_pagamento);
+
+        if ( !$cria_assinatura ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar seus dados de faturamento. Por favor, tente mais tarde!'))));
+        }
+
+        if ( isset($cria_assinatura['errors']) ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar seus dados de faturamento. Por favor, tente mais tarde! '.$asaas_dados['errors'][0]['description']))));
+        }
 
         $dados_salvar = [
             'Cliente' => [
@@ -419,7 +526,28 @@ class ClientesController extends AppController {
             ],
             'ClienteSubcategoria' => $subcategorias_salvar,
             'ClienteHorarioAtendimento' => $turnos_salvar,
+            'ClienteAssinatura' => [
+                [
+                    'plano_id' => $dados->plano,
+                    'json_response' => json_encode($cria_assinatura),
+                    'link_pagamento' => $cria_assinatura['paymentLink'],
+                    'external_id' => $cria_assinatura['id'],
+                    'status' => $cria_assinatura['status'],
+                ]
+            ],
         ];
+
+        if ( isset($cria_assinatura['creditCard']) && is_array($cria_assinatura['creditCard']) && count($cria_assinatura['creditCard']) > 0 ) {
+     
+ 
+            $credit_cards_save[] = [
+                'bandeira' => $cria_assinatura['creditCard']['creditCardBrand'],
+                'ultimos_digitos' => $cria_assinatura['creditCard']['creditCardNumber'],
+                'token_asaas' => $cria_assinatura['creditCard']['creditCardToken']
+            ];
+
+            $dados_salvar['ClienteCartaoCredito'] = $credit_cards_save;
+        }
 
     
         if (isset($this->request->params['form']['logo']) && $this->request->params['form']['logo'] != '' && $this->request->params['form']['logo']['error'] == 0) {
@@ -457,6 +585,216 @@ class ClientesController extends AppController {
             ]) > 0;
 
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cadastrado com sucesso!', 'cadastro_horarios_ok' => $cadastro_horarios_ok, 'cadastro_categorias_ok' => $cadastro_categorias_ok))));
+        } else {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
+        }
+    }
+
+    public function renovar_assinatura() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+
+        if (!isset($dados->token) || $dados->token == '') {
+            throw new BadRequestException('Token não informado', 400);
+        }
+
+        if (!isset($dados->email) || $dados->email == '') {
+            throw new BadRequestException('Email não informado', 400);
+        }
+
+        if (!isset($dados->plano) || $dados->plano == '') {
+            throw new BadRequestException('Plano não informado', 400);
+        }
+
+        if (!isset($dados->metodo_pagamento) || $dados->metodo_pagamento == '') {
+            throw new BadRequestException('Método de pagamento não informado', 400);
+        }
+
+        if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
+        }
+        
+        $token = $dados->token;
+        $email = $dados->email;
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+
+        $this->loadModel('Plano');
+        $this->loadModel('MetodoPagamento');
+        $this->loadModel('Cliente');
+        $this->loadModel('ClienteCartaoCredito');
+        $this->loadModel('ClienteAssinatura');
+
+        $dados_assinatura = $this->ClienteAssinatura->getLastByClientId($dados_token['Usuario']['cliente_id']);
+
+        if ( count($dados_assinatura) > 0 && $dados_assinatura['ClienteAssinatura']['status'] != 'INACTIVE' ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você já tem uma assinatura válida!'))));
+        }
+
+        $dados_cliente = $this->Cliente->find('first',[
+            'conditions' => [
+                'Cliente.id' => $dados_token['Usuario']['cliente_id']
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_cliente) == 0) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados de cliente não encontrados!'))));
+        }
+
+        $dados_plano = $this->Plano->find('first',[
+            'conditions' => [
+                'Plano.id' => $dados->plano,
+                'Plano.ativo' => 'Y',
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_plano) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Os dados do plano não foram encontrados!'))));
+        }
+
+        $dados_metodo_pagamento = $this->MetodoPagamento->find('first',[
+            'conditions' => [
+                'MetodoPagamento.id' => $dados->metodo_pagamento,
+                'MetodoPagamento.ativo' => 'Y',
+            ],
+            'link' => []
+        ]);
+
+        if ( count($dados_metodo_pagamento) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Os dados do método de pagamento não foram encontrados!'))));
+        }
+
+        $dados_cartao = [];
+        if ( $dados_metodo_pagamento['MetodoPagamento']['credit_card'] == 'Y' ){
+
+            if ( isset($dados->cc) && $dados->cc != '' && $dados->cc != '_new' ) {
+                $dados_cartao = $this->ClienteCartaoCredito->find('first',[
+                    'conditions' => [
+                        'ClienteCartaoCredito.id' => $dados->cc,
+                        'ClienteCartaoCredito.cliente_id' => $dados_token['Usuario']['cliente_id']
+                    ],
+                    'link' => []
+                ]);
+
+                if ( count($dados_cartao) == 0 ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Os dados do cartão de crédito não foram encontrados!'))));
+                }
+
+            } else {
+
+                if (!isset($dados->cc_number) || $dados->cc_number == '') {
+                    throw new BadRequestException('Nº do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_name) || $dados->cc_name == '') {
+                    throw new BadRequestException('Nome impresso no cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_expiry) || $dados->cc_expiry == '') {
+                    throw new BadRequestException('Data de expiração do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_secure_code) || $dados->cc_secure_code == '') {
+                    throw new BadRequestException('Código de segurança do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_holder_name) || $dados->cc_holder_name == '') {
+                    throw new BadRequestException('Nome do titular do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_holder_email) || $dados->cc_holder_email == '') {
+                    throw new BadRequestException('Email do titular do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_holder_telefone) || $dados->cc_holder_telefone == '') {
+                    throw new BadRequestException('Telefone do titular do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_holder_cpf) || $dados->cc_holder_cpf == '') {
+                    throw new BadRequestException('CPF do titular do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_holder_cep) || $dados->cc_holder_cep == '') {
+                    throw new BadRequestException('CEP do titular do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_holder_bairro) || $dados->cc_holder_bairro == '') {
+                    throw new BadRequestException('Bairro do titular do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_holder_endereco) || $dados->cc_holder_endereco == '') {
+                    throw new BadRequestException('Endereço do titular do cartão de crédito não informado.', 400);
+                }
+    
+                if (!isset($dados->cc_holder_n) || $dados->cc_holder_n == '') {
+                    throw new BadRequestException('Nº do titular do cartão de crédito não informado.', 400);
+                }
+
+            }
+
+        }
+
+        $atualiza_assinatura = $this->renewSignatureApi($dados_cliente, $dados, $dados_plano, $dados_metodo_pagamento, $dados_cartao);
+
+        if ( !$atualiza_assinatura ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar seus dados de faturamento. Por favor, tente mais tarde!'))));
+        }
+
+        if ( isset($atualiza_assinatura['errors']) ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar seus dados de faturamento. Por favor, tente mais tarde! '.$asaas_dados['errors'][0]['description']))));
+        }
+
+        $dados_salvar = [
+            'Cliente' => [
+                'plano_id' => $dados->plano,
+                'id' => $dados_token['Usuario']['cliente_id'],
+            ],
+            'ClienteAssinatura' => [
+                [
+                    'plano_id' => $dados->plano,
+                    'json_response' => json_encode($atualiza_assinatura),
+                    'link_pagamento' => $atualiza_assinatura['paymentLink'],
+                    'external_id' => $atualiza_assinatura['id'],
+                    'status' => $atualiza_assinatura['status'],
+                ]
+            ],
+        ];
+
+        if ( isset($atualiza_assinatura['creditCard']) && is_array($atualiza_assinatura['creditCard']) && count($atualiza_assinatura['creditCard']) > 0 && count($dados_cartao) == 0 ) {
+     
+ 
+            $credit_cards_save[] = [
+                'bandeira' => $atualiza_assinatura['creditCard']['creditCardBrand'],
+                'ultimos_digitos' => $atualiza_assinatura['creditCard']['creditCardNumber'],
+                'token_asaas' => $atualiza_assinatura['creditCard']['creditCardToken']
+            ];
+
+            $dados_salvar['ClienteCartaoCredito'] = $credit_cards_save;
+        }
+
+        $this->loadModel('Cliente');
+
+        $this->Cliente->set($dados_salvar);
+        if ($this->Cliente->saveAssociated($dados_salvar)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Assinatura atualizada com sucesso!'))));
         } else {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
         }
@@ -1256,6 +1594,268 @@ class ClientesController extends AppController {
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Seus dados foram atualizados com sucesso!'))));
+
+    }
+
+    public function cartoes_de_credito() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dado_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dado_usuario['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('ClienteCartaoCredito');
+
+        $cartoes = $this->ClienteCartaoCredito->getByClientId($dado_usuario['Usuario']['cliente_id']);
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $cartoes))));
+
+    }
+
+    public function checkSignature() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('ClienteAssinatura');
+        $dados_assinatura = $this->ClienteAssinatura->getLastByClientId($dados_token['Usuario']['cliente_id']);
+
+        if ( count($dados_assinatura) == 0 || $dados_assinatura['ClienteAssinatura']['status'] == 'INACTIVE' ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Sua assinatura venceu, clique no botao abaixo para resolver.', 'button_text' => 'Renovar Assinatura'))));
+        }
+
+        if ( $dados_assinatura['ClienteAssinatura']['status'] == 'OVERDUE' ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'overdue', 'msg' => 'Você possui pendencias financeiras com o Buzke, clique no botao abaixo para resolver.', 'button_text' => 'Resolver'))));
+        }
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok'))));
+    }
+
+    private function createSignatureApi($cliente = [], $dados_adicionais, $plano = [], $tipo_pagamento = [] ) {
+    
+        if ( count($cliente) == 0 || count($plano) == 0 || count($tipo_pagamento) == 0 ) {
+            return false;
+        }
+
+        $hoje = date('Y-m-d');
+        $hoje_time = strtotime($hoje);
+        $one_month_more = date("Y-m-d", strtotime("+1 month", $hoje_time));
+
+        if ( $this->ambiente == 1 ) {
+            $asaas_url = $this->asaas_api_url;
+            $asaas_token = $this->asaas_api_token;            
+            $asaas_cliente_id = $cliente['Cliente']['asaas_id'];
+        }
+        else if ( $this->ambiente == 2 ) {
+            $asaas_url = $this->asaas_sandbox_url;
+            $asaas_token = $this->asaas_sandbox_token;
+            $asaas_cliente_id = $cliente['Cliente']['asaas_homologacao_id'];
+        }
+
+        $params = [
+            'customer' => $asaas_cliente_id,
+            'billingType' => $tipo_pagamento['MetodoPagamento']['asaas_key'],
+            'nextDueDate' => $one_month_more,
+            'value' => floatval($plano['Plano']['valor_promocional']),
+            'cycle' => 'MONTHLY',
+            'description' => $plano['Plano']['nome'],
+            'maxPayments' => $plano['Plano']['prazo_promocao'],
+            //'remoteIp' => ,
+        ];
+
+        if ( $tipo_pagamento['MetodoPagamento']['credit_card'] == 'Y' ) {
+
+            list($expiry_month, $expiry_year) = explode('/',$dados_adicionais->cc_expiry);
+
+            $params['creditCard'] = 
+            [
+              'holderName' => $dados_adicionais->cc_name,
+              'number' => $dados_adicionais->cc_number,
+              'expiryMonth' => $expiry_month,
+              'expiryYear' => '20'.$expiry_year,
+              'ccv' => $dados_adicionais->cc_secure_code,
+            ];
+
+            $params['creditCardHolderInfo'] = 
+            [
+              'name' => $dados_adicionais->cc_holder_name,
+              'email' => $dados_adicionais->cc_holder_email,
+              'cpfCnpj' => preg_replace('/[^0-9]/', '', $dados_adicionais->cc_holder_cpf),
+              'postalCode' => $dados_adicionais->cc_holder_cep,
+              'addressNumber' => $dados_adicionais->cc_holder_n,
+              'addressComplement' => isset($dados_adicionais->cc_holder_complemento) && $dados_adicionais->cc_holder_complemento != '' ? $dados_adicionais->cc_holder_complemento : null,
+              'phone' => preg_replace('/[^0-9]/', '', $dados_adicionais->cc_holder_telefone),
+              //'mobilePhone' => '47998781877',
+            ];
+
+            //$params['creditCardToken'] = $credit_card_token;
+
+        }
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $asaas_url .'/api/v3/subscriptions',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER=> 0,
+            CURLOPT_SSL_VERIFYHOST=> 0,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($params),
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'access_token: '.$asaas_token,
+            ),
+        ));
+
+        $response = curl_exec($curl);
+
+        $errors = curl_error($curl);
+        curl_close($curl);
+
+        if ( !empty($errors) ) {
+            return false;
+        }
+
+        return json_decode($response, true);
+
+    }
+
+    private function renewSignatureApi($cliente = [], $dados_adicionais, $plano = [], $tipo_pagamento = [], $cartao = [] ) {
+    
+        if ( count($cliente) == 0 || count($plano) == 0 || count($tipo_pagamento) == 0 ) {
+            return false;
+        }
+
+        $hoje = date('Y-m-d');
+        $hoje_time = strtotime($hoje);
+        $one_month_more = date("Y-m-d", strtotime("+1 month", $hoje_time));
+
+        if ( $this->ambiente == 1 ) {
+            $asaas_url = $this->asaas_api_url;
+            $asaas_token = $this->asaas_api_token;            
+            $asaas_cliente_id = $cliente['Cliente']['asaas_id'];
+        }
+        else if ( $this->ambiente == 2 ) {
+            $asaas_url = $this->asaas_sandbox_url;
+            $asaas_token = $this->asaas_sandbox_token;
+            $asaas_cliente_id = $cliente['Cliente']['asaas_homologacao_id'];
+        }
+
+        $params = [
+            'customer' => $asaas_cliente_id,
+            'billingType' => $tipo_pagamento['MetodoPagamento']['asaas_key'],
+            'nextDueDate' => $one_month_more,
+            'value' => floatval($plano['Plano']['valor']),
+            'cycle' => 'MONTHLY',
+            'description' => $plano['Plano']['nome'],
+            'maxPayments' => $plano['Plano']['prazo_promocao'],
+            //'remoteIp' => ,
+        ];
+
+        if ( $tipo_pagamento['MetodoPagamento']['credit_card'] == 'Y' ) {
+
+            if ( isset($cartao['ClienteCartaoCredito']['token_asaas']) ) {
+                $params['creditCardToken'] = $cartao['ClienteCartaoCredito']['token_asaas'];
+            } else {
+
+                list($expiry_month, $expiry_year) = explode('/',$dados_adicionais->cc_expiry);
+    
+                $params['creditCard'] = 
+                [
+                  'holderName' => $dados_adicionais->cc_name,
+                  'number' => $dados_adicionais->cc_number,
+                  'expiryMonth' => $expiry_month,
+                  'expiryYear' => '20'.$expiry_year,
+                  'ccv' => $dados_adicionais->cc_secure_code,
+                ];
+    
+                $params['creditCardHolderInfo'] = 
+                [
+                  'name' => $dados_adicionais->cc_holder_name,
+                  'email' => $dados_adicionais->cc_holder_email,
+                  'cpfCnpj' => preg_replace('/[^0-9]/', '', $dados_adicionais->cc_holder_cpf),
+                  'postalCode' => $dados_adicionais->cc_holder_cep,
+                  'addressNumber' => $dados_adicionais->cc_holder_n,
+                  'addressComplement' => isset($dados_adicionais->cc_holder_complemento) && $dados_adicionais->cc_holder_complemento != '' ? $dados_adicionais->cc_holder_complemento : null,
+                  'phone' => preg_replace('/[^0-9]/', '', $dados_adicionais->cc_holder_telefone),
+                  //'mobilePhone' => '47998781877',
+                ];
+
+            }
+
+        }
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $asaas_url .'/api/v3/subscriptions',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER=> 0,
+            CURLOPT_SSL_VERIFYHOST=> 0,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($params),
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'access_token: '.$asaas_token,
+            ),
+        ));
+
+        $response = curl_exec($curl);
+
+        $errors = curl_error($curl);
+        curl_close($curl);
+
+        if ( !empty($errors) ) {
+            return false;
+        }
+
+        return json_decode($response, true);
 
     }
 }
