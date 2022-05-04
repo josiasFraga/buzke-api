@@ -158,7 +158,7 @@ class UsuariosController extends AppController {
                 $usuario['Usuario']['img'] = $this->images_path."usuarios/".$usuario['Usuario']['img'];
             }
 
-            if ( $cadastro_categorias_ok && $cadastro_horarios_ok ) {
+            if ( $cadastro_categorias_ok && $cadastro_horarios_ok && $usuario['Usuario']['nivel_id'] == 2 ) {
                 $this->loadModel('ClienteAssinatura');
                 $dados_assinatura = $this->ClienteAssinatura->getLastByClientId($usuario['Usuario']['cliente_id']);
 

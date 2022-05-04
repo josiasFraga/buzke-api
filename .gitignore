@@ -2,7 +2,7 @@
 #################################################
 /app/Config/database.php
 /app/tmp
-/app/webroot/field/relatorios/*
+/app/webroot/files/relatorios/*
 /lib/Cake/Console/Templates/skel/tmp/
 /plugins
 /vendors
