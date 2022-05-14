@@ -939,6 +939,7 @@ class AppController extends Controller {
                 'conditions' => array(
                     'Token.token' => $usuario_token,
                     'Token.data_validade >=' => date("Y-m-d"),
+                    'Token.usuario_id IS NULL',
                 ),
             ));
 
@@ -952,6 +953,7 @@ class AppController extends Controller {
                     'Usuario.img',
                     'Usuario.nivel_id',
                     'Usuario.cliente_id',
+                    'Token.id',
                     'Token.token',
                     'Token.data_validade',
                 ),
@@ -1082,19 +1084,17 @@ class AppController extends Controller {
       
             ];
 
+            if ( count($arr_ids_app) > 0 ) {
+                foreach( $arr_ids_app as $key_player_id => $player_id ){
+                    $dados_salvar[0]['NotificacaoUsuario'][] = ['token' => $player_id];
+                }
+            }
+     
             $this->Notificacao->create();
             return $this->Notificacao->saveAll($dados_salvar, ['deep' => true]) !== false;
 
         } else {
-
             $this->log($response, 'debug');
-
-        }
-
-        if ( count($arr_ids_app) > 0 ) {
-            foreach( $arr_ids_app as $key_player_id => $player_id ){
-                $dados_salvar[0]['NotificacaoUsuario'][] = ['token' => $player_id];
-            }
         }
 
         return true;

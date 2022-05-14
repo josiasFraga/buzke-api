@@ -151,9 +151,13 @@ class FinanceiroController extends AppController {
         if ( !isset($dados['email']) || $dados['email'] == "" ) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
+        if ( !isset($dados['os']) || $dados['os'] == "" ) {
+            throw new BadRequestException('OS de usuário não informado!', 401);
+        }
 
         $token = $dados['token'];
         $email = $dados['email'];
+        $os = $dados['os'];
 
         $dados_token = $this->verificaValidadeToken($token, $email);
 
@@ -169,7 +173,8 @@ class FinanceiroController extends AppController {
 
     
         $conditions = [
-            'MetodoPagamento.ativo' => 'Y',   
+            'MetodoPagamento.ativo' => 'Y',
+            'MetodoPagamento.disponivel_em LIKE' => '%'.$os.'%',
         ];
 
         $metodos_pagamento = $this->MetodoPagamento->find('all',[
@@ -214,6 +219,10 @@ class FinanceiroController extends AppController {
 
         if ( count($dados_assinatura) == 0 || $dados_assinatura['ClienteAssinatura']['status'] == 'INACTIVE' ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Sua assinatura venceu, clique no botao abaixo para resolver.', 'button_text' => 'Renovar Assinatura'))));
+        }
+
+        if ( $dados_assinatura['ClienteAssinatura']['registrada_em'] == 'Apple' ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'apple_signature', 'msg' => 'Assinatura registrada na apple.'))));
         }
 
         $dados = $this->getPayments($dados_assinatura['ClienteAssinatura']['external_id']);

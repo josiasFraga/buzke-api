@@ -12,9 +12,13 @@ class ClientesController extends AppController {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
 
-        $token = $dados['token'];
+        $email = null;
+        if ( isset($dados['email']) && $dados['email'] != "" ) {
+            $email = $dados['email'];
+        }
 
-        $dados_token = $this->verificaValidadeToken($token);
+        $token = $dados['token'];
+        $dados_token = $this->verificaValidadeToken($token, $email);
 
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
@@ -114,13 +118,20 @@ class ClientesController extends AppController {
 
     public function buscaCategorias() {
         $this->layout = 'ajax';
+
         $dados = $this->request->query;
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
 
+        $email = null;
+        if ( isset($dados['email']) && $dados['email'] != "" ) {
+            $email = $dados['email'];
+        }
+
         $token = $dados['token'];
-        $dados_token = $this->verificaValidadeToken($token);
+    
+        $dados_token = $this->verificaValidadeToken($token,$email);
 
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
@@ -505,14 +516,24 @@ class ClientesController extends AppController {
 
         }
 
-        $cria_assinatura = $this->createSignatureApi($dados_cliente, $dados, $dados_plano, $dados_metodo_pagamento);
+        $registrada_em = '';
+        if ( !empty($dados_metodo_pagamento['MetodoPagamento']['asaas_key']) ) {
+        
+            $cria_assinatura = $this->createSignatureApi($dados_cliente, $dados, $dados_plano, $dados_metodo_pagamento);
+    
+            if ( !$cria_assinatura ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar seus dados de faturamento. Por favor, tente mais tarde!'))));
+            }
+    
+            if ( isset($cria_assinatura['errors']) ){
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar seus dados de faturamento. Por favor, tente mais tarde! '.$asaas_dados['errors'][0]['description']))));
+            }
 
-        if ( !$cria_assinatura ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar seus dados de faturamento. Por favor, tente mais tarde!'))));
-        }
+            $registrada_em = 'Asaas';
 
-        if ( isset($cria_assinatura['errors']) ){
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar seus dados de faturamento. Por favor, tente mais tarde! '.$asaas_dados['errors'][0]['description']))));
+        } else {
+            $cria_assinatura = ['paymentLink' => '', 'status' => 'Active', 'id' => $dados->recibo];
+            $registrada_em = 'Apple';
         }
 
         $dados_salvar = [
@@ -533,6 +554,7 @@ class ClientesController extends AppController {
                     'link_pagamento' => $cria_assinatura['paymentLink'],
                     'external_id' => $cria_assinatura['id'],
                     'status' => $cria_assinatura['status'],
+                    'registrada_em' => $registrada_em,
                 ]
             ],
         ];
@@ -811,7 +833,12 @@ class ClientesController extends AppController {
         }
         $token = $dados['token'];
 
-        $dados_token = $this->verificaValidadeToken($token);
+        $email = null;
+        if ( isset($dados['email']) && $dados['email'] != "" ) {
+            $email = $dados['email'];
+        }
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
 
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
@@ -855,7 +882,12 @@ class ClientesController extends AppController {
         $data = $dados['data'];
         $dia_semana = date('w',strtotime($data));
 
-        $dados_token = $this->verificaValidadeToken($token);
+        $email = null;
+        if ( isset($dados['email']) && $dados['email'] != "" ) {
+            $email = $dados['email'];
+        }
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
 
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);

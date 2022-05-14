@@ -35,7 +35,7 @@ class TorneiosController extends AppController {
         if ( $dados['tipo'] == 'meus' ) {
 
             if ( !isset($dados_token['Usuario']) ) {
-                throw new BadRequestException('Usuario não logado!', 401);
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
             }
 
             if ( $dados_token['Usuario']['cliente_id'] != null ) {
@@ -123,7 +123,11 @@ class TorneiosController extends AppController {
 
         $conditions = [];
 
-        $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
+        $usuario_visitante = !isset($dados_token['Usuario']);
+        $meus_ids_de_cliente = [];
+
+        if ( !$usuario_visitante )
+            $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
 
         $conditions = array_merge($conditions, [
             'Torneio.id' => $dados['id'],
@@ -205,8 +209,13 @@ class TorneiosController extends AppController {
         $dados['TorneioCategoria'] = $categorias;
         $dados['TorneioData'] = $this->TorneioData->getByTournamentId($dados['Torneio']['id']);
         $dados['TorneioQuadra'] = $this->TorneioQuadra->getByTournamentId($dados['Torneio']['id']);
-        $dados['Torneio']['_subscribed'] = $this->TorneioInscricaoJogador->checkSubscribed($dados['Torneio']['id'], $meus_ids_de_cliente);
-        $dados['Torneio']['_subscriptions_finished'] = $this->Torneio->checkIsSubscriptionsFinished($dados['Torneio']['id']);
+        if ( $usuario_visitante ) {
+            $dados['Torneio']['_subscribed'] = false;
+            $dados['Torneio']['_subscriptions_finished'] = true;
+        } else {
+            $dados['Torneio']['_subscribed'] = $this->TorneioInscricaoJogador->checkSubscribed($dados['Torneio']['id'], $meus_ids_de_cliente);
+            $dados['Torneio']['_subscriptions_finished'] = $this->Torneio->checkIsSubscriptionsFinished($dados['Torneio']['id']);
+        }
         $dados['Torneio']['_all_group_generated'] = $all_group_generated;
         $dados['Torneio']['_some_group_generated'] = $some_group_generated;
         $dados['Torneio']['_matches_generated'] = $matches_generated;
@@ -274,10 +283,6 @@ class TorneiosController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->query;
 
-        if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Email não informado!', 401);
-        }
-
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
@@ -287,7 +292,11 @@ class TorneiosController extends AppController {
         }
 
         $token = $dados['token'];
-        $email = $dados['email'];
+
+        $email = null;
+        if ( isset($dados['email']) && $dados['email'] != "" ) {
+            $email = $dados['email'];
+        }
 
         $dados_token = $this->verificaValidadeToken($token, $email);
 
@@ -300,6 +309,7 @@ class TorneiosController extends AppController {
         $this->loadModel('TorneioInscricaoJogador');
 
         $conditions = [];
+        $usuario_visitante = !isset($dados_token['Usuario']);
 
         $conditions = array_merge($conditions, [
             'TorneioInscricao.torneio_categoria_id' => $dados['categoria_id'],
@@ -322,7 +332,7 @@ class TorneiosController extends AppController {
 
         $owner = false;
 
-        if ( $dados_token['Usuario']['nivel_id'] == 2 ) {
+        if ( !$usuario_visitante && $dados_token['Usuario']['nivel_id'] == 2 ) {
             $owner = true;
         }
       
@@ -1232,10 +1242,6 @@ class TorneiosController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->query;
 
-        if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Email não informado!', 401);
-        }
-
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
@@ -1244,7 +1250,12 @@ class TorneiosController extends AppController {
             throw new BadRequestException('ID não informado!', 401);
         }
 
-        $dados_usuario = $this->verificaValidadeToken($dados['token'], $dados['email']);
+        $email = null;
+        if ( isset($dados['email']) && $dados['email'] != "" ) {
+            $email = $dados['email'];
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados['token'], $email);
         if ( !$dados_usuario ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
@@ -2017,10 +2028,6 @@ class TorneiosController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->query;
 
-        if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Email não informado!', 401);
-        }
-
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
@@ -2029,7 +2036,12 @@ class TorneiosController extends AppController {
             throw new BadRequestException('Torneio não informado!', 401);
         }
 
-        $dados_usuario = $this->verificaValidadeToken($dados['token'], $dados['email']);
+        $email = null;
+        if ( isset($dados['email']) && $dados['email'] != "" ) {
+            $email = $dados['email'];
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados['token'], $email);
 
         if ( !$dados_usuario ) {
             throw new BadRequestException('Usuário não logado!', 401);
@@ -2040,11 +2052,13 @@ class TorneiosController extends AppController {
         $this->loadModel('TorneioJogoPlacar');
         $this->loadModel('TorneioGrupo');
 
+        $usuario_visitante = !isset($dados_usuario['Usuario']);
+
         $conditions = [
             'Agendamento.torneio_id' => $dados['torneio_id'],
         ];
 
-        if ( $dados_usuario['Usuario']['cliente_id'] == null ){
+        if ( $usuario_visitante || $dados_usuario['Usuario']['cliente_id'] == null ){
             $conditions = array_merge($conditions, [
                 'Torneio.jogos_liberados_ao_publico' => 'Y',
             ]);

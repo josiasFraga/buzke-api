@@ -369,7 +369,13 @@ class UsuariosController extends AppController {
         }
 
         $token = $dados->token;
-        $dados_token = $this->verificaValidadeToken($token);
+        $email = null;
+
+        if ( isset($dados->email) && $dados->email != "" ) {
+            $email = $dados->email;
+        }
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
 
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
@@ -383,9 +389,9 @@ class UsuariosController extends AppController {
             'description' => $dados_address->description
         ];
 
-        if ($dados_token['Token']['usuario_id'] != null) {
+        if ( isset($dados_token['Usuario']) && isset($dados_token['Usuario']['id']) && $dados_token['Usuario']['id'] != null) {
             $dados_salvar = array_merge($dados_salvar,[
-                'usuario_id' => $dados_token['Token']['usuario_id']
+                'usuario_id' => $dados_token['Usuario']['id']
             ]);
 
         }

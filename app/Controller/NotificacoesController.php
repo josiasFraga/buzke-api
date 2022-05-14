@@ -106,7 +106,17 @@ class NotificacoesController extends AppController {
         $this->loadModel('Notificacao');
         $n_notificacoes = $this->Notificacao->countByTokens($ids_de_notificacao);
 
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $n_notificacoes))));
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => ($n_notificacoes == null ? 0 : $n_notificacoes)))));
+    }
+
+    public function getFromOneSignal() {
+        $this->layout = 'ajax';
+        $notificacoes = $this->getNotifications();
+        foreach( $notificacoes as $key => $not ){
+            debug($not);
+        }
+
+        die();
     }
 
 }

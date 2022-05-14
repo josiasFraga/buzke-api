@@ -48,22 +48,51 @@ class Agendamento extends AppModel {
             return [];
         }
 
+        $dia_semana = date('w',strtotime($data));
+
         foreach( $horarios as $key => $horario ){
 
             $agendamentos_marcados = $this->find('all',[
                 'fields' => [
                     'Agendamento.id',
+                    'Agendamento.dia_semana',
+                    'Agendamento.dia_mes',
+                    'Agendamento.horario',
                     'ClienteServico.*'
                 ],
                 'conditions' => [
                     'Agendamento.cliente_id' => $cliente_id,
-                    'Agendamento.horario' => $data.' '.$horario['horario'],
+                    'or' => [
+                        ['Agendamento.horario' => $data.' '.$horario['horario']],
+                        [
+                            'TIME(Agendamento.horario)' => $horario['horario'],
+                            'Agendamento.dia_semana' => $dia_semana
+                        ],
+                        [
+                            'TIME(Agendamento.horario)' => $horario['horario'],
+                            'Agendamento.dia_mes' => (int)date('d')
+                        ],
+                    ],
                     'Agendamento.cancelado' => 'N'
                 ],
-                'Link' => [
+                'link' => [
                     'ClienteServico'
                 ]
             ]);
+
+            if ( count($agendamentos_marcados) > 0 ) {
+                foreach($agendamentos_marcados as $key => $agendamento ){
+                    $agendamentos_marcados[$key]['Agendamento']['horario'] = $data.' '.$horario['horario'];
+                }
+ 
+                $agendamentos_marcados = $this->AgendamentoFixoCancelado->checkStatus($agendamentos_marcados);
+
+                foreach($agendamentos_marcados as $key => $agendamento ){
+                    if ( isset($agendamento['Agendamento']['status']) && $agendamento['Agendamento']['status'] == 'cancelled' ){
+                        unset($agendamentos_marcados[$key]);
+                    }
+                }
+            }
 
             $n_agendamentos_marcados = count($agendamentos_marcados);
 
@@ -74,7 +103,6 @@ class Agendamento extends AppModel {
                 $horarios[$key]['agendamentos_marcados'] = $agendamentos_marcados;
 
             }
-
 
         }
 
@@ -479,7 +507,6 @@ class Agendamento extends AppModel {
                 'Agendamento.dia_semana',
                 'Agendamento.horario',
                 'Agendamento.duracao',
-                'Agendamento.dia_semana',
                 'Agendamento.dia_mes',
                 'Agendamento.endereco',
                 'ClienteCliente.id',
