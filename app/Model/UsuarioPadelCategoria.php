@@ -15,12 +15,12 @@ class UsuarioPadelCategoria extends AppModel {
 
     public $validate = array();
 
-    public function findByUserId($user_id = null) {
+    public function findByUserId($user_id = null, $minified = false) {
       if ( $user_id == null ) {
         return [];
       }
 
-      return $this->find('all',[
+      $categorias = $this->find('all',[
         'fields' => ['*'],
         'conditions' => [
           'UsuarioPadelCategoria.usuario_id' => $user_id
@@ -30,6 +30,32 @@ class UsuarioPadelCategoria extends AppModel {
         ]
       ]);
 
+      if ( !$minified ) {
+        return $categorias;
+      }
+
+      $arr_categorias = [];
+      if ( count($categorias) > 0 ){
+        foreach( $categorias as $key => $categoria ){
+          $arr_categorias[] = $categoria['PadelCategoria']['titulo'];
+        }
+      }
+
+      return implode(',',$arr_categorias);
+
+    }
+
+    public function getFromUsers($users = []){
+      if ( count($users) == 0 ) {
+        return [];
+      }
+
+      foreach( $users as $key => $user ){
+        $categorias = $this->findByUserId($user['Usuario']['id'],true);
+        $users[$key]['UsuarioDadosPadel']['_categorias'] = $categorias;
+      }
+
+      return $users;
     }
 
 }

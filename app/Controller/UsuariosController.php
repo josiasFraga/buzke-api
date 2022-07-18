@@ -280,6 +280,13 @@ class UsuariosController extends AppController {
         ]);
 
         $token = md5(uniqid($telefone, true));
+        $pais = 'Brasil';
+        $telefone_ddi = '55';
+
+        if ( isset($dados->pais) && !empty($dados->pais) ) {
+            $pais = $dados->pais;
+            $telefone_ddi = $this->phone_ddi[$pais];
+        }
 
         if ( count($dados_cliente_cliente) == 0){
             $dados_salvar = array(
@@ -289,7 +296,9 @@ class UsuariosController extends AppController {
                     'telefone' => $telefone, 
                     //'email' => $dados->email, 
                     'senha' => $senha, 
-                    'nivel_id' => 3
+                    'nivel_id' => 3,
+                    'pais' => $pais, 
+                    'telefone_ddi' => $pais, 
                 ), 
                 'Token' => array(
                     array(
@@ -303,6 +312,8 @@ class UsuariosController extends AppController {
                         'nome' => $nome, 
                         'email' => $email, 
                         'telefone' => $telefone, 
+                        'pais' => $pais, 
+                        'telefone_ddi' => $pais, 
                         //'cpf' => $cpf, 
                     )
                 )
@@ -314,6 +325,8 @@ class UsuariosController extends AppController {
                     'nome' => $nome, 
                     'email' => $email, 
                     'telefone' => $telefone, 
+                    'pais' => $pais, 
+                    'telefone_ddi' => $pais, 
                     //'cpf' => $cpf, 
                 ]                
             ];
@@ -330,7 +343,9 @@ class UsuariosController extends AppController {
                     'telefone' => $telefone, 
                     //'email' => $dados->email, 
                     'senha' => $senha, 
-                    'nivel_id' => 3
+                    'nivel_id' => 3,
+                    'pais' => $pais, 
+                    'telefone_ddi' => $pais, 
                 ), 
                 'Token' => array(
                     array(

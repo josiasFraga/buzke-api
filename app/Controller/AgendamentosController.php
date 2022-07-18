@@ -50,6 +50,8 @@ class AgendamentosController extends AppController {
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
                 'ClienteCliente.telefone',
+                'ClienteCliente.telefone_ddi',
+                'ClienteCliente.pais',
                 'Cliente.id',
                 'Cliente.nome',
                 'ClienteCliente.img',
@@ -250,6 +252,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('ClienteHorarioAtendimento');
         $this->loadModel('ClienteHorarioAtendimentoExcessao');
         $this->loadModel('AgendamentoFixoCancelado');
+
         $agendamentos = $this->Agendamento->buscaAgendamentoEmpresa($dados_token['Usuario']['cliente_id'],$type,$data,$year_week);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
@@ -476,7 +479,7 @@ class AgendamentosController extends AppController {
             if ( !isset($dados->client_client_id) || $dados->client_client_id == "" ) {
                 throw new BadRequestException('Cliente não informado!', 401);
             }
-
+    
             $dados->cliente_id = $dados_usuario['Usuario']['cliente_id'];
             $cliente_cliente_id = $dados->client_client_id;
             $cadastrado_por = 'cliente';
@@ -753,7 +756,8 @@ class AgendamentosController extends AppController {
         if ( isset($dados->convites_grl) && is_array($dados->convites_grl)) {
             $dados->convites_grl = (object)$dados->convites_grl;
         }
-    
+
+        $dados_agendamento['Agendamento']['horario'] = $dados->horaSelecionada->horario;
 
         $this->enviaConvites($dados, $dados_agendamento, $dados_cliente['Localidade']);
         

@@ -27,7 +27,8 @@ class ClientesController extends AppController {
         $this->loadModel('Cliente');
 
         $conditions = [
-            'Cliente.ativo' => 'Y'
+            'Cliente.ativo' => 'Y',
+            'Cliente.mostrar' => 'Y'
         ];
 
         if ( $categoria_id != null ) {
@@ -62,8 +63,11 @@ class ClientesController extends AppController {
         ]);
         
         $this->loadModel('ClienteHorarioAtendimento');
+        $this->loadModel('ClienteSubcategoria');
+
         $arr_clientes_ids = [];
         foreach($clientes as $key => $cliente) {
+
             $arr_clientes_ids[] = $cliente['Cliente']['id'];
             $clientes[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$clientes[$key]['Cliente']['logo'];
             $clientes[$key]['Horarios'] = $this->ClienteHorarioAtendimento->find('all',[
@@ -74,9 +78,25 @@ class ClientesController extends AppController {
             ]);
 
             $clientes[$key]['Cliente']['atendimento_hoje'] = $this->procuraHorariosHoje($clientes[$key]['Horarios']);
+            $subcategorias = $this->ClienteSubcategoria->find('list',[
+                'fields' => [
+                    'Subcategoria.nome',
+                    'Subcategoria.nome'
+                ],
+                'conditions' => [
+                    'ClienteSubcategoria.cliente_id' => $cliente['Cliente']['id'],
+                ],
+                'link' => [
+                    'Subcategoria'
+                ],
+                'group' => [
+                    'Subcategoria.nome'
+                ]
+            ]);
+
+            $clientes[$key]['Cliente']['subcategorias_str'] = implode(`,`,$subcategorias);
         }
 
-        $this->loadModel('ClienteSubcategoria');
         $subcategorias = $this->ClienteSubcategoria->find('all',[
             'fields' => [
                 'Subcategoria.*'
@@ -1228,7 +1248,9 @@ class ClientesController extends AppController {
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
                 'ClienteCliente.email',
+                'ClienteCliente.pais',
                 'ClienteCliente.telefone',
+                'ClienteCliente.telefone_ddi',
                 'ClienteCliente.endereco',
                 'ClienteCliente.bairro',
                 'ClienteCliente.endreceo_n',

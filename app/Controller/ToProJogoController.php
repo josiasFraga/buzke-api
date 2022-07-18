@@ -577,6 +577,7 @@ class ToProJogoController extends AppController {
 
         $this->loadModel('ClienteCliente');
         $this->loadModel('AgendamentoConvite');
+        $this->loadModel('UsuarioPadelCategoria');
 
         $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
         $meus_ids_de_cliente = array_values($meus_ids_de_cliente);
@@ -599,7 +600,8 @@ class ToProJogoController extends AppController {
                 'Cliente.logo',
                 'Localidade.loc_no',
                 'ClienteServico.nome',
-                'ClienteServico.valor'
+                'ClienteServico.valor',
+                'UsuarioDadosPadel.*'
             ],
             'order' => [
                 'AgendamentoConvite.horario'
@@ -607,8 +609,8 @@ class ToProJogoController extends AppController {
             'link' => [
                 'Agendamento' => ['Cliente' => ['Localidade', 'ClienteServico']],
                 'ClienteCliente' => [
-                    'Usuario'
-                ]
+                    'Usuario' => ['UsuarioDadosPadel']
+                ],
             ],
             'conditions' => [
                 'or' => [
@@ -630,6 +632,8 @@ class ToProJogoController extends AppController {
             $dados[$key]['AgendamentoConvite']['_data_desc'] = date('Y-m-d') == date('Y-m-d',strtotime($tpj['AgendamentoConvite']['horario'])) ? 'Hoje' : date('d/m/Y',strtotime($tpj['AgendamentoConvite']['horario']));
             $dados[$key]['AgendamentoConvite']['_hora_desc'] = date('H:i',strtotime($tpj['AgendamentoConvite']['horario']));
             $dados[$key]['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($dados[$key]['AgendamentoConvite']['agendamento_id'], $this->images_path.'/usuarios/', $tpj['AgendamentoConvite']['horario']);
+            $dados[$key]['_usuarios_confirmados'] = $this->UsuarioPadelCategoria->getFromUsers($dados[$key]['_usuarios_confirmados']);
+            $dados[$key]['UsuarioPadelCategoria'] = $this->UsuarioPadelCategoria->findByUserId($tpj['Usuario']['id'], true);
             if ( $usuario_dono_horario ) {
                 $dados[$key]['AgendamentoConvite']['_tipo'] = [
                     'id' => 1,

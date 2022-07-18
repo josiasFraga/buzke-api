@@ -26,10 +26,19 @@ class ClientesClientesController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
+        $pais = 'Brasil';
+        $telefone_ddi = '55';
+
+        if ( isset($dados->pais) && !empty($dados->pais) ) {
+            $pais = $dados->pais;
+            $telefone_ddi = $this->phone_ddi[$pais];
+        }
+
 
         $dados_salvar['ClienteCliente']['cliente_id'] = $dados_usuario['Usuario']['cliente_id'];
         $dados_salvar['ClienteCliente']['nome'] = $dados->nome;
-
+        $dados_salvar['ClienteCliente']['pais'] = $pais;
+        $dados_salvar['ClienteCliente']['telefone_ddi'] = $telefone_ddi;
         
         $dados_salvar['ClienteCliente']['sexo'] = isset($dados->sexo) && $dados->sexo != null ? $dados->sexo : null;
         $dados_salvar['ClienteCliente']['cpf'] = isset($dados->cpf) && $dados->cpf != null ? $dados->cpf : null;
@@ -43,7 +52,6 @@ class ClientesClientesController extends AppController {
 
         if ( isset($dados->padel) )
             $dados_salvar['ClienteClienteDadosPadel'][]['lado'] = isset($dados->padel->lado) && $dados->padel->lado != null ? $dados->padel->lado : null;
-
 
         $this->loadModel('ClienteCliente');
 
@@ -139,6 +147,14 @@ class ClientesClientesController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Não encontramos os dados do cliente.'))));
         }
 
+        $pais = 'Brasil';
+        $telefone_ddi = '55';
+
+        if ( isset($dados->pais) && !empty($dados->pais) ) {
+            $pais = $dados->pais;
+            $telefone_ddi = $this->phone_ddi[$pais];
+        }
+
         $dados_salvar['ClienteCliente']['id'] = $dados->id;
         $dados_salvar['ClienteCliente']['cliente_id'] = $dados_usuario['Usuario']['cliente_id'];
         $dados_salvar['ClienteCliente']['nome'] = $dados->nome;
@@ -148,6 +164,10 @@ class ClientesClientesController extends AppController {
         $dados_salvar['ClienteCliente']['email'] = isset($dados->email_cliente) && $dados->email_cliente != null ? $dados->email_cliente : null;
         $dados_salvar['ClienteCliente']['telefone'] = isset($dados->telefone) && $dados->telefone != null ? $dados->telefone : null;
         $dados_salvar['ClienteCliente']['endereco'] = isset($dados->endereco) && $dados->endereco != null ? $dados->endereco : null;
+        
+        $dados_salvar['ClienteCliente']['pais'] = $pais;
+        $dados_salvar['ClienteCliente']['telefone_ddi'] = $telefone_ddi;
+        
         $dados_salvar['ClienteCliente']['endreceo_n'] = isset($dados->n) && $dados->n != null ? $dados->n : null;
         $dados_salvar['ClienteCliente']['cep'] = isset($dados->cep) && $dados->cep != null ? $dados->cep : null;
         $dados_salvar['ClienteCliente']['estado_id'] = isset($dados->uf) && $dados->uf != null ? $dados->uf : null;

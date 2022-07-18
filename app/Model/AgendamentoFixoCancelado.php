@@ -18,7 +18,6 @@ class AgendamentoFixoCancelado extends AppModel {
         if ( count($agendamentos) == 0 ) {
             return [];
         }
-
         foreach($agendamentos as $key => $agendamento) {
 
             if ( $agendamento['Agendamento']['dia_semana'] == '' && $agendamento['Agendamento']['dia_mes'] == '' ) {

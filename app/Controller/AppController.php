@@ -43,11 +43,15 @@ class AppController extends Controller {
     public $dias_mes_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
     public $meses_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
     public $quadra_de_padel_subcategoria = 7;
-    public $ambiente = 2; //1 = producao | 2 = homologacao
+    public $ambiente = 1; //1 = producao | 2 = homologacao
     public $asaas_api_url = 'https://www.asaas.com';
     public $asaas_api_token ='064ebe695a7a27c189af2ded46156e3b4db205fd6ffa1e80ddbe51617d45733f';
     public $asaas_sandbox_url = 'https://sandbox.asaas.com';
     public $asaas_sandbox_token ='8560b71adc7047d5f2d574bbf4620b5b0a86e714f89a6f9f90a3f1d3a4cbf727';
+    public $phone_ddi = [
+        'Brasil' => '55',
+        'Uruguai' => '598',
+    ];
     public $proximas_fases = [
         1 => [
             'fases'=> [

@@ -50,7 +50,7 @@ class Agendamento extends AppModel {
 
         $dia_semana = date('w',strtotime($data));
 
-        foreach( $horarios as $key => $horario ){
+        foreach( $horarios as $key_horario => $horario ){
 
             $agendamentos_marcados = $this->find('all',[
                 'fields' => [
@@ -63,14 +63,20 @@ class Agendamento extends AppModel {
                 'conditions' => [
                     'Agendamento.cliente_id' => $cliente_id,
                     'or' => [
-                        ['Agendamento.horario' => $data.' '.$horario['horario']],
                         [
-                            'TIME(Agendamento.horario)' => $horario['horario'],
-                            'Agendamento.dia_semana' => $dia_semana
+                            'Agendamento.horario' => $data.' '.$horario['horario'],
+                            'Agendamento.dia_semana' => null,
+                            'Agendamento.dia_mes' => null
                         ],
                         [
                             'TIME(Agendamento.horario)' => $horario['horario'],
-                            'Agendamento.dia_mes' => (int)date('d')
+                            'Agendamento.dia_semana' => $dia_semana,
+                            'Agendamento.horario <=' => $data.' 23:59:59',
+                        ],
+                        [
+                            'TIME(Agendamento.horario)' => $horario['horario'],
+                            'Agendamento.dia_mes' => (int)date('d'),
+                            'Agendamento.horario <=' => $data.' 23:59:59',
                         ],
                     ],
                     'Agendamento.cancelado' => 'N'
@@ -97,10 +103,10 @@ class Agendamento extends AppModel {
             $n_agendamentos_marcados = count($agendamentos_marcados);
 
             if ( $n_agendamentos_marcados >= $horario['vagas'] ) {
-                $horarios[$key]['enabled'] = false;
+                $horarios[$key_horario]['enabled'] = false;
             } else {
-                $horarios[$key]['enabled'] = true;
-                $horarios[$key]['agendamentos_marcados'] = $agendamentos_marcados;
+                $horarios[$key_horario]['enabled'] = true;
+                $horarios[$key_horario]['agendamentos_marcados'] = $agendamentos_marcados;
 
             }
 
@@ -165,7 +171,9 @@ class Agendamento extends AppModel {
             'conditions' => [
                 'Agendamento.cliente_id' => $cliente_id,
                 'Agendamento.horario' => $data.' '.$hora,
-                'Agendamento.cancelado' => 'N'
+                'Agendamento.cancelado' => 'N',
+                'Agendamento.dia_semana' => null,
+                'Agendamento.dia_mes' => null
             ]
         ]);
 
@@ -655,7 +663,7 @@ class Agendamento extends AppModel {
             for($i = 1; $i < $months_of_difference; $i++) {
 
                 if (checkdate($mes_checar, $dia, $ano_checar)){
-                    $age['Agendamento']['horario'] = $ano_checar.'-'.($mes_checar < 10 ? "0".$mes_checar : $mes_checar).'-'.$dia.' '.$hora;
+                    $age['Agendamento']['horario'] = $ano_checar.'-'.(strlen($mes_checar) < 2 ? "0".$mes_checar : $mes_checar).'-'.$dia.' '.$hora;
                 }
                 $mes_checar = $mes_checar + 1;
                 if ( $mes_checar > 12 ) {
@@ -665,7 +673,6 @@ class Agendamento extends AppModel {
 
                 if ($age['Agendamento']['horario'] >= date('Y-m-d H:i:s')){
                     $dados_retornar[] = $age;
-                   
                 }
                 
                 //$age['Agendamento']['horario'] = date('Y-m-d', $i).' '.$hora;

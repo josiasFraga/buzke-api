@@ -20,9 +20,11 @@ class AgendamentoConvite extends AppModel {
         $this->virtualFields['_usuario_foto'] = 'CONCAT("'.$photo_path .'",Usuario.img)';
         return $this->find('all',[
             'fields' => [
+                'Usuario.id',
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
-                'AgendamentoConvite._usuario_foto'
+                'AgendamentoConvite._usuario_foto',
+                'UsuarioDadosPadel.lado',
             ],
             'conditions' => [
                 'AgendamentoConvite.agendamento_id' => $agendamento_id,
@@ -33,7 +35,7 @@ class AgendamentoConvite extends AppModel {
                 //'ClienteCliente.id' => null,
 
             ],
-            'link' => ['ClienteCliente' => ['Usuario']],
+            'link' => ['ClienteCliente' => ['Usuario' => 'UsuarioDadosPadel']],
             'group' => ['AgendamentoConvite.id']
         ]);
 
