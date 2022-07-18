@@ -158,6 +158,7 @@ class ClientesController extends AppController {
         }
 
         $conditions = [
+            'Cliente.mostrar' => 'Y',
             'Cliente.ativo' => 'Y',
             'not' => [
                 'Categoria.id' => null

@@ -830,6 +830,118 @@ class UsuariosController extends AppController {
         }
     }
 
+    public function dados() {
+        $this->layout = 'ajax';
+        
+        $dados = $this->request->query;
+
+        
+        if ((!isset($dados['token']) || $dados['token'] == "") ||  (!isset($dados['email']) || $dados['email'] == "")) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $dados = $this->Usuario->find('first',[
+            'conditions' => [
+                'Usuario.id' => $dados_usuario['Usuario']['id']
+            ],
+            'link' => [],
+            'fields' => [
+                'Usuario.id',
+                'Usuario.nome',
+                'Usuario.pais',
+                'Usuario.telefone',
+                'Usuario.telefone_ddi',
+            ]
+        ]);
+
+        $dados_retornar = [
+            //'email' => $dados['Usuario']['email'],
+            'nome' => $dados['Usuario']['nome'],
+            'pais' => $dados['Usuario']['pais'],
+            'telefone' => $dados['Usuario']['telefone'],
+            'telefone_ddi' => $dados['Usuario']['telefone_ddi'],
+        ];
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_retornar))));
+
+    }
+
+    public function altera_dados_pessoais() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+        if ((!isset($dados->token) || $dados->token == "") ||  (!isset($dados->email) || $dados->email == "")) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if (!isset($dados->nome) || $dados->nome == '') {
+            throw new BadRequestException('Nome não informado', 400);
+        }
+
+        if (!isset($dados->pais) || $dados->pais == '') {
+            throw new BadRequestException('País não informado', 400);
+        }
+
+        if (!isset($dados->telefone_ddi) || $dados->telefone_ddi == '') {
+            throw new BadRequestException('DDI não informado', 400);
+        }
+
+        if (!isset($dados->telefone) || $dados->telefone == '') {
+            throw new BadRequestException('Telefone não informado', 400);
+        }
+
+        $this->loadModel('Usuario');
+        $this->loadModel('ClienteCliente');
+
+        $dados_atualizar = [
+            'id' => $dados_usuario['Usuario']['id'],
+            'nome' => $dados->nome,
+            'pais' => $dados->pais,
+            'telefone' => $dados->telefone,
+            'telefone_ddi' => $dados->telefone_ddi,
+        ];
+
+        $dados_como_cliente_atualizar = [
+ 
+            'nome' => "'".$dados->nome."'",//n sei pq buga sem as aspas
+            'pais' => "'".$dados->pais."'",//n sei pq buga sem as aspas
+            'telefone' => "'".$dados->telefone."'",
+            'telefone_ddi' => "'".$dados->telefone_ddi."'",
+        ];
+
+        if ( !$this->Usuario->save($dados_atualizar) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
+        }
+
+
+        $this->ClienteCliente->updateAll($dados_como_cliente_atualizar, [
+            'ClienteCliente.usuario_id' => $dados_usuario['Usuario']['id']
+        ]);
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Dados atualizados com sucesso!'))));
+
+    }
+
     public function usuario_alterar() {
         $this->layout = 'ajax';
         $dados = $this->request->input('json_decode');
