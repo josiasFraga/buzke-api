@@ -298,7 +298,7 @@ class UsuariosController extends AppController {
                     'senha' => $senha, 
                     'nivel_id' => 3,
                     'pais' => $pais, 
-                    'telefone_ddi' => $pais, 
+                    'telefone_ddi' => $telefone_ddi, 
                 ), 
                 'Token' => array(
                     array(
