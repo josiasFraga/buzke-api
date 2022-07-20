@@ -313,7 +313,7 @@ class UsuariosController extends AppController {
                         'email' => $email, 
                         'telefone' => $telefone, 
                         'pais' => $pais, 
-                        'telefone_ddi' => $pais, 
+                        'telefone_ddi' => $telefone_ddi, 
                         //'cpf' => $cpf, 
                     )
                 )
@@ -326,7 +326,7 @@ class UsuariosController extends AppController {
                     'email' => $email, 
                     'telefone' => $telefone, 
                     'pais' => $pais, 
-                    'telefone_ddi' => $pais, 
+                    'telefone_ddi' => $telefone_ddi, 
                     //'cpf' => $cpf, 
                 ]                
             ];
@@ -345,7 +345,7 @@ class UsuariosController extends AppController {
                     'senha' => $senha, 
                     'nivel_id' => 3,
                     'pais' => $pais, 
-                    'telefone_ddi' => $pais, 
+                    'telefone_ddi' => $telefone_ddi, 
                 ), 
                 'Token' => array(
                     array(
@@ -1319,6 +1319,35 @@ class UsuariosController extends AppController {
 
         return json_decode($response, true);
 
+
+    }
+
+    public function excluir() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+
+        if ((!isset($dados->token) || $dados->token == "") ||  (!isset($dados->email) || $dados->email == "")) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Usuario');
+        if ( !$this->Usuario->delete($dados_usuario['Usuario']['id']) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao excluir seus dados. Por favor, tente novamente mais tarde.'))));
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Seu cadastro foi excluído com sucesso!'))));
 
     }
     

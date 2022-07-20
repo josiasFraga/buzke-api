@@ -49,6 +49,7 @@ class Agendamento extends AppModel {
         }
 
         $dia_semana = date('w',strtotime($data));
+        $dia_mes = (int)date('d', strtotime($data));
 
         foreach( $horarios as $key_horario => $horario ){
 
@@ -75,7 +76,7 @@ class Agendamento extends AppModel {
                         ],
                         [
                             'TIME(Agendamento.horario)' => $horario['horario'],
-                            'Agendamento.dia_mes' => (int)date('d'),
+                            'Agendamento.dia_mes' => $dia_mes,
                             'Agendamento.horario <=' => $data.' 23:59:59',
                         ],
                     ],
