@@ -34,7 +34,6 @@ class ClientesClientesController extends AppController {
             $telefone_ddi = $this->phone_ddi[$pais];
         }
 
-
         $dados_salvar['ClienteCliente']['cliente_id'] = $dados_usuario['Usuario']['cliente_id'];
         $dados_salvar['ClienteCliente']['nome'] = $dados->nome;
         $dados_salvar['ClienteCliente']['pais'] = $pais;
