@@ -314,6 +314,8 @@ class AgendamentosController extends AppController {
         $last_data = '';
         $count = -1;
         if ( count($agendamentos) > 0 ) {
+            $ultimo_horario = "";
+            $cor = $this->list_even_color;
             foreach( $agendamentos as $key => $agend) {
                 $hora = date('H:i',strtotime($agend['Agendamento']['horario']));
                 $data = date('Y-m-d',strtotime($agend['Agendamento']['horario']));
@@ -342,9 +344,15 @@ class AgendamentosController extends AppController {
                     $imagem .= 'clientes_clientes/'.$agend['ClienteCliente']['img'];
                 }
 
+                if ( $ultimo_horario != $agend['Agendamento']['horario'] ) {
+                    $ultimo_horario = $agend['Agendamento']['horario'];
+                    $cor = ($cor == $this->list_odd_color) ? $this->list_even_color : $this->list_odd_color;
+                }
+
                 $arr_dados = [
                     'name' => $hora, 
                     'height' => $agend['Agendamento']['endereco'] == '' || $agend['Agendamento']['endereco'] == '' ? 100 : 130, 
+                    "bg_color" => $cor,
                     'usuario' => $agend['ClienteCliente']['nome'], 
                     'id' => $agend['Agendamento']['id'], 
                     'termino' => $duracao,
@@ -366,8 +374,6 @@ class AgendamentosController extends AppController {
                 }
             }
         }
-
-        
 
         return $arr_retornar;
 
@@ -829,7 +835,6 @@ class AgendamentosController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-
         $this->loadModel('Agendamento');
 
         $conditions = [
@@ -866,7 +871,6 @@ class AgendamentosController extends AppController {
             ]
         ]);
        
-
         if ( count($dados_agendamento) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'O agendamento que você está tentando exlcuir, não existe!'))));
         }
@@ -884,7 +888,6 @@ class AgendamentosController extends AppController {
                 if ( !$this->AgendamentoFixoCancelado->save($dados_salvar) ) {
                     return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cancelar o agendamento. Por favor, tente novamente mais tarde!'))));
                 }
-                
 
                 $this->avisaConvidadosCancelamento($dados_agendamento, $dados);
                 $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento);

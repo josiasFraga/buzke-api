@@ -48,6 +48,8 @@ class AppController extends Controller {
     public $asaas_api_token ='064ebe695a7a27c189af2ded46156e3b4db205fd6ffa1e80ddbe51617d45733f';
     public $asaas_sandbox_url = 'https://sandbox.asaas.com';
     public $asaas_sandbox_token ='8560b71adc7047d5f2d574bbf4620b5b0a86e714f89a6f9f90a3f1d3a4cbf727';
+    public $list_odd_color = "#FFFFFF";
+    public $list_even_color = "#f7f7f7";
     public $phone_ddi = [
         'Brasil' => '55',
         'Uruguai' => '598',
@@ -1017,7 +1019,11 @@ class AppController extends Controller {
     }
 
 	public function sendNotification( $arr_ids = array(), $agendamento_id = null, $titulo = "", $mensagem = "", $motivo = "agendamento", $group = 'geral', $group_message = ''){
-	
+        
+        if ( $this->ambiente == 2 ) {
+            return true;
+        }
+
 		if ( count($arr_ids) == 0 )
 			return false;
 	

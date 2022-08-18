@@ -1342,14 +1342,24 @@ class UsuariosController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        $this->loadModel('Usuario');
-        if ( !$this->Usuario->delete($dados_usuario['Usuario']['id']) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao excluir seus dados. Por favor, tente novamente mais tarde.'))));
+        if ( $dados_usuario['Usuario']['cliente_id'] != null && $dados_usuario['Usuario']['cliente_id'] != '' ) {
+
+            $this->loadModel('Cliente');
+            if ( !$this->Cliente->delete($dados_usuario['Usuario']['cliente_id']) ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao excluir os dados da sua empresa. Por favor, tente novamente mais tarde.'))));
+            }
+
+        } else {
+
+            $this->loadModel('Usuario');
+            if ( !$this->Usuario->delete($dados_usuario['Usuario']['id']) ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao excluir seus dados. Por favor, tente novamente mais tarde.'))));
+            }
+
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Seu cadastro foi excluído com sucesso!'))));
 
     }
-    
-	
+
 }

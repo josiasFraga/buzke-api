@@ -24,6 +24,7 @@ class AgendamentoConvite extends AppModel {
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
                 'AgendamentoConvite._usuario_foto',
+                'AgendamentoConvite.id',
                 'UsuarioDadosPadel.lado',
             ],
             'conditions' => [
