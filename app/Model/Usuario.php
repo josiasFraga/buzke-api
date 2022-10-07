@@ -150,8 +150,6 @@ class Usuario extends AppModel {
                 'AgendamentoConvite.confirmado_convidado' => 'Y',
                 'AgendamentoConvite.horario' => $agendamento_horario,
                 'AgendamentoConvite.horario_cancelado' => 'N'
-                //'ClienteCliente.id' => null,
-
             ],
             'link' => ['ClienteCliente' => ['AgendamentoConvite']],
             'group' => ['Usuario.id']

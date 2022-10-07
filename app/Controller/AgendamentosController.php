@@ -257,6 +257,7 @@ class AgendamentosController extends AppController {
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->AgendamentoFixoCancelado->checkStatus($agendamentos);
+        //debug($agendamentos); die();
 
         if ( count($agendamentos) > 0 ) {
             usort($agendamentos, function($a, $b) {

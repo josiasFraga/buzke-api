@@ -7,6 +7,9 @@ class CronsController extends AppController {
         $this->loadModel('Agendamento');
         $this->loadModel('TorneioJogo');
         $this->loadModel('TorneioInscricaoJogador');
+        $this->loadModel('Agendamento');
+        $this->loadModel('AgendamentoAviso');
+
         $hoje = date('Y-m-d');
         $amanha = date('Y-m-d', strtotime($hoje.' + 1 days'));
         $dia_semana = date('w',strtotime($hoje));
@@ -19,28 +22,24 @@ class CronsController extends AppController {
             
         $dia_mes_amanha = (int)date('d',strtotime($amanha));
 
-        $this->loadModel('Agendamento');
-        $this->loadModel('AgendamentoAviso');
-
-
         //agendamentos padrão
         $agendamentos_proximos = $this->Agendamento->find('all',[
             'fields' => ['*'],
             'conditions' => [
                 'or' => [
                     [
-                        'DATE(Agendamento.horario) >=' => date('Y-m-d'),
-                        'DATE(Agendamento.horario) <=' => date('Y-m-d', strtotime($hoje.' + 1 days')),
+                        'DATE(Agendamento.horario) >=' => $hoje,
+                        'DATE(Agendamento.horario) <=' => $amanha,
                         'Agendamento.dia_semana' => null,
                         'Agendamento.dia_mes' => null,
                     ],
                     [
-                        'DATE(Agendamento.horario) <=' => date('Y-m-d', strtotime($hoje.' + 1 days')),
+                        'DATE(Agendamento.horario) <=' => $amanha,
                         'Agendamento.dia_semana' => [$dia_semana, $dia_semana_amanha],
                         'Agendamento.dia_mes' => null,
                     ],
                     [
-                        'DATE(Agendamento.horario) <=' => date('Y-m-d', strtotime($hoje.' + 1 days')),
+                        'DATE(Agendamento.horario) <=' => $amanha,
                         'Agendamento.dia_semana' => null,
                         'Agendamento.dia_mes' => [$dia_mes, $dia_mes_amanha],
                     ]
@@ -59,6 +58,8 @@ class CronsController extends AppController {
             foreach($agendamentos_proximos as $key => $agendamento){
 
                 $agendamento_horario = $agendamento['Agendamento']['horario'];
+
+                //agendamento fixo semanal
                 if ( $agendamento['Agendamento']['dia_semana'] != null ) {
                     if ( $agendamento['Agendamento']['dia_semana'] == $dia_semana) {
                         $agendamento_horario = $hoje.' '.date('H:i:s',strtotime($agendamento['Agendamento']['horario']));
@@ -68,6 +69,7 @@ class CronsController extends AppController {
                     }
                 }
 
+                //agendamento fixo mensal
                 if ( $agendamento['Agendamento']['dia_mes'] != null ) {
                     if ( $agendamento['Agendamento']['dia_mes'] == $dia_mes) {
                         $agendamento_horario = $hoje.' '.date('H:i:s',strtotime($agendamento['Agendamento']['horario']));
@@ -85,6 +87,7 @@ class CronsController extends AppController {
                     continue;
                 }
 
+                //verifica se esse agendamento já foi emitido o aviso
                 $v_aviso = $this->AgendamentoAviso->find('first',[
                     'conditions' => [
                         'AgendamentoAviso.agendamento_id' => $agendamento['Agendamento']['id'],
@@ -93,6 +96,7 @@ class CronsController extends AppController {
                     'link' => []
                 ]);
 
+                //se ainda nao foi avisado
                 if ( count($v_aviso) == 0 ) {
 
                     $usuarios_ids[] = $agendamento['Usuario']['id'];
@@ -127,7 +131,7 @@ class CronsController extends AppController {
         $agendamentos_proximos = $this->Agendamento->find('all',[
             'fields' => ['*'],
             'conditions' => [
-                'DATE(Agendamento.horario) >=' => date('Y-m-d'),
+                'DATE(Agendamento.horario) >=' => $hoje,
                 'DATE(Agendamento.horario) <=' => $amanha,  
                 'Agendamento.cancelado' => 'N',
                 'Torneio.jogos_liberados_ao_publico' => 'Y',

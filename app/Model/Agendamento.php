@@ -131,7 +131,7 @@ class Agendamento extends AppModel {
         $conditions = [
             'Agendamento.cliente_cliente_id' => $cliente_cliente_id,
             'Agendamento.horario' => $data.' '.$hora,
-            'Agendamento.cancelado' => 'N'
+            'Agendamento.cancelado' => 'N',
         ];
 
         if ( $cliente_id != null ) {
@@ -140,9 +140,17 @@ class Agendamento extends AppModel {
             ]);
         }
 
-        return $this->find('first',[
-            'conditions' => $conditions
+        $dados_agendamento = $this->find('first',[
+            "fields" => ["*"],
+            'conditions' => $conditions,
+            "contain" => ["AgendamentoFixoCancelado"]
         ]);
+
+        if ( isset($dados_agendamento["AgendamentoFixoCancelado"]) && count($dados_agendamento["AgendamentoFixoCancelado"]) > 0 ) {
+            return [];
+        }
+
+        return $dados_agendamento;
 
     }
 

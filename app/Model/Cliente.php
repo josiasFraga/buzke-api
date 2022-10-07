@@ -50,6 +50,12 @@ class Cliente extends AppModel {
 		'MetodoPagamento' => array(
 			'foreignKey' => 'metodo_pagamento_id'
 		),
+		'UruguaiCidade' => array(
+			'foreignKey' => 'ui_cidade'
+		),
+		'UruguaiDepartamento' => array(
+			'foreignKey' => 'ui_departamento'
+		),
     );
     
     public $validate = array();

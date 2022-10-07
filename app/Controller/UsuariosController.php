@@ -436,13 +436,6 @@ class UsuariosController extends AppController {
         /*$this->log($dados,'debug');
         die();*/
 
-        if (!isset($dados->uf) || $dados->uf == '') {
-            throw new BadRequestException('UF não informada', 400);
-        }
-
-        if (!isset($dados->localidade ) || $dados->localidade  == '') {
-            throw new BadRequestException('Localidade não informada', 400);
-        }
 
         if (!isset($dados->tipo_cadastro) || $dados->tipo_cadastro   == '') {
             throw new BadRequestException('Tipo de Cadastro não informado', 400);
@@ -474,13 +467,6 @@ class UsuariosController extends AppController {
             throw new BadRequestException('Nome business não informado', 400);
         }
 
-        if (!isset($dados->cep) || $dados->cep == '') {
-            throw new BadRequestException('CEP não informado', 400);
-        }
-
-        if (!isset($dados->bairro) || $dados->bairro == '') {
-            throw new BadRequestException('Bairro não informado', 400);
-        }
 
         if (!isset($dados->endereco ) || $dados->endereco  == '') {
             throw new BadRequestException('Endereço não informado', 400);
@@ -490,7 +476,6 @@ class UsuariosController extends AppController {
             throw new BadRequestException('Número não informado', 400);
         }
 
-
         if (!isset($dados->nome) || $dados->nome == '') {
             throw new BadRequestException('Nome não informado', 400);
         }
@@ -498,9 +483,11 @@ class UsuariosController extends AppController {
         if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
         }
+
         if (!isset($dados->telefone) || $dados->telefone == '') {
             throw new BadRequestException('Telefone não informado', 400);
         }
+
         if (!isset($dados->senha) || $dados->senha == '') {
             throw new BadRequestException('Senha não informada', 400);
         }
@@ -509,20 +496,91 @@ class UsuariosController extends AppController {
             $dados->notifications_id = null;
         }
 
-        $tipo = $dados->tipo_cadastro;
-        $uf = $dados->uf;
-        $localidade = $dados->localidade;
-        $nome_rofissional = $dados->nomeProfissional;
-        $cep = $dados->cep;
-        $bairro = $dados->bairro;
-        $endereco = $dados->endereco;
-        $n = $dados->n;
+        $this->log($dados, "debug");
 
         $nome = $dados->nome;
         $email = $dados->email;
         $telefone = $dados->telefone;
         $senha = $dados->senha;
         $notifications_id = $dados->notifications_id;
+        $tipo = $dados->tipo_cadastro;
+        $nome_rofissional = $dados->nomeProfissional;
+        $endereco = $dados->endereco;
+        $n = $dados->n;
+        $pais = isset($dados->pais) ? $dados->pais : "Brasil";
+
+        if ( $pais == "Brasil" ) {
+
+            if (!isset($dados->localidade) || $dados->localidade == '') {
+                throw new BadRequestException('cidade não informada', 400);
+            }
+
+            if (!isset($dados->uf) || $dados->uf == '') {
+                throw new BadRequestException('UF não informada', 400);
+            }
+
+            if (!isset($dados->cep) || $dados->cep == '') {
+                throw new BadRequestException('CEP não informada', 400);
+            }
+
+            if (!isset($dados->bairro) || $dados->bairro == '') {
+                throw new BadRequestException('Bairro não informado', 400);
+            }
+
+            $estado = $dados->uf;
+            $localidade = $dados->localidade;
+            $bairro = $dados->bairro;
+            $ui_departamento = null;
+            $ui_cidade = null;
+            $cep = $dados->cep;
+            $telefone_ddi = "55";
+            $wp_ddi = "55";
+
+            $this->loadModel('Uf');
+            $dadosUf = $this->Uf->find('first',[
+                'conditions' => [
+                    'Uf.ufe_sg' => $estado
+                ]
+            ]);
+
+        
+            if (count($dadosUf) == 0) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do Estado não encontrados.'))));
+            }
+
+            $this->loadModel('Localidade');
+            $dadosLocalidade = $this->Localidade->find('first',[
+                'conditions' => [
+                    'Localidade.loc_no' => $localidade
+                ]
+            ]);
+        
+            if (count($dadosLocalidade) == 0) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados da cidade não encontrados.'))));
+            }
+
+            $cidade_id = $dadosLocalidade['Localidade']['loc_nu_sequencial'];
+        }
+
+        else if ( $pais == "Uruguai" ) {
+
+            if (!isset($dados->ui_departamento) || $dados->ui_departamento == '') {
+                throw new BadRequestException('Departamento não informado', 400);
+            }
+
+            if (!isset($dados->ui_cidade) || $dados->ui_cidade == '') {
+                throw new BadRequestException('Cidade não informada', 400);
+            }
+
+            $ui_departamento = $dados->ui_departamento;
+            $ui_cidade = $dados->ui_cidade;
+            $cidade_id = null;
+            $estado = null;
+            $bairro = null;
+            $cep = null;
+            $telefone_ddi = "598";
+            $wp_ddi = "598";
+        }
 
         $this->loadModel('Usuario');
         $ja_existe = ($this->Usuario->find('count', array('conditions' => array('Usuario.email' => $email))) > 0);
@@ -545,29 +603,6 @@ class UsuariosController extends AppController {
             if ($ja_existe) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Já existe um usuário cadastrado com este CNPJ. Por favor, informe outro.'))));
             }
-        }
-
-        $this->loadModel('Uf');
-        $dadosUf = $this->Uf->find('first',[
-            'conditions' => [
-                'Uf.ufe_sg' => $uf
-            ]
-        ]);
-
-    
-        if (count($dadosUf) == 0) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do Estado não encontrados.'))));
-        }
-
-        $this->loadModel('Localidade');
-        $dadosLocalidade = $this->Localidade->find('first',[
-            'conditions' => [
-                'Localidade.loc_no' => $localidade
-            ]
-        ]);
-    
-        if (count($dadosLocalidade) == 0) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados da cidade não encontrados.'))));
         }
 
         $wp = null;
@@ -598,14 +633,19 @@ class UsuariosController extends AppController {
                 )
             ),
             'Cliente' => array(
+                'pais' => $pais,
                 'tipo' => $tipo,
                 'nome' => $nome_rofissional,
                 'cpf' => $cpf,
                 'cnpj' => $cnpj,
-                'telefone' => $telefone,
-                'wp' => $wp,
-                'cidade_id' => $dadosLocalidade['Localidade']['loc_nu_sequencial'],
-                'estado' => $uf,
+                'telefone_ddi' => $telefone_ddi,
+                'telefone' => $telefone, 
+                'wp_ddi' => $wp_ddi, 
+                'wp' => $wp, 
+                'cidade_id' => $cidade_id,
+                'estado' => $estado,
+                'ui_departamento' => $ui_departamento,
+                'ui_cidade' => $ui_cidade,
                 'cep' => $cep,
                 'endereco' => $endereco,
                 'endereco_n' => $n,
