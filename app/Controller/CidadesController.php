@@ -1,6 +1,6 @@
 <?php
 
-class EstadosController extends AppController {
+class CidadesController extends AppController {
     
     public $helpers = array('Html', 'Form');	
     public $components = array('RequestHandler');
@@ -9,7 +9,7 @@ class EstadosController extends AppController {
         header("Access-Control-Allow-Origin: *");
     }
 
-    public function index() {
+    public function index($uf=null) {
 
         $this->layout = 'ajax';
         $dados = $this->request->query;
@@ -25,20 +25,26 @@ class EstadosController extends AppController {
             $dados_token = $this->verificaValidadeToken($token);
         }
 
-
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        $this->loadModel('Uf');
+        if ( $uf == null ) {            
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
+        }
 
-        $ufs = $this->Uf->find('all',[
+        $this->loadModel('Localidade');
+
+        $ufs = $this->Localidade->find('all',[
             'fields' => [
-                'Uf.ufe_sg',
-                'Uf.ufe_no'
+                'Localidade.loc_nu_sequencial',
+                'Localidade.loc_no'
             ],
             'link' => [],
-            'order' => ['Uf.ufe_no']
+            'conditions' => [
+                'Localidade.ufe_sg' => $uf
+            ],
+            'order' => ['Localidade.loc_no']
         ]);
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $ufs))));

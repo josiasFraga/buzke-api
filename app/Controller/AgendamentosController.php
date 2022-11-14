@@ -253,7 +253,17 @@ class AgendamentosController extends AppController {
         $this->loadModel('ClienteHorarioAtendimentoExcessao');
         $this->loadModel('AgendamentoFixoCancelado');
 
-        $agendamentos = $this->Agendamento->buscaAgendamentoEmpresa($dados_token['Usuario']['cliente_id'],$type,$data,$year_week);
+        $aditional_conditions = [];
+
+        if ( isset($dados["cliente_cliente_id"]) && $dados["cliente_cliente_id"] ) {
+            $aditional_conditions["Agendamento.cliente_cliente_id"] = $dados["cliente_cliente_id"];
+        }
+
+        if ( isset($dados["services_ids"]) ) {
+            $aditional_conditions["Agendamento.servico_id"] = $dados["services_ids"];
+        }
+
+        $agendamentos = $this->Agendamento->buscaAgendamentoEmpresa($dados_token['Usuario']['cliente_id'],$type,$data,$year_week,$aditional_conditions);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->AgendamentoFixoCancelado->checkStatus($agendamentos);
@@ -281,6 +291,8 @@ class AgendamentosController extends AppController {
     }
 
     private function formataAgendamentos($agendamentos = [], $data = '', $type = '') {
+
+        $this->loadModel("ClienteServico");
 
         if ( $data == '' )
             return [];
@@ -350,8 +362,11 @@ class AgendamentosController extends AppController {
                     $cor = ($cor == $this->list_odd_color) ? $this->list_even_color : $this->list_odd_color;
                 }
 
+                $colors = $this->ClienteServico->generateColors($agend['Agendamento']['cliente_id'],$this->services_colors);
+
                 $arr_dados = [
                     'name' => $hora, 
+                    'admin_id' => $agend['Agendamento']['cliente_id'], 
                     'height' => $agend['Agendamento']['endereco'] == '' || $agend['Agendamento']['endereco'] == '' ? 100 : 130, 
                     "bg_color" => $cor,
                     'usuario' => $agend['ClienteCliente']['nome'], 
@@ -365,6 +380,10 @@ class AgendamentosController extends AppController {
                     'endereco' => $agend['Agendamento']['endereco'], 
                     'tipo_str' => $tipo,
                 ];
+
+                if ( isset($agend['ClienteServico']['id']) && isset($colors[$agend['ClienteServico']['id']]) ) {
+                    $arr_dados['service_color'] = $colors[$agend['ClienteServico']['id']];
+                }
 
                 if ( $data != $last_data ) {
                     $count++;

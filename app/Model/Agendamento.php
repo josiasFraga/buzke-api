@@ -233,6 +233,7 @@ class Agendamento extends AppModel {
                 'Agendamento.*', 
                 'Localidade.loc_no',
                 'Localidade.ufe_sg',
+                'ClienteServico.id',
                 'ClienteServico.nome',
                 'ClienteServico.descricao',
                 'ClienteServico.valor',
@@ -296,6 +297,7 @@ class Agendamento extends AppModel {
                 'Agendamento.*', 
                 'Localidade.loc_no',
                 'Localidade.ufe_sg',
+                'ClienteServico.id',
                 'ClienteServico.nome',
                 'ClienteServico.descricao',
                 'ClienteServico.valor',
@@ -332,6 +334,7 @@ class Agendamento extends AppModel {
                 'Agendamento.*', 
                 'Localidade.loc_no',
                 'Localidade.ufe_sg',
+                'ClienteServico.id',
                 'ClienteServico.nome',
                 'ClienteServico.descricao',
                 'ClienteServico.valor',
@@ -370,6 +373,7 @@ class Agendamento extends AppModel {
                 'AgendamentoConvite.*', 
                 'Localidade.loc_no',
                 'Localidade.ufe_sg',
+                'ClienteServico.id',
                 'ClienteServico.nome',
                 'ClienteServico.descricao',
                 'ClienteServico.valor',
@@ -409,6 +413,7 @@ class Agendamento extends AppModel {
                 'TorneioJogo.*', 
                 'Localidade.loc_no',
                 'Localidade.ufe_sg',
+                'ClienteServico.id',
                 'ClienteServico.nome',
                 //'ClienteServico.descricao',
                 //'ClienteServico.valor',
@@ -444,7 +449,7 @@ class Agendamento extends AppModel {
 
     }
 
-    public function buscaAgendamentoEmpresa($cliente_id, $type, $data, $year_week) {
+    public function buscaAgendamentoEmpresa($cliente_id, $type, $data, $year_week, $aditional_conditions) {
 
         
         if ( $type == 1) {
@@ -472,6 +477,9 @@ class Agendamento extends AppModel {
             ];
         }
 
+        if ( count($aditional_conditions) > 0 ) {
+            $conditions = array_merge($conditions, $aditional_conditions);
+        }
 
         $agendamentos_basicos = $this->find('all',[
             'conditions' => $conditions,
@@ -486,13 +494,14 @@ class Agendamento extends AppModel {
                 'ClienteCliente.nome',
                 'ClienteCliente.img',
                 'ClienteServico.nome',
+                'ClienteServico.id',
                 'Agendamento.cliente_id'
             ],
             'link' => ['ClienteCliente', 'ClienteServico'],
             'order' => ['Agendamento.horario']
         ]);
 
-        $fixo_semanal = $this->buscaAgendamentoEmpresaFixoSemanal($cliente_id);
+        $fixo_semanal = $this->buscaAgendamentoEmpresaFixoSemanal($cliente_id, $aditional_conditions);
         if ( count($fixo_semanal) > 0 ) {
             $data_selecionada = $data;
             $inicio_mes = date('Y-m-01',strtotime($data_selecionada));
@@ -500,7 +509,7 @@ class Agendamento extends AppModel {
             $fixo_semanal = $this->montaArrayHorariosFixoSemanal($fixo_semanal, $limitDate, $inicio_mes);
         }
 
-        $fixo_mensal = $this->buscaAgendamentoEmpresaFixoMensal($cliente_id); 
+        $fixo_mensal = $this->buscaAgendamentoEmpresaFixoMensal($cliente_id, $aditional_conditions); 
         if ( count($fixo_mensal) > 0 ) {
             $data_selecionada = $data;
             $inicio_mes = date('Y-m-01',strtotime($data_selecionada));
@@ -516,7 +525,19 @@ class Agendamento extends AppModel {
         return array_merge($agendamentos_basicos, $fixo_semanal, $fixo_mensal, $agendamentos_de_torneios);
     }
     
-    public function buscaAgendamentoEmpresaFixoSemanal($cliente_id) {
+    public function buscaAgendamentoEmpresaFixoSemanal($cliente_id, $aditional_conditions) {
+
+        $conditions = [
+            'Agendamento.cliente_id' => $cliente_id,
+            'Agendamento.cancelado' => "N",
+            'not' => [
+                'Agendamento.dia_semana' => null,
+            ]
+        ];
+
+        if ( count($aditional_conditions) > 0 ) {
+            $conditions = array_merge($conditions, $aditional_conditions);
+        }
 
         return $this->find('all',[
             'fields' => [
@@ -530,15 +551,10 @@ class Agendamento extends AppModel {
                 'ClienteCliente.nome',
                 'ClienteCliente.img',
                 'ClienteServico.nome',
+                'ClienteServico.id',
                 'Agendamento.cliente_id'
             ],
-            'conditions' => [
-                'Agendamento.cliente_id' => $cliente_id,
-                'Agendamento.cancelado' => "N",
-                'not' => [
-                    'Agendamento.dia_semana' => null,
-                ]
-            ],
+            'conditions' => $conditions,
             'order' => [
                 'Agendamento.horario'
             ],
@@ -547,7 +563,19 @@ class Agendamento extends AppModel {
 
     }
 
-    public function buscaAgendamentoEmpresaFixoMensal($cliente_id) {
+    public function buscaAgendamentoEmpresaFixoMensal($cliente_id, $aditional_conditions) {
+
+        $conditions = [
+            'Agendamento.cliente_id' => $cliente_id,
+            'Agendamento.cancelado' => "N",
+            'not' => [
+                'Agendamento.dia_mes' => null,
+            ]
+        ];
+
+        if ( count($aditional_conditions) > 0 ) {
+            $conditions = array_merge($conditions, $aditional_conditions);
+        }
 
         return $this->find('all',[
             'fields' => [
@@ -562,15 +590,10 @@ class Agendamento extends AppModel {
                 'ClienteCliente.nome',
                 'ClienteCliente.img',
                 'ClienteServico.nome',
+                'ClienteServico.id',
                 'Agendamento.cliente_id'
             ],
-            'conditions' => [
-                'Agendamento.cliente_id' => $cliente_id,
-                'Agendamento.cancelado' => "N",
-                'not' => [
-                    'Agendamento.dia_mes' => null,
-                ]
-            ],
+            'conditions' => $conditions,
             'order' => [
                 'Agendamento.horario'
             ],
@@ -591,6 +614,7 @@ class Agendamento extends AppModel {
                 'Agendamento.dia_mes',
                 'Agendamento.endereco',
                 'ClienteServico.nome',
+                'ClienteServico.id',
                 'Agendamento.cliente_id',
                 'Torneio.img',
                 'TorneioQuadra.nome',

@@ -54,6 +54,16 @@ class AppController extends Controller {
         'Brasil' => '55',
         'Uruguai' => '598',
     ];
+    public $services_colors = [
+        "#42288e",
+        "#444359",
+        "#525252",
+        "#594343",
+        "#770f0f",
+        "#2a1313",
+        "#af1a1a",
+        "#161835",
+    ];
     public $proximas_fases = [
         1 => [
             'fases'=> [

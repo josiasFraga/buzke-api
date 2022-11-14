@@ -1050,6 +1050,7 @@ class ClientesController extends AppController {
         if ( count($servicos) > 0 ) {
             foreach($servicos as $key => $servico) {
                 $servicos[$key]['ClienteServico']['valor'] = 'R$ '.$this->floatEnBr($servico['ClienteServico']['valor']);
+                $servicos[$key]["ClienteServico"]["cor"] = $this->services_colors[$key];
             }
         }
 
@@ -1154,6 +1155,7 @@ class ClientesController extends AppController {
             'conditions' => $conditions,
             'fields' => [
                 'ClienteCliente.id',
+                'ClienteCliente.nacionalidade',
                 'ClienteCliente.nome',
                 'ClienteCliente.email',
                 'ClienteCliente.pais',
@@ -1193,6 +1195,8 @@ class ClientesController extends AppController {
 
                     }
                 }
+                $clientes[$key]['ClienteCliente']['_telefone'] = "+" . $clientes[$key]['ClienteCliente']['telefone_ddi'] . " " . $clientes[$key]['ClienteCliente']['telefone'];
+                $clientes[$key]['ClienteCliente']['_endereco'] = $clientes[$key]['ClienteCliente']['endereco'] . ", " . $clientes[$key]['ClienteCliente']['endreceo_n'];
                 unset($clientes[$key]['ClienteClientePadelCategoria']);
             }
         }
