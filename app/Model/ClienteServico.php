@@ -203,21 +203,5 @@ class ClienteServico extends AppModel {
          
     }
 
-    public function generateColors($cliente_id = null, $colors = []) {
-        $servicos = $this->getByClientId($cliente_id);
-        if ( count($servicos) == 0 ) {
-            return [];
-        }
-
-        $colors_return = [];
-        foreach( $servicos as $key => $servico ) {
-            if ( isset($colors[$key]) ) {
-                $colors_return[$servico["ClienteServico"]["id"]] = $colors[$key];
-            }
-        }
-
-        return $colors_return;
-    }
-
 
 }
