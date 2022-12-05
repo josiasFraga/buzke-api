@@ -797,13 +797,11 @@ class ClientesController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->query;
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
+            throw new BadRequestException('Dados de usuário não informados!', 401);
         }
-        if ( !isset($dados['cliente_id']) || $dados['cliente_id'] == "" ) {
-            throw new BadRequestException('Dados de cliente não informados!', 401);
-        }
+    
         if ( !isset($dados['data']) || $dados['data'] == "" ) {
-            throw new BadRequestException('Dados de cliente não informados!', 401);
+            throw new BadRequestException('Data não informada!', 401);
         }
 
         $token = $dados['token'];
@@ -819,6 +817,15 @@ class ClientesController extends AppController {
 
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token["Usuario"]["cliente_id"] == null ) {
+
+            if ( !isset($dados['cliente_id']) || $dados['cliente_id'] == "" ) {
+                throw new BadRequestException('Dados de cliente não informados!', 401);
+            }
+        } else {
+            $dados['cliente_id'] = $dados_token["Usuario"]["cliente_id"];
         }
 
         $this->loadModel('Cliente');
@@ -1376,6 +1383,10 @@ class ClientesController extends AppController {
             throw new BadRequestException('Telefone não informado', 400);
         }
 
+        if (!isset($dados->telefone_ddi) || $dados->telefone_ddi == '') {
+            throw new BadRequestException('Telefone DDI não informado', 400);
+        }
+
         if (!isset($dados->avisar_com ) || $dados->avisar_com  == '' || $dados->avisar_com  == '00:00' ) {
             throw new BadRequestException('Tempo para aviso dos usuários não informado', 400);
         }
@@ -1406,8 +1417,6 @@ class ClientesController extends AppController {
             $ui_departamento = null;
             $ui_cidade = null;
             $cep = $dados->cep;
-            $telefone_ddi = "55";
-            $wp_ddi = "55";
 
             $this->loadModel('Uf');
             $dadosUf = $this->Uf->find('first',[
@@ -1450,8 +1459,6 @@ class ClientesController extends AppController {
             $estado = null;
             $bairro = null;
             $cep = null;
-            $telefone_ddi = "598";
-            $wp_ddi = "598";
         }
         
         $token = $dados->token;
@@ -1495,11 +1502,14 @@ class ClientesController extends AppController {
         $wp = null;
         if (isset($dados->telefone_possui_wp) && $dados->telefone_possui_wp) {
             $wp = $dados->telefone;
+            $wp_ddi = $dados->telefone_ddi;
         } else {
-            if (isset($dados->wp) && $dados->wp != '') {
-                $wp = $dados->wp;
-            }
+            $wp = $dados->wp;
+            $wp_ddi = $dados->wp_ddi;
         }
+
+        $telefone = $dados->telefone;
+        $telefone_ddi = $dados->telefone_ddi;
 
         $dados_salvar = [
             'Cliente' => [
@@ -1509,7 +1519,7 @@ class ClientesController extends AppController {
                 'cnpj' => $cnpj,
                 'nome' => $dados->nomeProfissional,
                 'telefone_ddi' => $telefone_ddi,
-                'telefone' => $dados->telefone,
+                'telefone' => $telefone,
                 'wp_ddi' => $wp_ddi,
                 'wp' => $wp,
                 'cep' => $dados->cep,

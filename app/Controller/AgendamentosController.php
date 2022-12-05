@@ -443,10 +443,6 @@ class AgendamentosController extends AppController {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
 
-        if ( !isset($dados->cliente_id) || $dados->cliente_id == "" || !is_numeric($dados->cliente_id) ) {
-            throw new BadRequestException('Dados da empresa não informada!', 401);
-        }
-
         if ( !isset($dados->day) || $dados->day == "" ) {
             throw new BadRequestException('Data não informada!', 401);
         }
@@ -477,20 +473,6 @@ class AgendamentosController extends AppController {
         $this->loadModel('ClienteHorarioAtendimento');
         $this->loadModel('TorneioQuadraPeriodo');
 
-        //busca os dados da empresa
-        $dados_cliente = $this->Cliente->find('first',[
-            'fields' => ['Cliente.id', 'Localidade.loc_no', 'Localidade.ufe_sg'],
-            'conditions' => [
-                'Cliente.id' => $dados->cliente_id,
-                'Cliente.ativo' => 'Y'
-            ],
-            'link' => ['Localidade']
-        ]);
-
-        if (count($dados_cliente) == 0) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Empresa não encontrada!'))));
-        }
-
         //verifico quem está tentando salvar o agendamento, se é uma empresa ou um usuário
         if ( $dados_usuario['Usuario']['cliente_id'] != '' && $dados_usuario['Usuario']['cliente_id'] != null ) {
 
@@ -510,6 +492,10 @@ class AgendamentosController extends AppController {
         } else {
             $cadastrado_por = 'cliente_cliente';
 
+            if ( !isset($dados->cliente_id) || $dados->cliente_id == "" || !is_numeric($dados->cliente_id) ) {
+                throw new BadRequestException('Dados da empresa não informada!', 401);
+            }
+
             //busca os dados do usuário do agendamento como cliente
             $dados_usuario_como_cliente = $this->ClienteCliente->buscaDadosUsuarioComoCliente($dados_usuario['Usuario']['id'], $dados->cliente_id);
     
@@ -522,6 +508,20 @@ class AgendamentosController extends AppController {
             }
             $cliente_cliente_id = $dados_usuario_como_cliente['ClienteCliente']['id'];
     
+        }
+
+        //busca os dados da empresa
+        $dados_cliente = $this->Cliente->find('first',[
+            'fields' => ['Cliente.id', 'Localidade.loc_no', 'Localidade.ufe_sg'],
+            'conditions' => [
+                'Cliente.id' => $dados->cliente_id,
+                'Cliente.ativo' => 'Y'
+            ],
+            'link' => ['Localidade']
+        ]);
+
+        if (count($dados_cliente) == 0) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Empresa não encontrada!'))));
         }
 
         //verfica se o cliente fechará excepcionalmente nesse dia no dia
@@ -670,9 +670,28 @@ class AgendamentosController extends AppController {
         }
 
         if ( count($notifications_ids) > 0 ) {
+  
             $data_str_agendamento = date('d/m',strtotime($dados_agendamento_salvo['Agendamento']['horario']));
             $hora_str_agendamento = date('H:i',strtotime($dados_agendamento_salvo['Agendamento']['horario']));
-            $this->sendNotification( $notifications_ids, $dados_agendamento_salvo['Agendamento']['id'], "Novo Agendamento :)", "Você tem um novo agendamento de ".$cadastrado_por." às ".$hora_str_agendamento." do dia ".$data_str_agendamento, "agendamento", 'novo_agendamento', ["en"=> '$[notif_count] Novos Agendamentos'] );
+            $notification_msg = "Você tem um novo agendamento de ".$cadastrado_por." às ".$hora_str_agendamento." do dia ".$data_str_agendamento;
+            
+            if ( isset($dados->servico) && $dados->servico != '' ) {
+                    $dados_servico = $this->ClienteServico->find("first",[
+                    "conditions" => [
+                        "ClienteServico.id" => $dados->servico
+                    ]
+                ]);
+            }
+
+            if ( isset($dados_servico) && count($dados_servico) > 0 ) {
+                if ($isCourt) {
+                    $notification_msg .= " na quadra " . $dados_servico["ClienteServico"]["nome"];
+                } else {
+                    $notification_msg .= " serviço selecionado: " . $dados_servico["ClienteServico"]["nome"];
+                }
+            }
+
+            $this->sendNotification( $notifications_ids, $dados_agendamento_salvo['Agendamento']['id'], "Novo Agendamento :)", $notification_msg, "agendamento", 'novo_agendamento', ["en"=> '$[notif_count] Novos Agendamentos'] );
         }
 
         $this->enviaConvites($dados, $dados_agendamento_salvo, $dados_cliente['Localidade']);

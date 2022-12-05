@@ -62,7 +62,8 @@ class Token extends AppModel {
 				'Usuario.id' => $user_id,
 				'Token.data_validade >=' => date('Y-m-d') ,
 				'not' => [
-					'Token.notification_id' => null
+					['Token.notification_id' => null],
+					['Token.notification_id' => "painel"]
 				]
 			],
 			'link' => ['Usuario'],
@@ -91,7 +92,8 @@ class Token extends AppModel {
 				'Usuario.cliente_id' => $empresa_id,
 				'Token.data_validade >=' => date('Y-m-d') ,
 				'not' => [
-					'Token.notification_id' => null
+					['Token.notification_id' => null],
+					['Token.notification_id' => "painel"]
 				]
 			],
 			'link' => ['Usuario'],

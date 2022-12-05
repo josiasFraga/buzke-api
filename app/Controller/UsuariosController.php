@@ -259,6 +259,8 @@ class UsuariosController extends AppController {
         $email = $dados->email;
         $telefone = $dados->telefone;
         $senha = $dados->senha;
+        $pais = $dados->pais;
+        $telefone_ddi = $dados->telefone_ddi;
         //$cpf = $dados->cpf;
         $notifications_id = $dados->notifications_id;
 
@@ -280,13 +282,6 @@ class UsuariosController extends AppController {
         ]);
 
         $token = md5(uniqid($telefone, true));
-        $pais = 'Brasil';
-        $telefone_ddi = '55';
-
-        if ( isset($dados->pais) && !empty($dados->pais) ) {
-            $pais = $dados->pais;
-            $telefone_ddi = $this->phone_ddi[$pais];
-        }
 
         if ( count($dados_cliente_cliente) == 0){
             $dados_salvar = array(
@@ -484,6 +479,10 @@ class UsuariosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
         }
 
+        if (!isset($dados->telefone_ddi) || $dados->telefone_ddi == '') {
+            throw new BadRequestException('Telefone DDI não informado', 400);
+        }
+
         if (!isset($dados->telefone) || $dados->telefone == '') {
             throw new BadRequestException('Telefone não informado', 400);
         }
@@ -501,6 +500,7 @@ class UsuariosController extends AppController {
         $nome = $dados->nome;
         $email = $dados->email;
         $telefone = $dados->telefone;
+        $telefone_ddi = $dados->telefone_ddi;
         $senha = $dados->senha;
         $notifications_id = $dados->notifications_id;
         $tipo = $dados->tipo_cadastro;
@@ -533,8 +533,6 @@ class UsuariosController extends AppController {
             $ui_departamento = null;
             $ui_cidade = null;
             $cep = $dados->cep;
-            $telefone_ddi = "55";
-            $wp_ddi = "55";
 
             $this->loadModel('Uf');
             $dadosUf = $this->Uf->find('first',[
@@ -578,8 +576,6 @@ class UsuariosController extends AppController {
             $estado = null;
             $bairro = null;
             $cep = null;
-            $telefone_ddi = "598";
-            $wp_ddi = "598";
         }
 
         $this->loadModel('Usuario');
@@ -608,10 +604,10 @@ class UsuariosController extends AppController {
         $wp = null;
         if (isset($dados->telefone_possui_wp) && $dados->telefone_possui_wp) {
             $wp = $telefone;
+            $wp_ddi = $telefone_ddi;
         } else {
-            if (isset($dados->wp) && $dados->wp != '') {
-                $wp = $dados->wp;
-            }
+            $wp = $dados->wp;
+            $wp_ddi = $dados->wp_ddi;
         }
 
         $token = md5(uniqid($telefone, true));
@@ -621,6 +617,7 @@ class UsuariosController extends AppController {
                 'nome' => $nome, 
                 'email' => $email, 
                 'telefone' => $telefone, 
+                'telefone_ddi' => $telefone_ddi, 
                 //'email' => $dados->email, 
                 'senha' => $senha, 
                 'nivel_id' => 2
