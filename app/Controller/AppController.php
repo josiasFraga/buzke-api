@@ -918,6 +918,11 @@ class AppController extends Controller {
     }
 
 	public function datetimeBrEn( $data ){
+
+        if (strpos($data, "/") === false) {
+            return $data;
+        }
+
 		list( $data, $hora ) = explode(' ', $data);
 		$data = explode("/",$data);
 		$data = $data[2]."-".$data[1]."-".$data[0];
@@ -926,6 +931,11 @@ class AppController extends Controller {
 	}
 
 	public function dateBrEn( $data ){
+
+        if (strpos($data, "/") === false) {
+            return $data;
+        }
+
 		$data = explode("/",$data);
 		$data = $data[2]."-".$data[1]."-".$data[0];
 		$data = date("Y-m-d", strtotime($data));

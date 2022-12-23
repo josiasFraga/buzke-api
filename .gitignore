@@ -9,6 +9,10 @@
 /build
 /dist
 /tags
+/app/webroot/painel
+/app/webroot/painel/*
+/app/webroot/placares
+/app/webroot/placares/*
 *.mo
 
 # IDE and editor specific files #
