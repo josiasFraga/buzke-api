@@ -11,7 +11,7 @@ class TorneioJogoPlacar extends AppModel {
 	public $hasMany = array(
 	);
 
-	public function busca_resultados($jogo_id = null) {
+	public function busca_resultados($jogo_id = null, $finalizado = "Y") {
 
 		if ( $jogo_id == null ) {
 			return [];
@@ -19,10 +19,101 @@ class TorneioJogoPlacar extends AppModel {
 
 		return $this->find('all', [
 			'conditions' => [
-				'TorneioJogoPlacar.torneio_jogo_id' => $jogo_id
+				'TorneioJogoPlacar.torneio_jogo_id' => $jogo_id,
+				'TorneioJogo.finalizado' => $finalizado
 			],
-			'link' => []
+			'link' => [
+				'TorneioJogo'
+			]
 		]);
+
+	}
+
+	public function tipo_set_em_aberto($jogo_id = null) {
+
+		if ( $jogo_id == null ) {
+			return null;
+		}
+
+		$check_opened_set = $this->find('first', [
+			'conditions' => [
+				'TorneioJogoPlacar.torneio_jogo_id' => $jogo_id,
+				'TorneioJogoPlacar.finalizado' => 'N'
+			],
+			'link' => [
+				'TorneioJogo'
+			]
+		]);
+
+		if ( count($check_opened_set) == 0 ) {
+			return null;
+		}
+
+		return $check_opened_set['TorneioJogoPlacar']['tipo'];
+
+	}
+
+	public function conta_vitorias( $resultados = [], $equipe ) {
+
+		if ( count($resultados) == 0 ) {
+			return 0;
+		}
+
+		$n_vitorias = 0;
+
+		if ( $equipe == 1 ) {
+
+			foreach ( $resultados as $key => $resultado ) { 
+				if ( $resultado["TorneioJogoPlacar"]['finalizado'] == "Y" && $resultado["TorneioJogoPlacar"]['time_1_placar'] > $resultado["TorneioJogoPlacar"]['time_2_placar'] ) {
+					$n_vitorias++;
+				}
+			}
+
+		}
+
+		else if ( $equipe == 2 ) {
+
+			foreach ( $resultados as $key => $resultado ) { 
+				if ( $resultado["TorneioJogoPlacar"]['finalizado'] == "Y" && $resultado["TorneioJogoPlacar"]['time_2_placar'] > $resultado["TorneioJogoPlacar"]['time_1_placar'] ) {
+					$n_vitorias++;
+				}
+			}
+
+		}
+
+		return $n_vitorias;
+
+	}
+
+	public function busca_games( $resultados = [], $equipe ) {
+
+		if ( count($resultados) == 0 ) {
+			return 0;
+		}
+
+		$n_games = 0;
+
+		if ( $equipe == 1 ) {
+
+			foreach ( $resultados as $key => $resultado ) {
+				if ( $resultado["TorneioJogoPlacar"]['finalizado'] == "N" ) {
+					return $resultado["TorneioJogoPlacar"]['time_1_placar'];
+				}
+			}
+
+		}
+
+		else if ( $equipe == 2 ) {
+
+			foreach ( $resultados as $key => $resultado ) {
+				if ( $resultado["TorneioJogoPlacar"]['finalizado'] == "N" ) {
+					return $resultado["TorneioJogoPlacar"]['time_2_placar'];
+				}
+			}
+
+		}
+
+		return $n_games;
 
 	}
 

@@ -34,7 +34,8 @@ class Torneio extends AppModel {
                     'thumb' => '512x512',
 				),
 				'pathMethod' => 'flat',
-				'nameCallback' => 'rename'
+				'nameCallback' => 'rename',
+                'keepFilesOnDelete' => true,
 			)
 		)
 	);

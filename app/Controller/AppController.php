@@ -100,16 +100,16 @@ class AppController extends Controller {
                         [
                             'id' => 1,
                             'time_1_grupo' => 1,
-                            'time_2_grupo' => 1,
+                            'time_2_grupo' => 2,
                             'time_1_posicao' => 1,
                             'time_2_posicao' => 2
                         ],
                         [
                             'id' => 2,
-                            'time_1_grupo' => 2,
+                            'time_1_grupo' => 1,
                             'time_2_grupo' => 2,
-                            'time_1_posicao' => 1,
-                            'time_2_posicao' => 2
+                            'time_1_posicao' => 2,
+                            'time_2_posicao' => 1
                         ]
                     ]
                 ],
@@ -134,14 +134,14 @@ class AppController extends Controller {
                             'id' => 1,
                             'time_1_posicao' => 2,
                             'time_1_grupo' => 2,
-                            'time_2_posicao' => 1,
+                            'time_2_posicao' => 2,
                             'time_2_grupo' => 3,
                         ],
                         [
                             'id' => 2,
                             'time_1_posicao' => 2,
                             'time_1_grupo' => 1,
-                            'time_2_posicao' => 2,
+                            'time_2_posicao' => 1,
                             'time_2_grupo' => 3,
                         ]
                     ]
@@ -216,12 +216,12 @@ class AppController extends Controller {
                         [
                             'id' => 5,
                             'time_1_jogo' => 1,
-                            'time_2_jogo' => 4
+                            'time_2_jogo' => 2
                         ],
                         [
                             'id' => 6,
-                            'time_1_jogo' => 2,
-                            'time_2_jogo' => 3
+                            'time_1_jogo' => 3,
+                            'time_2_jogo' => 4
                         ]
                     ]
                 ],
@@ -247,14 +247,14 @@ class AppController extends Controller {
                             'time_1_posicao' => 2,
                             'time_1_grupo' => 1,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 2,
+                            'time_2_grupo' => 4,
                         ],
                         [
                             'id' => 2,
                             'time_1_posicao' => 2,
-                            'time_1_grupo' => 3,
+                            'time_1_grupo' => 2,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 4,
+                            'time_2_grupo' => 3,
                         ],
                     ]
                 ],
@@ -265,27 +265,27 @@ class AppController extends Controller {
                             'id' => 3,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 1,
-                            'time_2_posicao' => 2,
+                            'time_2_posicao' => 1,
                             'time_2_grupo' => 5,
                         ],
                         [
                             'id' => 4,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 2,
-                            'time_2_jogo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 5,
                         ],
                         [
                             'id' => 5,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 3,
-                            'time_2_jogo' => 2,
+                            'time_2_jogo' => 1,
                         ],
                         [
                             'id' => 6,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 4,
-                            'time_2_posicao' => 1,
-                            'time_2_grupo' => 5,
+                            'time_2_jogo' => 2,
                         ]
                     ]
                 ],
@@ -295,12 +295,12 @@ class AppController extends Controller {
                         [
                             'id' => 7,
                             'time_1_jogo' => 3,
-                            'time_2_jogo' => 4
+                            'time_2_jogo' => 6
                         ],
                         [
                             'id' => 8,
-                            'time_1_jogo' => 5,
-                            'time_2_jogo' => 6
+                            'time_1_jogo' => 4,
+                            'time_2_jogo' => 5
                         ]
                     ]
                 ],
@@ -324,29 +324,29 @@ class AppController extends Controller {
                         [
                             'id' => 1,
                             'time_1_posicao' => 1,
-                            'time_1_grupo' => 6,
+                            'time_1_grupo' => 2,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 1,
+                            'time_2_grupo' => 6,
                         ],
                         [
                             'id' => 2,
-                            'time_1_posicao' => 1,
-                            'time_1_grupo' => 5,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 2,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 2,
+                            'time_2_grupo' => 5,
                         ],
                         [
                             'id' => 3,
                             'time_1_posicao' => 2,
-                            'time_1_grupo' => 4,
-                            'time_2_posicao' => 2,
-                            'time_2_grupo' => 3,
+                            'time_1_grupo' => 3,
+                            'time_2_posicao' => 1,
+                            'time_2_grupo' => 5,
                         ],
                         [
                             'id' => 4,
                             'time_1_posicao' => 2,
-                            'time_1_grupo' => 5,
-                            'time_2_posicao' => 2,
+                            'time_1_grupo' => 4,
+                            'time_2_posicao' => 1,
                             'time_2_grupo' => 6,
                         ],
                     ]
@@ -386,11 +386,11 @@ class AppController extends Controller {
                         [
                             'id' => 9,
                             'time_1_jogo' => 5,
-                            'time_2_jogo' => 6
+                            'time_2_jogo' => 7
                         ],
                         [
                             'id' => 10,
-                            'time_1_jogo' => 7,
+                            'time_1_jogo' => 6,
                             'time_2_jogo' => 8
                         ]
                     ]
@@ -415,44 +415,44 @@ class AppController extends Controller {
                         [
                             'id' => 1,
                             'time_1_posicao' => 1,
-                            'time_1_grupo' => 7,
+                            'time_1_grupo' => 3,
                             'time_2_posicao' => 2,
                             'time_2_grupo' => 1,
                         ],
                         [
                             'id' => 2,
                             'time_1_posicao' => 1,
-                            'time_1_grupo' => 6,
+                            'time_1_grupo' => 4,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 2,
+                            'time_2_grupo' => 7,
                         ],
                         [
                             'id' => 3,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 5,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 3,
+                            'time_2_grupo' => 6,
                         ],
                         [
                             'id' => 4,
                             'time_1_posicao' => 1,
-                            'time_1_grupo' => 4,
-                            'time_2_posicao' => 2,
-                            'time_2_grupo' => 4,
-                        ],
-                        [
-                            'id' => 5,
-                            'time_1_posicao' => 1,
-                            'time_1_grupo' => 3,
+                            'time_1_grupo' => 6,
                             'time_2_posicao' => 2,
                             'time_2_grupo' => 5,
                         ],
                         [
-                            'id' => 6,
-                            'time_1_posicao' => 2,
+                            'id' => 5,
+                            'time_1_posicao' => 1,
                             'time_1_grupo' => 7,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 6,
+                            'time_2_grupo' => 4,
+                        ],
+                        [
+                            'id' => 6,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 3,
                         ],
                     ]
                 ],
@@ -463,23 +463,23 @@ class AppController extends Controller {
                             'id' => 7,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 1,
-                            'time_2_jogo' => 6,
+                            'time_2_jogo' => 4,
                         ],
                         [
                             'id' => 8,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 2,
-                            'time_2_jogo' => 5,
+                            'time_2_jogo' => 3,
                         ],
                         [
                             'id' => 9,
-                            'time_1_jogo' => 4,
-                            'time_2_jogo' => 3,
+                            'time_1_jogo' => 1,
+                            'time_2_jogo' => 5,
                         ],
                         [
                             'id' => 10,
                             'time_1_jogo' => 2,
-                            'time_2_jogo' => 1,
+                            'time_2_jogo' => 6,
                         ]
                     ]
                 ],
@@ -489,11 +489,11 @@ class AppController extends Controller {
                         [
                             'id' => 11,
                             'time_1_jogo' => 7,
-                            'time_2_jogo' => 8
+                            'time_2_jogo' => 9
                         ],
                         [
                             'id' => 12,
-                            'time_1_jogo' => 9,
+                            'time_1_jogo' => 8,
                             'time_2_jogo' => 10
                         ]
                     ]
@@ -579,22 +579,22 @@ class AppController extends Controller {
                         [
                             'id' => 9,
                             'time_1_jogo' => 1,
-                            'time_2_jogo' => 8,
+                            'time_2_jogo' => 4,
                         ],
                         [
                             'id' => 10,
                             'time_1_jogo' => 2,
-                            'time_2_jogo' => 7,
+                            'time_2_jogo' => 3,
                         ],
                         [
                             'id' => 11,
-                            'time_1_jogo' => 3,
-                            'time_2_jogo' => 6,
+                            'time_1_jogo' => 5,
+                            'time_2_jogo' => 8,
                         ],
                         [
                             'id' => 12,
-                            'time_1_jogo' => 4,
-                            'time_2_jogo' => 5,
+                            'time_1_jogo' => 6,
+                            'time_2_jogo' => 7,
                         ]
                     ]
                 ],
@@ -640,9 +640,9 @@ class AppController extends Controller {
                         [
                             'id' => 2,
                             'time_1_posicao' => 2,
-                            'time_1_grupo' => 8,
+                            'time_1_grupo' => 7,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 7,
+                            'time_2_grupo' => 8,
                         ],
                     ]
                 ],
@@ -653,55 +653,55 @@ class AppController extends Controller {
                             'id' => 3,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 1,
-                            'time_2_posicao' => 2,
-                            'time_2_grupo' => 5,
+                            'time_2_jogo' => 1,
                         ],
                         [
                             'id' => 4,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 2,
-                            'time_2_posicao' => 2,
-                            'time_2_grupo' => 4,
+                            'time_2_jogo' => 2,
                         ],
                         [
                             'id' => 5,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 3,
-                            'time_2_posicao' => 2,
-                            'time_2_grupo' => 3,
+                            'time_2_posicao' => 1,
+                            'time_2_grupo' => 8,
                         ],
                         [
                             'id' => 6,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 4,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 2,
+                            'time_2_grupo' => 1,
                         ],
                         [
                             'id' => 7,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 5,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 1,
+                            'time_2_grupo' => 5,
                         ],
                         [
                             'id' => 8,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 6,
-                            'time_2_jogo' => 1,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 3,
                         ],
                         [
                             'id' => 9,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 7,
-                            'time_2_jogo' => 2,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 4,
                         ],
                         [
                             'id' => 10,
                             'time_1_posicao' => 1,
-                            'time_1_grupo' => 8,
-                            'time_2_posicao' => 1,
-                            'time_2_grupo' => 9,
+                            'time_1_grupo' => 9,
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 5,
                         ],
                     ]
                 ],
@@ -711,22 +711,22 @@ class AppController extends Controller {
                         [
                             'id' => 11,
                             'time_1_jogo' => 3,
-                            'time_2_jogo' => 10,
+                            'time_2_jogo' => 7,
                         ],
                         [
                             'id' => 12,
                             'time_1_jogo' => 4,
-                            'time_2_jogo' => 9,
+                            'time_2_jogo' => 8,
                         ],
                         [
                             'id' => 13,
                             'time_1_jogo' => 5,
-                            'time_2_jogo' => 8,
+                            'time_2_jogo' => 9,
                         ],
                         [
                             'id' => 14,
                             'time_1_jogo' => 6,
-                            'time_2_jogo' => 7,
+                            'time_2_jogo' => 10,
                         ]
                     ]
                 ],
@@ -736,12 +736,12 @@ class AppController extends Controller {
                         [
                             'id' => 15,
                             'time_1_jogo' => 11,
-                            'time_2_jogo' => 14
+                            'time_2_jogo' => 13
                         ],
                         [
                             'id' => 16,
                             'time_1_jogo' => 12,
-                            'time_2_jogo' => 13
+                            'time_2_jogo' => 14
                         ]
                     ]
                 ],
@@ -799,53 +799,53 @@ class AppController extends Controller {
                             'id' => 5,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 1,
-                            'time_2_posicao' => 2,
+                            'time_2_posicao' => 1,
                             'time_2_grupo' => 10,
                         ],
                         [
                             'id' => 6,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 2,
-                            'time_2_posicao' => 2,
+                            'time_2_posicao' => 1,
                             'time_2_grupo' => 9,
                         ],
                         [
                             'id' => 7,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 3,
-                            'time_2_jogo' => 1
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 9,
                         ],
                         [
                             'id' => 8,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 4,
-                            'time_2_jogo' => 2
+                            'time_2_posicao' => 2,
+                            'time_2_grupo' => 10,
                         ],
                         [
                             'id' => 9,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 5,
-                            'time_2_jogo' => 3
+                            'time_2_jogo' => 1
                         ],
                         [
                             'id' => 10,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 6,
-                            'time_2_jogo' => 4,
+                            'time_2_jogo' => 2,
                         ],
                         [
                             'id' => 11,
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 7,
-                            'time_1_posicao' => 1,
-                            'time_1_grupo' => 8,
+                            'time_2_jogo' => 3,
                         ],
                         [
                             'id' => 12,
                             'time_1_posicao' => 1,
-                            'time_1_grupo' => 9,
-                            'time_2_posicao' => 1,
-                            'time_2_grupo' => 10,
+                            'time_1_grupo' => 8,
+                            'time_2_jogo' => 4,
                         ],
                     ]
                 ],
@@ -880,12 +880,12 @@ class AppController extends Controller {
                         [
                             'id' => 17,
                             'time_1_jogo' => 13,
-                            'time_2_jogo' => 16
+                            'time_2_jogo' => 15
                         ],
                         [
                             'id' => 18,
                             'time_1_jogo' => 14,
-                            'time_2_jogo' => 15
+                            'time_2_jogo' => 16
                         ]
                     ]
                 ],

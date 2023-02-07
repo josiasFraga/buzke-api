@@ -38,7 +38,7 @@ class TorneioInscricaoJogador extends AppModel {
         ]) > 0;
     }
 
-    public function buscaNomeDupla($inscricao_id = null){
+    public function buscaNomeDupla($inscricao_id = null, $separator = ' | '){
         if ($inscricao_id == null ) {
             return '';
         }
@@ -63,10 +63,74 @@ class TorneioInscricaoJogador extends AppModel {
             $nomes[] = $jogador['ClienteCliente']['nome'];
         }
 
-        $nomes_str = implode(' | ',$nomes);
+        $nomes_str = implode($separator,$nomes);
         return $nomes_str;
         
-    }    
+    }
+
+    public function buscaPrimeiroNomeDupla($inscricao_id = null, $separator = ' | '){
+        if ($inscricao_id == null ) {
+            return '';
+        }
+
+        $jogadores = $this->find('all',[
+            'fields' => [
+                'ClienteCliente.nome'
+            ],
+            'conditions' => [
+                'TorneioInscricaoJogador.torneio_inscricao_id' => $inscricao_id
+            ],
+            'link' => ['ClienteCliente']
+        ]);
+
+        if ( count($jogadores) == 0 ) {
+            return "";
+        }
+
+        $nomes = [];
+
+        foreach($jogadores as $key => $jogador){
+            $nomes[] = explode(' ', $jogador['ClienteCliente']['nome'])[0];
+        }
+
+        $nomes_str = implode($separator,$nomes);
+        return $nomes_str;
+        
+    }
+
+    public function buscaImagemJogador($inscricao_id = null, $n_jogador, $images_path){
+        if ($inscricao_id == null ) {
+            return '';
+        }
+
+        $jogadores = $this->find('all',[
+            'fields' => [
+                'Usuario.img',
+                'ClienteCliente.img'
+            ],
+            'conditions' => [
+                'TorneioInscricaoJogador.torneio_inscricao_id' => $inscricao_id
+            ],
+            'link' => [
+                'ClienteCliente' => [
+                    'Usuario'
+                ]
+            ]
+        ]);
+
+        $jogador_imagem = $jogadores[($n_jogador-1)]["ClienteCliente"]["img"];
+
+        if ( $jogadores[($n_jogador-1)]["Usuario"]["img"] ) {
+            $jogador_imagem = $jogadores[($n_jogador-1)]["Usuario"]["img"];
+        }
+
+        if ( $jogador_imagem == null )  {
+            $jogador_imagem = $images_path."usuarios/default.png";;
+        }
+
+        return $images_path . "usuarios/" . $jogador_imagem;
+
+    }
 
 	public function getBySubscriptionId($id = null) {
 

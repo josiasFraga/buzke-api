@@ -18,6 +18,9 @@ class TorneioJogo extends AppModel {
 		'TorneioJogoPlacar' => array(
 			'foreignKey' => 'torneio_jogo_id'
         ),
+		'TorneioJogoPonto' => array(
+			'foreignKey' => 'torneio_jogo_id'
+        ),
 	);
 
 	public function buscaNVitorias($inscricao_id =  null, $fase = null) {

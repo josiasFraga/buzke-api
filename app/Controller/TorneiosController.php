@@ -161,7 +161,7 @@ class TorneiosController extends AppController {
             date('d',strtotime($dados['Torneio']['inscricoes_ate'])).
             '/'.$this->meses_abrev[(int)date('m',strtotime($dados['Torneio']['inscricoes_ate']))];
 
-        $dados['Torneio']['_subscriptions_opened'] = ($dados['Torneio']['inscricoes_de'] <= date('Y-m-d H:i:s') && $dados['Torneio']['inscricoes_ate'] >= date('Y-m-d H:i:s'));
+        $dados['Torneio']['_subscriptions_opened'] = ($dados['Torneio']['inscricoes_de'] <= date('Y-m-d') && $dados['Torneio']['inscricoes_ate'] >= date('Y-m-d'));
         $dados['Torneio']['_valor_inscricao'] =  'R$ '.number_format($dados['Torneio']['valor_inscricao'],2,',','.');
         $all_group_generated = true;
         $some_group_generated = false;
@@ -1889,7 +1889,8 @@ class TorneiosController extends AppController {
     }
 
     private function getMaxTimeGeneratedByCategory( $confrontos = [], $horarios = [] ) {
-        if ( count($confrontos) == 0 || count($horarios) == 0 ) {
+   
+        if ( !$confrontos || count($confrontos) == 0 || count($horarios) == 0 ) {
             return [];
         }
 
@@ -2221,7 +2222,16 @@ class TorneiosController extends AppController {
         }
  
         if ( $dados_jogo['TorneioJogo']['time_1'] == null || $dados_jogo['TorneioJogo']['time_2'] == null ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Os times desta fase ainda não foram definidos.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'As equipes desta fase ainda não foram definidos.'))));
+        }
+
+        $dados_jogo_atualizar = [
+            'id' => $dados->id,
+            'finalizado' => "Y",
+        ];
+
+        if ( !$this->TorneioJogo->save($dados_jogo_atualizar) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao finalizar o jogo.'))));
         }
 
         $this->TorneioJogoPlacar->deleteAll(['TorneioJogoPlacar.torneio_jogo_id' => $dados->id]);
