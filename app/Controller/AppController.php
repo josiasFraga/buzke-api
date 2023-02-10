@@ -323,8 +323,8 @@ class AppController extends Controller {
                     'jogos' => [
                         [
                             'id' => 1,
-                            'time_1_posicao' => 1,
-                            'time_1_grupo' => 2,
+                            'time_1_posicao' => 2,
+                            'time_1_grupo' => 1,
                             'time_2_posicao' => 2,
                             'time_2_grupo' => 6,
                         ],
@@ -417,7 +417,7 @@ class AppController extends Controller {
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 3,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 1,
+                            'time_2_grupo' => 2,
                         ],
                         [
                             'id' => 2,

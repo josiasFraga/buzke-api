@@ -1613,6 +1613,9 @@ class TorneiosController extends AppController {
             'conditions' => [
                 'TorneioCategoria.torneio_id' => $dados->torneio_id,
                 'TorneioInscricao.id' => null,
+                'not' => [
+                    'TorneioInscricao.confirmado' => 'R',
+                ]
             ],
             'link' => ['TorneioInscricao'],
         ]);
@@ -1633,13 +1636,19 @@ class TorneiosController extends AppController {
         $grupos = $this->TorneioGrupo->find('all',[
             'fields' => ['*'],
             'conditions' => [
-                'TorneioCategoria.torneio_id' => $dados->torneio_id
+                'TorneioCategoria.torneio_id' => $dados->torneio_id,
+                'not' => [
+                    'TorneioInscricao.confirmado' => 'R',
+                ]
             ],
             'link' => ['TorneioInscricao' => ['TorneioCategoria']]
         ]);
 
         //gera os confrontos por grupos
         $confrontos = $this->geraConfrontosGrupos($grupos);
+
+        //variável para armazenar o total de confrontos do torneio, uso para verificar se tem horários em quadras suficientes
+        $total_confrontos = $this->conta_confrontos($confrontos);
 
         if ( !$confrontos || count($confrontos) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível gerar os confrontos.'))));
@@ -1663,6 +1672,7 @@ class TorneiosController extends AppController {
         $confrontos = $this->atribui_horarios_confrontos($confrontos,$horarios);
 
         //busca os horarios máximos gerados por categoria para poder, a partir daí, gerar os hoarios do jogos das próximas fases
+        //isso porque as próximas fazes não podem acontecer antes que os resultados de todos os grupos sejam informados
         $max_horarios_gerados = $this->getMaxTimeGeneratedByCategory($confrontos, $horarios);
 
         //busca os próximos horários disponíveis por categoria
@@ -1673,6 +1683,9 @@ class TorneiosController extends AppController {
 
         //gera os jogos das próximas fases
         $confrontos_proximas_fases = $this->geraJogosProximasFases($confrontos_proximas_fases);
+
+        //conta o núemro de confrontos total
+        $total_confrontos += $this->conta_confrontos($confrontos_proximas_fases);
 
         //atribui os horarios disponíveis aos jogos das próximas fases
         $confrontos_proximas_fases = $this->atribui_horarios_confrontos_proximas_fases($confrontos_proximas_fases, $proximos_horarios);
@@ -1941,6 +1954,7 @@ class TorneiosController extends AppController {
 
             $categoria_id = $confronto['torneio_categoria_id'];
 
+
             if ( count($horarios[$categoria_id]) < count($confronto['confrontos'])) {
                 return false;
             }
@@ -1951,11 +1965,34 @@ class TorneiosController extends AppController {
                     return false;
          
                 $horario = $horarios[$categoria_id][0];
-                $confrontos[$key]['confrontos'][$key_confronto]['horario'] = $horario;
 
+                //semifinais sao, preferencialmente no domingo a tarde >= 13:00:00
+                if ( $confrontos[$key]['confrontos'][$key_confronto]['fase_nome'] == 'Semi Final' ) {
+                    $check_time = $this->buscaHorarioDomingo($horarios[$categoria_id], '13:00');
+                    if ( $check_time ) {
+                        debug($check_time);
+                        die();
+                        $horario = $check_time;
+                    }
+                }
+
+                //finais sao, preferencialmente no domingo a tarde >= 13:00:00
+                if ( $confrontos[$key]['confrontos'][$key_confronto]['fase_nome'] == 'Final' ) {
+                    $check_time = $this->buscaHorarioDomingo($horarios[$categoria_id], '13:00');
+                    if ( $check_time ) {
+                        debug($check_time);
+                        die();
+                        $horario = $check_time;
+                    }
+
+                }
+
+                $confrontos[$key]['confrontos'][$key_confronto]['horario'] = $horario;
+                
+                // remove o horario usado para que n seja usado em outro jogo de qualquer outra categoria
                 $horarios = array_map(function($_horarios) use ($horario) {
                     $retornar =  array_filter($_horarios, function($_horario) use ($horario) {
-                        return $_horario['horario'] != $horario['horario'];
+                        return $_horario !== $horario;
                     });
                     return array_values($retornar);
                 }, $horarios);
@@ -2021,6 +2058,41 @@ class TorneiosController extends AppController {
         }
 
         return $confrontos;
+
+    }
+
+    private function conta_confrontos($confrontos = []) {
+
+        $n_confrontos = 0;
+        foreach( @$confrontos as $key => $confronto ) {
+            $n_confrontos += count($confronto['confrontos']);
+        }
+        return $n_confrontos;
+    }
+
+    private function buscaHorarioDomingo($horarios = [], $horario_minimo = '') {
+
+        if ( count($horarios) == 0 ) {
+            return false;
+        }
+
+        $horarios_encontrados = [];
+
+        foreach( $horarios as $key => $horario ) {
+            $horario_dia_semana = date('w',strtotime($horario['horario']));
+            $horario_hora = date('H:i',strtotime($horario['horario']));
+
+            if ( $horario_dia_semana == 0 && $horario_hora > date('H:i', strtotime($horario_minimo)) ) {
+                
+                $horarios_encontrados[] = $horario;
+            }
+        
+        }
+
+        if ( count($horarios_encontrados) > 0 ) {
+            return $horarios_encontrados[0];
+        }
+        return false;
 
     }
 
