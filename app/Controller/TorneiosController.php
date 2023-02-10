@@ -1671,12 +1671,15 @@ class TorneiosController extends AppController {
         //atribui os horarios gerados aos confrontos
         $confrontos = $this->atribui_horarios_confrontos($confrontos,$horarios);
 
-        //busca os horarios máximos gerados por categoria para poder, a partir daí, gerar os hoarios do jogos das próximas fases
-        //isso porque as próximas fazes não podem acontecer antes que os resultados de todos os grupos sejam informados
-        $max_horarios_gerados = $this->getMaxTimeGeneratedByCategory($confrontos, $horarios);
+        //deprecated - busca os horarios máximos gerados por categoria para poder, a partir daí, gerar os hoarios do jogos das próximas fases
+        //deprecated - isso porque as próximas fazes não podem acontecer antes que os resultados de todos os grupos sejam informados
 
-        //busca os próximos horários disponíveis por categoria
-        $proximos_horarios = $this->getNextAvailableTimes($max_horarios_gerados, $horarios);
+        //nova funçao - busca o último horário gerado de jogo na fase de grupos
+        $max_horario_gerado = $this->getMaxTimeGenerated($confrontos);
+
+        //deprecated - busca os próximos horários disponíveis por categoria
+        //busca os próximos horários disponíveis
+        $proximos_horarios = $this->getNextAvailableTimes($max_horario_gerado, $horarios);
 
         //busca os dados dos confrontos das próximas fases
         $confrontos_proximas_fases = $this->buscaDadosProximasFases($grupos_por_categoria);
@@ -1901,6 +1904,7 @@ class TorneiosController extends AppController {
 
     }
 
+    //deprecated - Cada etapa só inicia depois que a outra termina
     private function getMaxTimeGeneratedByCategory( $confrontos = [], $horarios = [] ) {
    
         if ( !$confrontos || count($confrontos) == 0 || count($horarios) == 0 ) {
@@ -1927,17 +1931,35 @@ class TorneiosController extends AppController {
 
     }
 
-    public function getNextAvailableTimes( $max_horarios_gerados = [], $horarios = [] ) {
-        if ( count($max_horarios_gerados) == 0 || count($horarios) == 0 ) {
+    private function getMaxTimeGenerated( $confrontos = [] ) {
+   
+        if ( !$confrontos || count($confrontos) == 0 ) {
+            return '';
+        }
+
+        $max_horarios_gerado = '1990-01-01 00:00:00';
+
+        foreach( $confrontos as $key => $confronto ) {
+            foreach( $confronto['confrontos'] as $key_confronto => $jogo ) {
+                if ( isset($jogo['horario']['horario']) && strtotime($max_horarios_gerado) < strtotime($jogo['horario']['horario']) ) {
+                    $max_horarios_gerado = $jogo['horario']['horario'];
+                }
+            }
+        }
+
+        return $max_horarios_gerado;
+
+    }
+
+    public function getNextAvailableTimes( $max_horario_gerado = '', $horarios = [] ) {
+        if ( $max_horario_gerado == '' ) {
             return false;
         }
 
         $arr_retornar = [];
-        foreach( $max_horarios_gerados as $categoria_id => $max_horario ) {
-            foreach( $horarios as $key_horario => $horario ) {
-                if ( strtotime($max_horario) < strtotime($horario['horario']) ) {
-                    $arr_retornar[$categoria_id][] = $horario;
-                }
+        foreach( $horarios as $key_horario => $horario ) {
+            if ( strtotime($max_horario_gerado) < strtotime($horario['horario']) ) {
+                $arr_retornar[] = $horario;
             }
         }
 
@@ -1949,57 +1971,116 @@ class TorneiosController extends AppController {
         if ( count($confrontos) == 0 || $horarios == 0 ) {
             return false;
         }
+    
+        //agrupa os confrontos por fase para atribuir os horarios
+        foreach( $confrontos as $key => $_confronto ) {
+            foreach( $_confronto['confrontos'] as $key_jogo => $jogo ) {
+                $jogo['key_confronto'] = $key;
+                $jogo['key_jogo'] = $key_jogo;
+                $confrontos_agrupados[$jogo['fase_nome']][] = $jogo;
+            }
+        }
 
-        foreach( $confrontos as $key => $confronto ) {
+
+        //verifica se tem horário disponível pra todos os jogos
+        if ( count($horarios) < count($confrontos_agrupados)) {
+            return false;
+        }
+
+        foreach ( $confrontos_agrupados as $key => $_confrontos ) {
+
+            foreach ( $_confrontos as $key => $confronto ) {
+
+                if ( !isset($horarios[0]) )
+                    return false;
+            
+                $horario = $horarios[0];
+
+                //semifinais sao, preferencialmente no domingo a tarde >= 13:00:00
+                if ( $confronto['fase_nome'] == 'Semi Final' ) {
+                    $check_time = $this->buscaHorarioDomingo($horarios, '13:00');
+                    if ( $check_time ) {
+                        $horario = $check_time;
+                    }
+                }
+
+                //finais sao, preferencialmente no domingo a tarde >= 13:00:00
+                if ( $confronto['fase_nome'] == 'Final' ) {
+                    $check_time = $this->buscaHorarioDomingo($horarios, '13:00');
+                    if ( $check_time ) {
+                        $horario = $check_time;
+                    }
+                }
+
+                $key_confronto = $confronto['key_confronto'];
+                $key_jogo = $confronto['key_jogo'];
+
+                $confrontos[$key_confronto]['confrontos'][$key_jogo]['horario'] = $horario;
+                
+                // remove o horario usado para que n seja usado em outro jogo de qualquer outra categoria
+                $horarios =  array_filter($horarios, function($_horario) use ($horario) {
+                    return $_horario !== $horario;
+                });
+                $horarios = array_values($horarios);
+            }
+        
+            //nova funçao - busca o último horário gerado de jogo
+            $max_horario_gerado = $this->getMaxTimeGenerated($confrontos);
+        
+            //busca os próximos horários disponíveis
+            $horarios = $this->getNextAvailableTimes($max_horario_gerado, $horarios);
+
+        }
+        
+
+        /*foreach( $confrontos as $key => $confronto ) {
 
             $categoria_id = $confronto['torneio_categoria_id'];
 
-
-            if ( count($horarios[$categoria_id]) < count($confronto['confrontos'])) {
+            if ( count($horarios) < count($confronto['confrontos'])) {
                 return false;
             }
 
+            //organizo os confrontos por fase, pra que todas as fases fiquem agrupadas e uma só comece quando a anterior acabar (em termos de horários)
+            $confrontos_agrupados = array_map(function($confronto) {
+                $retornar[$confronto['fase_nome']][] = $confronto;
+                return $retornar;
+            }, $confronto['confrontos']);
+
             foreach( $confronto['confrontos'] as $key_confronto => $jogo ) {
 
-                if ( !isset($horarios[$categoria_id][0]) )
+                if ( !isset($horarios[0]) )
                     return false;
          
-                $horario = $horarios[$categoria_id][0];
+                $horario = $horarios[0];
 
                 //semifinais sao, preferencialmente no domingo a tarde >= 13:00:00
                 if ( $confrontos[$key]['confrontos'][$key_confronto]['fase_nome'] == 'Semi Final' ) {
-                    $check_time = $this->buscaHorarioDomingo($horarios[$categoria_id], '13:00');
+                    $check_time = $this->buscaHorarioDomingo($horarios, '13:00');
                     if ( $check_time ) {
-                        debug($check_time);
-                        die();
                         $horario = $check_time;
                     }
                 }
 
                 //finais sao, preferencialmente no domingo a tarde >= 13:00:00
                 if ( $confrontos[$key]['confrontos'][$key_confronto]['fase_nome'] == 'Final' ) {
-                    $check_time = $this->buscaHorarioDomingo($horarios[$categoria_id], '13:00');
+                    $check_time = $this->buscaHorarioDomingo($horarios, '13:00');
                     if ( $check_time ) {
-                        debug($check_time);
-                        die();
                         $horario = $check_time;
                     }
-
                 }
 
                 $confrontos[$key]['confrontos'][$key_confronto]['horario'] = $horario;
                 
                 // remove o horario usado para que n seja usado em outro jogo de qualquer outra categoria
-                $horarios = array_map(function($_horarios) use ($horario) {
-                    $retornar =  array_filter($_horarios, function($_horario) use ($horario) {
-                        return $_horario !== $horario;
-                    });
-                    return array_values($retornar);
-                }, $horarios);
+                $horarios =  array_filter($horarios, function($_horario) use ($horario) {
+                    return $_horario !== $horario;
+                });
+                $horarios = array_values($horarios);
 
             }
 
-        }
+        }*/
 
         return $confrontos;
 
