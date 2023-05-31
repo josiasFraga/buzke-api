@@ -97,13 +97,14 @@ class Token extends AppModel {
 				]
 			],
 			'link' => ['Usuario'],
-			'group' => ['Token.notification_id'],
+			//'group' => ['Token.notification_id'],//não usar, senão buga quando o cliente reloga usando um id antigo
 			'order' => ['Token.id DESC'],
-			"limit" => 3
+			//"limit" => 3,//não usar, senão buga quando o cliente reloga usando um id antigo
 		]);
 
 		if ( count($notifications_ids) > 0 ) {
-			return array_values($notifications_ids);
+			$notifications_ids = array_slice(array_unique(array_values($notifications_ids)), 0, 3);
+			return $notifications_ids;
 		}
 
 		return [];		

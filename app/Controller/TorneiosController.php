@@ -420,6 +420,9 @@ class TorneiosController extends AppController {
             if ( ( !isset($categoria->categoria_id) || $categoria->categoria_id == "" || $categoria->categoria_id == "0") && ( !isset($categoria->nome) || $categoria->nome == "" ) ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Categoria ou nome não informados'))));
             }
+            if ( $categoria->sexo == 'O') {
+                $categoria->sexo = 'MI';
+            }
             if ( !isset($categoria->sexo) || $categoria->sexo == "" || !in_array($categoria->sexo, ['M','F','MI']) ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Sexo da categoria não informado'))));
             }
@@ -1671,6 +1674,8 @@ class TorneiosController extends AppController {
         //atribui os horarios gerados aos confrontos
         $confrontos = $this->atribui_horarios_confrontos($confrontos,$horarios);
 
+        //debug($confrontos); die();
+
         //deprecated - busca os horarios máximos gerados por categoria para poder, a partir daí, gerar os hoarios do jogos das próximas fases
         //deprecated - isso porque as próximas fazes não podem acontecer antes que os resultados de todos os grupos sejam informados
 
@@ -2121,7 +2126,7 @@ class TorneiosController extends AppController {
         $horarios = array_values($horarios);
 
         //embaralha os horarios
-        shuffle($horarios);
+        //shuffle($horarios);
 
         //atribui um horario pra cada jogo        
         foreach( $confrontos as $key => $dados_confronto ){
@@ -2233,7 +2238,13 @@ class TorneiosController extends AppController {
         $this->TorneioJogo->virtualFields['_quadra_nome'] = 'CONCAT_WS("", TorneioQuadra.nome, ClienteServico.nome)';
 
         $jogos = $this->TorneioJogo->find('all',[
-            'fields' => ['Agendamento.horario', 'TorneioJogo.*'],
+            'fields' => [
+                'Agendamento.horario', 
+                'TorneioJogo.*', 
+                'TorneioCategoria.sexo', 
+                'TorneioCategoria.nome', 
+                'PadelCategoria.titulo'
+            ],
             'conditions' => $conditions,
             'order' => ['Agendamento.horario'],
             'link' => [
@@ -2241,6 +2252,9 @@ class TorneiosController extends AppController {
                 'TorneioQuadra' => [
                     'ClienteServico'
                 ],
+                'TorneioCategoria' => [
+                    'PadelCategoria'
+                ]
             ],
             'group' => [
                 'TorneioJogo.id'

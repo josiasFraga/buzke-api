@@ -75,9 +75,20 @@ class TorneioQuadraPeriodo extends AppModel {
 
         }
 
+        uasort($horarios, function ($a, $b) {
+            $horarioA = strtotime($a['horario']);
+            $horarioB = strtotime($b['horario']);
+            
+            if ($horarioA == $horarioB) {
+                return 0;
+            }
+            
+            return ($horarioA < $horarioB) ? -1 : 1;
+        });
         return $horarios;
 
 	}
+
 
     public function verificaJogo($quadra = null, $data = null, $hora = null, $duracao = null){
         if ( $quadra == null || $data == null || $hora == null || $duracao == null )
