@@ -1,5 +1,7 @@
 <?php
 App::uses('CombinationsComponent', 'Controller/Component');
+App::uses('Set', 'Utility');
+
 class TorneiosController extends AppController {
 
     public function index() {
@@ -1701,6 +1703,7 @@ class TorneiosController extends AppController {
         //atribui os horarios disponíveis aos jogos das próximas fases
         $confrontos_proximas_fases = $this->atribui_horarios_confrontos_proximas_fases($confrontos_proximas_fases, $proximos_horarios);
 
+
         if ( !$confrontos_proximas_fases || count($confrontos_proximas_fases) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Horários insuficientes para gerar todos os jogos.'))));
         }
@@ -1999,6 +2002,8 @@ class TorneiosController extends AppController {
             }
         }
 
+        // Ordena o array pelas chaves (fases do torneio) usando a função de comparação personalizada
+        uksort($confrontos_agrupados, array($this, 'ordenaFases'));
 
         //verifica se tem horário disponível pra todos os jogos
         if ( count($horarios) < count($confrontos_agrupados)) {
@@ -2053,6 +2058,22 @@ class TorneiosController extends AppController {
 
         return $confrontos;
 
+    }
+    
+    public function ordenaFases($a, $b) {
+        $order = array(
+            'Décima Sextas' => 1,
+            'Oitavas de Final' => 2,
+            'Quartas de Final' => 3,
+            'Semi Final' => 4,
+            'Final' => 5
+        );
+    
+        if (!isset($order[$a]) || !isset($order[$b])) {
+            return 0; // Se uma chave não estiver presente no array de ordenação, retorna 0 (sem alteração na ordem)
+        }
+    
+        return $order[$a] - $order[$b];
     }
 
     private function gera_confrontos($inscricoes = []){
