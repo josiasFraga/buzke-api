@@ -32,6 +32,9 @@ class Cliente extends AppModel {
 		'ClienteAssinatura' => array(
 			'foreignKey' => 'cliente_id'
 		),
+		'ProdutoCategoria' => array(
+			'foreignKey' => 'cliente_id'
+		),
     );
 
     public $hasOne = array(
