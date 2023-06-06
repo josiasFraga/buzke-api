@@ -8,6 +8,25 @@ class ProdutoAdicional extends AppModel {
 		'ClienteComandaProdutoAdicional' => array('foreignKey' => 'produto_adicional_id')
 	);
 
+	public function listar($cliente_id, $aditional_conditions = []) {
+
+		$conditions = [
+			'Produto.cliente_id' => $cliente_id
+		];
+
+		$conditions = array_merge($conditions, $aditional_conditions);
+
+		return $this->find('all', array(
+			'conditions' => $conditions,
+			'fields' => array(
+				'ProdutoAdicional.*'
+			),
+			'order' => 'ProdutoAdicional.descricao',
+            'link' => ['Produto']
+		));
+	}
+
 	public function beforeSave($options = array()) {
+		return true;
 	}
 }

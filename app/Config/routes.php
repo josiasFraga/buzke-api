@@ -28,6 +28,7 @@
 	Router::connect('/', array('controller' => 'login', 'action' => 'entrar'));
 
 	Router::connect('/produtos-categorias/:action', array('controller' => 'ProdutosCategorias', 'action' => ':action'));
+	Router::connect('/produtos-adicionais/:action', array('controller' => 'ProdutosAdicionais', 'action' => ':action'));
 
 /**
  * ...and connect the rest of 'Pages' controller's URLs.

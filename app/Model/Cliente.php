@@ -35,6 +35,9 @@ class Cliente extends AppModel {
 		'ProdutoCategoria' => array(
 			'foreignKey' => 'cliente_id'
 		),
+		'Mesa' => array(
+			'foreignKey' => 'cliente_id'
+		),
     );
 
     public $hasOne = array(
