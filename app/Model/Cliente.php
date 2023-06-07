@@ -38,6 +38,9 @@ class Cliente extends AppModel {
 		'Mesa' => array(
 			'foreignKey' => 'cliente_id'
 		),
+		'Comanda' => array(
+			'foreignKey' => 'cliente_id'
+		),
     );
 
     public $hasOne = array(

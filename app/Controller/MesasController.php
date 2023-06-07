@@ -142,7 +142,7 @@ class MesasController extends AppController {
         ]);
 
         if ( count($vMesa) == 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Não encontramos os dados da mesa.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Não encontramos os dados da mesa.'))));
         }
 
         $dados_salvar['Mesa']['id'] = $dados->id;
@@ -151,14 +151,14 @@ class MesasController extends AppController {
         $verifica_por_nome = $this->Mesa->buscaPorNome($dados_usuario['Usuario']['cliente_id'], $dados->descricao, $dados->id);
 
         if ( count($verifica_por_nome) > 0 && (!isset($dados->confirma) || $dados->confirma == 0 ) )
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Já existe uma mesa cadastrada com esse nome.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'message' => 'Já existe uma mesa cadastrada com esse nome.'))));
 
 
         if ( !$this->Mesa->saveAssociated($dados_salvar) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar os dados da mesa'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Ocorreu um erro ao salvar os dados da mesa'))));
         }
 
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Mesa alterada com sucesso!'))));
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'message' => 'Mesa alterada com sucesso!'))));
 
     }
 

@@ -158,7 +158,7 @@ class ProdutosController extends AppController {
         ]);
 
         if ( count($vProduto) == 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Não encontramos os dados do produto.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Não encontramos os dados do produto.'))));
         }
 
         $dados_salvar['Produto']['id'] = $dados->id;
@@ -191,10 +191,10 @@ class ProdutosController extends AppController {
 
 
         if ( !$this->Produto->saveAssociated($dados_salvar) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar os dados do produto'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Ocorreu um erro ao salvar os dados do produto'))));
         }
 
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Produto alterado com sucesso!'))));
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'message' => 'Produto alterado com sucesso!'))));
 
     }
 

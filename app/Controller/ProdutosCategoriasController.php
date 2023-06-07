@@ -137,7 +137,7 @@ class ProdutosCategoriasController extends AppController {
         ]);
 
         if ( count($vCategoria) == 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Não encontramos os dados da categoria.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Não encontramos os dados da categoria.'))));
         }
 
         $dados_salvar['ProdutoCategoria']['id'] = $dados->id;
@@ -146,14 +146,14 @@ class ProdutosCategoriasController extends AppController {
         $verifica_por_nome = $this->ProdutoCategoria->buscaPorNome($dados_usuario['Usuario']['cliente_id'], $dados->nome, $dados->id);
 
         if ( count($verifica_por_nome) > 0 && (!isset($dados->confirma) || $dados->confirma == 0 ) )
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Já existe uma categoria cadastrada com esse nome.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'message' => 'Já existe uma categoria cadastrada com esse nome.'))));
 
 
         if ( !$this->ProdutoCategoria->saveAssociated($dados_salvar) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar os dados da categoria'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Ocorreu um erro ao salvar os dados da categoria'))));
         }
 
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Categoria alterada com sucesso!'))));
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'message' => 'Categoria alterada com sucesso!'))));
 
     }
 

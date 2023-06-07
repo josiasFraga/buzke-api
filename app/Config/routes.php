@@ -29,6 +29,10 @@
 
 	Router::connect('/produtos-categorias/:action', array('controller' => 'ProdutosCategorias', 'action' => ':action'));
 	Router::connect('/produtos-adicionais/:action', array('controller' => 'ProdutosAdicionais', 'action' => ':action'));
+	Router::connect(
+		'/comandas/verifica-aberta',
+		array('controller' => 'comandas', 'action' => 'verificaAberta')
+	);
 
 /**
  * ...and connect the rest of 'Pages' controller's URLs.
