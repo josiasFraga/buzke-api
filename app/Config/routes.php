@@ -33,6 +33,10 @@
 		'/comandas/verifica-aberta',
 		array('controller' => 'comandas', 'action' => 'verificaAberta')
 	);
+	Router::connect(
+		'/comandas/iniciar-pedido',
+		array('controller' => 'comandas', 'action' => 'iniciarPedido')
+	);
 
 /**
  * ...and connect the rest of 'Pages' controller's URLs.

@@ -85,6 +85,11 @@ class ProdutosController extends AppController {
         if ( count($verifica_por_codigo) > 0 )
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'waning', 'message' => 'Já existe um produto cadastrada com esse código.'))));
 
+        // Verifica se o código já está em uso para o cliente selecionado
+        if ($this->Produto->existeCodigoDuplicado($dados->codigo, $dados_usuario['Usuario']['cliente_id'])) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Já existe um produto com este código para o cliente selecionado.'))));
+        }
+
         $dados_salvar['Produto']['cliente_id'] = $dados_usuario['Usuario']['cliente_id'];
         $dados_salvar['Produto']['cadastrado_por'] = $dados_usuario['Usuario']['id'];
         $dados_salvar['Produto']['descricao'] = $dados->descricao;
@@ -161,6 +166,11 @@ class ProdutosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Não encontramos os dados do produto.'))));
         }
 
+        // Verifica se o código já está em uso para o cliente selecionado
+        if ($this->Produto->existeCodigoDuplicado($dados->codigo, $dados_usuario['Usuario']['cliente_id'], $dados->id)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Já existe um produto com este código para o cliente selecionado.'))));
+        }
+
         $dados_salvar['Produto']['id'] = $dados->id;
         $dados_salvar['Produto']['descricao'] = $dados->descricao;
         $dados_salvar['Produto']['unidade_entrada_id'] = $dados->unidade_entrada_id;
@@ -191,7 +201,8 @@ class ProdutosController extends AppController {
 
 
         if ( !$this->Produto->saveAssociated($dados_salvar) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Ocorreu um erro ao salvar os dados do produto'))));
+            $erros = $this->Produto->validationErrors;
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'message' => 'Ocorreu um erro ao salvar os dados do produto', 'errors' => $erros))));
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'message' => 'Produto alterado com sucesso!'))));

@@ -5,7 +5,7 @@ class ClienteClienteComanda extends AppModel {
         'ClienteCliente' => array('foreignKey' => 'cliente_cliente_id'),
         'Comanda' => array('foreignKey' => 'comanda_id'),
         //'ClienteEndereco' => array('foreignKey' => 'cliente_endereco_id'),
-        //'Pdv' => array('foreignKey' => 'pdv_id'),
+        'Pdv' => array('foreignKey' => 'pdv_id'),
     );
     public $hasMany = array(
         //'ClienteComandaProduto' => array('foreignKey' => 'cliente_comanda_id'),

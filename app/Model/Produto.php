@@ -11,15 +11,21 @@ class Produto extends AppModel {
 	);
 
 	public $validate = array(
-		'codigo' => array(
-			'unique' => array(
-		        'rule' => 'isUnique',
-		        'required' => 'create',
-				'message' => 'Já existe um produto com este código.'
-		    )
-		)
+
 	);
 	
+	public function existeCodigoDuplicado($codigo, $clienteId, $registroId = null) {
+		$conditions = array(
+			'codigo' => $codigo,
+			'cliente_id' => $clienteId
+		);
+	
+		if ($registroId !== null) {
+			$conditions['NOT']['id'] = $registroId;
+		}
+	
+		return $this->find('count', array('conditions' => $conditions, 'link' => [])) > 0;
+	}
 
 	public function beforeSave($options = array()) {
 		

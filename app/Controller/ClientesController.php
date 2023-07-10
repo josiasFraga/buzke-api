@@ -1034,23 +1034,39 @@ class ClientesController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
+        $order_cliente_servico = [
+            'ClienteServico.nome'
+        ];
+
         if ( isset($dados['cliente_id']) && $dados['cliente_id'] != '' ) {
             $conditions = [
                 'ClienteServico.cliente_id' => $dados['cliente_id']
             ];
+
+            if ( $dados['cliente_id'] == 55 ) {
+                $order_cliente_servico = [
+                    'ClienteServico.id'
+                ];
+    
+            }
         } else {
             $conditions = [
                 'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id']
             ];
+
+            if ( $dado_usuario['Usuario']['cliente_id'] == 55 ) {
+                $order_cliente_servico = [
+                    'ClienteServico.id'
+                ];
+    
+            }
         }
 
 
         $this->loadModel('ClienteServico');
         $servicos = $this->ClienteServico->find('all',[
             'conditions' => $conditions,
-            'order' => [
-                'ClienteServico.nome'
-            ],
+            'order' => $order_cliente_servico,
             'link' => []
         ]);
 

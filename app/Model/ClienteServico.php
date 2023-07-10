@@ -190,14 +190,23 @@ class ClienteServico extends AppModel {
         
         if ( $cliente_id == null )
             return [];
+        
+        $order = [
+            'ClienteServico.nome'
+        ];
+
+        if ( $cliente_id == 55 ) {
+            $order = [
+                'ClienteServico.id'
+            ];
+
+        }
 
         return $this->find('all',[
             'conditions' => [
                 'ClienteServico.cliente_id' => $cliente_id
             ],
-            'order' => [
-                'ClienteServico.nome'
-            ],
+            'order' => $order,
             'link' => []
         ]);
          

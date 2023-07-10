@@ -603,8 +603,8 @@ class AppController extends Controller {
                     'jogos' => [
                         [
                             'id' => 13,
-                            'time_1_jogo' => 7,
-                            'time_2_jogo' => 8
+                            'time_1_jogo' => 11,
+                            'time_2_jogo' => 12
                         ],
                         [
                             'id' => 14,

@@ -41,6 +41,9 @@ class Cliente extends AppModel {
 		'Comanda' => array(
 			'foreignKey' => 'cliente_id'
 		),
+		'Pdv' => array(
+			'foreignKey' => 'cliente_id'
+		),
     );
 
     public $hasOne = array(

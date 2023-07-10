@@ -45,12 +45,19 @@ class QuadrasController extends AppController {
             ]);
         }
 
+        $order_quadras = ['ClienteServico.nome'];
+
+        if ( $dados_token['Usuario']['cliente_id'] == 55 ) {
+            $order_quadras = ['ClienteServico.id'];
+
+        }
+
         $quadras = $this->ClienteServico->find('all',[
             'fields' => [
                 'ClienteServico.*'
             ],
             'conditions' => $conditions,
-            'order' => ['ClienteServico.nome'],
+            'order' => $order_quadras,
             'link' => []
         ]);
         
