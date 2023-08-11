@@ -1311,7 +1311,7 @@ class TorneiosController extends AppController {
                     foreach( $integrantes as $key_integrante => $integrante) {
                         $integrantes[$key_integrante]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($integrante['TorneioInscricao']['id']);
                         $integrantes[$key_integrante]['TorneioInscricao']['_vitorias'] = $this->TorneioJogo->buscaNVitorias($integrante['TorneioInscricao']['id'], 1);
-                        $integrantes[$key_integrante]['TorneioInscricao']['_sets'] = $this->TorneioJogo->buscaNSets($integrante['TorneioInscricao']['id'], 1);
+                        $integrantes[$key_integrante]['TorneioInscricao']['_sets'] = $this->TorneioJogo->buscaSaldoSets($integrante['TorneioInscricao']['id'], 1);
                         $integrantes[$key_integrante]['TorneioInscricao']['_games'] = $this->TorneioJogo->buscaNGames($integrante['TorneioInscricao']['id'], 1);
                         //$dados[$key]['TorneioInscricao']['_owner'] = $owner;
                     }
@@ -2499,7 +2499,7 @@ class TorneiosController extends AppController {
                 foreach( $integrantes as $key_integrante => $integrante) {
                     $integrantes[$key_integrante]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($integrante['TorneioInscricao']['id']);
                     $integrantes[$key_integrante]['TorneioInscricao']['_vitorias'] = $this->TorneioJogo->buscaNVitorias($integrante['TorneioInscricao']['id'], 1);
-                    $integrantes[$key_integrante]['TorneioInscricao']['_sets'] = $this->TorneioJogo->buscaNSets($integrante['TorneioInscricao']['id'], 1);
+                    $integrantes[$key_integrante]['TorneioInscricao']['_sets'] = $this->TorneioJogo->buscaSaldoSets($integrante['TorneioInscricao']['id'], 1);
                     $integrantes[$key_integrante]['TorneioInscricao']['_games'] = $this->TorneioJogo->buscaNGames($integrante['TorneioInscricao']['id'], 1);
                 }
 
@@ -2830,7 +2830,7 @@ class TorneiosController extends AppController {
             foreach( $horarios as $key => $horario ) {
                 $texto_horario = '';
                 if ( $this->TorneioJogo->checaJogoNoHorario($dados['torneio_quadra_id'], $horario['horario']) ) {
-                    $texto_horario = ' *';
+                    $texto_horario = ' [Ocupado]';
                 }
                 $horarios_retornar[$key]['horario'] = date('H:i:s',strtotime($horario['horario']));
                 $horarios_retornar[$key]['complemento'] = $texto_horario;
