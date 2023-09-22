@@ -170,9 +170,10 @@ class Usuario extends AppModel {
         ]);
     }
 
-    public function atualizaTelefone($usuario_id, $telefone){
+    public function atualizaTelefone($usuario_id, $ddi, $telefone){
         return $this->save([
             'id' => $usuario_id,
+            'telefone_ddi' => $ddi,
             'telefone' => $telefone
         ]);
     }

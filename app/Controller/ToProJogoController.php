@@ -498,10 +498,6 @@ class ToProJogoController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        if ( $dados_token['Usuario']['nivel_id'] != 3 ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
         $this->loadModel('Cliente');
         $dados_cliente = $this->Cliente->find('first',[
             'fields' => ['Cliente.id', 'Localidade.loc_no', 'Localidade.ufe_sg'],
@@ -522,6 +518,7 @@ class ToProJogoController extends AppController {
         $day = json_decode($dados['day'], true);
 
         $this->loadModel('ToProJogo');
+
         $usuarios = $this->ToProJogo->findUsers($hora_selecionada['horario'], $day['dateString'], $dados_token['Usuario']['id'], $subcategorias, $dados_cliente);
 
         if ( count($usuarios) > 0 ) {

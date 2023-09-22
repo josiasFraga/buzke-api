@@ -271,4 +271,99 @@ class ClientesClientesController extends AppController {
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cliente excluído com sucesso!'))));
 
     }
+
+    public function view( $cliente_cliente_id = null ) {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( empty($cliente_cliente_id) ) {
+
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
+        }
+
+        $conditions = [
+            'ClienteCliente.cliente_id' => $dados_token['Usuario']['cliente_id'],
+            'ClienteCliente.id' => $cliente_cliente_id
+        ];
+
+
+        $this->loadModel('ClienteCliente');
+        $dados = $this->ClienteCliente->find('first',[
+            'conditions' => $conditions,
+            'fields' => [
+                'ClienteCliente.id',
+                'ClienteCliente.nacionalidade',
+                'ClienteCliente.nome',
+                'ClienteCliente.email',
+                'ClienteCliente.pais',
+                'ClienteCliente.telefone',
+                'ClienteCliente.telefone_ddi',
+                'ClienteCliente.endereco',
+                'ClienteCliente.bairro',
+                'ClienteCliente.endreceo_n',
+                'ClienteCliente.cep',
+                'ClienteCliente.img',
+                'ClienteCliente.sexo',
+                'Localidade.loc_no',
+                'ClienteCliente.cpf',
+                'Uf.ufe_sg',
+                'ClienteClienteDadosPadel.*'
+            ],
+            'order' => ['ClienteCliente.nome'],
+            'contain' => [
+                'Localidade', 
+                'Uf', 
+                'Usuario', 
+                'ClienteClienteDadosPadel', 
+                'ClienteClientePadelCategoria'
+            ],
+            'group' => ['ClienteCliente.id']
+        ]);
+
+        if  ( count($dados) > 0 ) {
+    
+            $dados['ClienteCliente']['img'] = $this->images_path.'/clientes_clientes/'.$dados['ClienteCliente']['img'];
+            $dados['ClienteCliente']['email_cliente'] = $dados['ClienteCliente']['email'];
+            $dados['ClienteCliente']['n'] = $dados['ClienteCliente']['endreceo_n'];
+            if ( isset($dados['ClienteClienteDadosPadel']['id']) && $dados['ClienteClienteDadosPadel']['id'] != '') {
+                $dados['ClienteCliente']['dados_padelista'] = true;
+                $dados['ClienteCliente']['lado'] = $dados['ClienteClienteDadosPadel']['lado'];
+            }
+            if ( isset($dados['ClienteClientePadelCategoria']) && count($dados['ClienteClientePadelCategoria']) > 0) {
+                $categorias = array_map(function ($item){
+                    return 'item_'.$item['categoria_id'];
+                },$dados['ClienteClientePadelCategoria']);
+                foreach($categorias as $key_categoria => $cat){
+                    $dados['ClienteCliente'][$cat] = true;
+
+                }
+            }
+            $dados['ClienteCliente']['_telefone'] = "+" . $dados['ClienteCliente']['telefone_ddi'] . " " . $dados['ClienteCliente']['telefone'];
+            $dados['ClienteCliente']['_endereco'] = $dados['ClienteCliente']['endereco'] . ", " . $dados['ClienteCliente']['endreceo_n'];
+            unset($dados['ClienteClientePadelCategoria']);
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
+
+    }
 }

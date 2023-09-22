@@ -50,7 +50,8 @@ class Comanda extends AppModel {
 		}
 
 		return $this->find('first',[
-			'conditions' => $conditions
+			'conditions' => $conditions,
+			'link' => []
 		]);
 
 	}

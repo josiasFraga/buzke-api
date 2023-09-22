@@ -17,7 +17,7 @@ class TorneioInscricaoJogador extends AppModel {
         ),
 	);
 
-    public function checkSubscribed($torneio_id = null, $ids = []){
+    public function getUserNSubscriptions($torneio_id = null, $ids = []){
 
         if ( count($ids) == 0 ) {
             return false;
@@ -35,7 +35,7 @@ class TorneioInscricaoJogador extends AppModel {
             'link' => [
                 'TorneioInscricao'
             ]
-        ]) > 0;
+        ]);
     }
 
     public function buscaNomeDupla($inscricao_id = null, $separator = ' | '){

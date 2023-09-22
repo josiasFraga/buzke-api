@@ -97,4 +97,18 @@ class Produto extends AppModel {
 		]);
 
 	}
+
+	public function buscaPorId($cliente_id, $id=null) {
+	
+		$conditions = [
+			'Produto.cliente_id' => $cliente_id,
+			'Produto.id' => $id
+		];
+
+		return $this->find('first',[
+			'conditions' => $conditions,
+			'link' => []
+		]);
+
+	}
 }

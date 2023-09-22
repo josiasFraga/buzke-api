@@ -680,7 +680,7 @@ class AppController extends Controller {
                             'time_1_posicao' => 1,
                             'time_1_grupo' => 5,
                             'time_2_posicao' => 2,
-                            'time_2_grupo' => 5,
+                            'time_2_grupo' => 2,
                         ],
                         [
                             'id' => 8,

@@ -8,8 +8,8 @@ class ClienteClienteComanda extends AppModel {
         'Pdv' => array('foreignKey' => 'pdv_id'),
     );
     public $hasMany = array(
-        //'ClienteComandaProduto' => array('foreignKey' => 'cliente_comanda_id'),
+        'ClienteClienteComandaProduto' => array('foreignKey' => 'cliente_comanda_id'),
         //'Caixa' => array('foreignKey' => 'cliente_comanda_id'),
-        //'ClienteComandaPedido' => array('foreignKey' => 'cliente_comanda_id')
+        'ClienteClienteComandaPedido' => array('foreignKey' => 'cliente_comanda_id')
     );
 }

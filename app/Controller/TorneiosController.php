@@ -137,7 +137,14 @@ class TorneiosController extends AppController {
 
         $dados = $this->Torneio->find('first',[
             'fields' => [
-                'Torneio.*', 'Cliente.nome', 'Cliente.endereco', 'Cliente.endereco_n', 'Cliente.wp', 'Localidade.loc_no', 'Localidade.ufe_sg', 'Cliente.telefone'
+                'Torneio.*', 
+                'Cliente.nome', 
+                'Cliente.endereco', 
+                'Cliente.endereco_n', 
+                'Cliente.wp', 
+                'Localidade.loc_no', 
+                'Localidade.ufe_sg', 
+                'Cliente.telefone'
             ],
             'conditions' => $conditions,
             'order' => ['Torneio.inicio'],
@@ -149,6 +156,8 @@ class TorneiosController extends AppController {
         }
 
         $owner = isset($dados_token['Usuario']) && $dados_token['Usuario']['cliente_id'] == $dados['Torneio']['cliente_id'];
+
+        $meus_dados_como_cliente = $this->ClienteCliente->buscaDadosUsuarioComoCliente($dados_token['Usuario']['id'], $dados['Torneio']['cliente_id']);
   
         $dados['Torneio']['_periodo'] = 
             'De '.date('d/m',strtotime($dados['Torneio']['inicio'])).
@@ -168,6 +177,7 @@ class TorneiosController extends AppController {
         $all_group_generated = true;
         $some_group_generated = false;
         $categorias = $this->TorneioCategoria->getByTournamentId($dados['Torneio']['id']);
+
         if ( count($categorias) > 0 ) {
             foreach($categorias as $key => $cat){
 
@@ -198,6 +208,7 @@ class TorneiosController extends AppController {
                 }
 
                 $categorias[$key]['_is_group_generated'] = $is_group_generated;
+                $categorias[$key]['_is_subscribed'] = $this->TorneioInscricao->checkSubscriptionInCategory($meus_dados_como_cliente, $dados, $cat['id']) > 0;
             }
         }
 
@@ -211,11 +222,13 @@ class TorneiosController extends AppController {
         $dados['TorneioCategoria'] = $categorias;
         $dados['TorneioData'] = $this->TorneioData->getByTournamentId($dados['Torneio']['id']);
         $dados['TorneioQuadra'] = $this->TorneioQuadra->getByTournamentId($dados['Torneio']['id']);
+
         if ( $usuario_visitante ) {
-            $dados['Torneio']['_subscribed'] = false;
+            $dados['Torneio']['_enable_subscribe_button'] = false;
             $dados['Torneio']['_subscriptions_finished'] = true;
         } else {
-            $dados['Torneio']['_subscribed'] = $this->TorneioInscricaoJogador->checkSubscribed($dados['Torneio']['id'], $meus_ids_de_cliente);
+            $n_user_subscriptions = $this->TorneioInscricaoJogador->getUserNSubscriptions($dados['Torneio']['id'], $meus_ids_de_cliente);
+            $dados['Torneio']['_enable_subscribe_button'] = $n_user_subscriptions <= $dados['Torneio']['max_inscricoes_por_jogador'];
             $dados['Torneio']['_subscriptions_finished'] = $this->Torneio->checkIsSubscriptionsFinished($dados['Torneio']['id']);
         }
         $dados['Torneio']['_all_group_generated'] = $all_group_generated;
@@ -339,6 +352,9 @@ class TorneiosController extends AppController {
         }
       
         foreach( $dados as $key => $dado) {
+            $dados_inscricao = $this->TorneioInscricaoJogador->getBySubscriptionId($dado['TorneioInscricao']['id']);
+            $dados[$key]['TorneioInscricao']['_jogador_1'] = $dados_inscricao[0]['TorneioInscricaoJogador']['cliente_cliente_id'];
+            $dados[$key]['TorneioInscricao']['_jogador_2'] = $dados_inscricao[1]['TorneioInscricaoJogador']['cliente_cliente_id'];
             $dados[$key]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($dado['TorneioInscricao']['id']);
             $dados[$key]['TorneioInscricao']['_owner'] = $owner;
         }
@@ -798,10 +814,10 @@ class TorneiosController extends AppController {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O seu telefone deve ser informado.'))));
             }
             if ( !isset($dados->nome_dupla) || $dados->nome_dupla == '' || $dados->nome_dupla == null ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O nome da dupla deve ser informado.'))));
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O nome do parceiro deve ser informado.'))));
             }
             if ( !isset($dados->telefone_dupla) || $dados->telefone_dupla == '' || $dados->telefone_dupla == null ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O telefone da dupla deve ser informado.'))));
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O telefone do parceiro deve ser informado.'))));
             }
 
             $email_dupla = null;
@@ -819,23 +835,32 @@ class TorneiosController extends AppController {
             if ( $email_dupla != null ){
 
                 $dados_usuario_dupla = $this->Usuario->getByEmail($email_dupla);
+
                 if ( count($dados_usuario_dupla) > 0 ){
                     $usuario_id_dupla = $dados_usuario['Usuario']['id'];
                     //se tem, verifico se existe os dados da dupla na empresa do torneio
                     $dados_cliente_cliente_dupla = $this->ClienteCliente->buscaDadosUsuarioComoCliente($usuario_id_dupla, $dados_torneio['Torneio']['cliente_id']);
                     if ( count($dados_cliente_cliente_dupla) > 0 ){
     
-                        //verifico se o usuário da dupla já nao esta cadastrado no torneio antes de atualizar os dados
-                        $check_inscricao = $this->TorneioInscricao->checkSubscription($dados_cliente_cliente_dupla, $dados_torneio, $dados->torneio_categoria_id);
+                        //verifico se o usuário da dupla já não atingiu o limite de inscrições
+                        $check_inscricao = $this->TorneioInscricao->checkSubscriptionsLimit($dados_cliente_cliente_dupla, $dados_torneio);
             
                         if ( $check_inscricao !== false ){
-                            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
+                            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já atingiu o limite de inscrições para este torneio'))));
+                        }
+
+                        //verifico se o usuário da dupla já não está inscrito na categoria selecionada
+                        $check_inscricao = $this->TorneioInscricao->checkSubscriptionInCategory($dados_cliente_cliente_dupla, $dados_torneio, $dados->torneio_categoria_id);
+            
+                        if ( $check_inscricao > 0 ){
+                            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito nesta categoria.'))));
                         }
 
                         $dados_salvar_dupla = [
                             'id' => $dados_cliente_cliente_dupla['ClienteCliente']['id'],
                             'nome' => $dados->nome_dupla,
                             'telefone' => $dados->telefone_dupla,
+                            'telefone_ddi' => $dados->telefone_dupla_ddi,
                             'usuario_id' => $dados_cliente_cliente_dupla['ClienteCliente']['usuario_id'],
                         ];
 
@@ -845,12 +870,14 @@ class TorneiosController extends AppController {
                             'cliente_id' => $dados_torneio['Torneio']['cliente_id'],
                             'nome' => $dados->nome_dupla,
                             'email' => $email_dupla,
+                            'telefone_ddi' => $dados->telefone_dupla_ddi,
                             'telefone' => $dados->telefone_dupla,
                         ];
                     }
                 }
 
             }
+
 
             //se ainda não cadastrei/atualizei os dados da dupla
             if ( !isset($dados_salvar_dupla) ){
@@ -861,16 +888,25 @@ class TorneiosController extends AppController {
 
                 if ( isset($dados_cliente_cliente_dupla) && count($dados_cliente_cliente_dupla) > 0 ){
 
-                    //verifico se o usuário da dupla já nao esta cadastrado no torneio antes de atualizar os dados
-                    $check_inscricao = $this->TorneioInscricao->checkSubscription($dados_cliente_cliente_dupla, $dados_torneio, $dados->torneio_categoria_id);
+                    //verifico se o usuário da dupla já não atingiu o limite de incrições para o torneio
+                    $check_inscricao = $this->TorneioInscricao->checkSubscriptionsLimit($dados_cliente_cliente_dupla, $dados_torneio);
             
                     if ( $check_inscricao !== false ){
-                        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
+                        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já atingiu o limite de inscrições para este torneio'))));
+                    }
+
+                    //verifico se o usuário da dupla já não está inscrito na categoria selecionada
+                    $check_inscricao = $this->TorneioInscricao->checkSubscriptionInCategory($dados_cliente_cliente_dupla, $dados_torneio, $dados->torneio_categoria_id);
+
+
+                    if ( $check_inscricao > 0 ){
+                        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito nesta categoria.'))));
                     }
 
                     $dados_salvar_dupla = [
                         'id' => $dados_cliente_cliente_dupla['ClienteCliente']['id'],
                         'nome' => $dados->nome_dupla,
+                        'telefone_ddi' => $dados->telefone_dupla_ddi,
                         'telefone' => $dados->telefone_dupla,
                         'usuario_id' => $dados_cliente_cliente_dupla['ClienteCliente']['usuario_id'],
                     ];
@@ -882,6 +918,7 @@ class TorneiosController extends AppController {
                         'nome' => $dados->nome_dupla,
                         'email' => $email_dupla,
                         'cpf' => null,
+                        'telefone_ddi' => $dados->telefone_dupla_ddi,
                         'telefone' => $dados->telefone_dupla,
                     ];
 
@@ -890,7 +927,7 @@ class TorneiosController extends AppController {
             }
 
             //atualizo o telefone do usuário
-            $this->Usuario->atualizaTelefone($dados_usuario['Usuario']['id'], $dados->telefone);
+            $this->Usuario->atualizaTelefone($dados_usuario['Usuario']['id'], $dados->telefone_ddi, $dados->telefone);
 
             $v_cadastro_jogador_1 = $this->ClienteCliente->buscaDadosUsuarioComoCliente($dados_usuario['Usuario']['id'], $dados_torneio['Torneio']['cliente_id']);
             if ( count($v_cadastro_jogador_1) == 0 ){
@@ -919,17 +956,33 @@ class TorneiosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você só pode selecionar até '.$dados_torneio['Torneio']['impedimentos'].' por jogador. O Jogador 2 ultrapassou esta cota..'))));
         }
 
-        $check_inscricao = $this->TorneioInscricao->checkSubscription($v_cadastro_jogador_1, $dados_torneio, $dados->torneio_categoria_id);
+        //verifico se o jogador 1 não atingiu o limite de inscrições do torneio
+        $check_inscricao = $this->TorneioInscricao->checkSubscriptionsLimit($v_cadastro_jogador_1, $dados_torneio);
 
         if ( $check_inscricao !== false ){
 
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 1 já está inscrito no torneio'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 1 já está atingiu o limite de inscrições do torneio'))));
         }
 
-        $check_inscricao = $this->TorneioInscricao->checkSubscription($v_cadastro_jogador_2, $dados_torneio, $dados->torneio_categoria_id);
+        //verifico se o jogador 1 já não está inscrito na categoria selecionada
+        $check_inscricao = $this->TorneioInscricao->checkSubscriptionInCategory($v_cadastro_jogador_1, $dados_torneio, $dados->torneio_categoria_id);
+
+        if ( $check_inscricao > 0 ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 1 já está inscrito nesta categoria.'))));
+        }
+
+        // Verifico se o jogador 2 não atingiu o limite de inscrições do torneio
+        $check_inscricao = $this->TorneioInscricao->checkSubscriptionsLimit($v_cadastro_jogador_2, $dados_torneio);
 
         if ( $check_inscricao !== false ){
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito no torneio'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já atingiu o limite de inscrições do torneio'))));
+        }
+
+        //verifico se o jogador 2 já não está inscrito na categoria selecionada
+        $check_inscricao = $this->TorneioInscricao->checkSubscriptionInCategory($v_cadastro_jogador_2, $dados_torneio, $dados->torneio_categoria_id);
+
+        if ( $check_inscricao > 0 ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O jogador 2 já está inscrito nesta categoria.'))));
         }
 
         $jogadores_salvar = [

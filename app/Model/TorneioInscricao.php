@@ -23,7 +23,7 @@ class TorneioInscricao extends AppModel {
         ),
 	);
 
-	public function checkSubscription($dados_cliente_cliente = [], $dados_torneio = [], $categoria_id = null) {
+	public function checkSubscriptionInCategory($dados_cliente_cliente = [], $dados_torneio = [], $categoria_id = null) {
 
 		if ( count($dados_cliente_cliente) == 0 || count($dados_torneio) == 0 || $categoria_id == null ){
 			return false;
@@ -31,39 +31,44 @@ class TorneioInscricao extends AppModel {
 
 		$torneio_id = $dados_torneio['Torneio']['id'];
 
-		$first_check = $this->find('all',[
+		return $this->find('count',[
 			'conditions' => [
 				'TorneioInscricao.torneio_id' => $torneio_id,
-				'TorneioInscricaoJogador.cliente_cliente_id' => $dados_cliente_cliente['ClienteCliente']['id'],
+				'TorneioInscricao.torneio_categoria_id' => $categoria_id,
+				'or' => [
+					[
+						'TorneioInscricaoJogador.cliente_cliente_id' => $dados_cliente_cliente['ClienteCliente']['id']
+					],
+					[
+						'ClienteCliente.usuario_id' => $dados_cliente_cliente['ClienteCliente']['usuario_id'],
+						'not' => [
+							'ClienteCliente.usuario_id' => null,
+						]
+					]
+					
+				],
 				'not' => [
 					'TorneioInscricao.confirmado' => 'R'
 				]
 			],
-			'link' => ['TorneioInscricaoJogador']
-		]);
+			'link' => ['TorneioInscricaoJogador' => ['ClienteCliente']]
+		]);		
 
-		if ( count($first_check) > 0 ) {
+	}
 
-			foreach( $first_check as $key => $inscricao ) {
+	public function checkSubscriptionsLimit($dados_cliente_cliente = [], $dados_torneio = []) {
 
-				if ( $inscricao['TorneioInscricao']['torneio_categoria_id'] == $categoria_id ) {
-					return $inscricao;
-				}
-
-			}
-
-			if ( $dados_torneio['Torneio']['max_inscricoes_por_jogador'] <= count($first_check) ) {
-				return $first_check[0];
-			}
+		if ( count($dados_cliente_cliente) == 0 || count($dados_torneio) == 0 ){
+			return false;
 		}
 
-		if ($dados_cliente_cliente['ClienteCliente']['usuario_id'] == null) 
-			return false;
+		$torneio_id = $dados_torneio['Torneio']['id'];
 
-		$second_check = $this->find('all',[
+		$first_check = $this->find('count',[
 			'conditions' => [
 				'TorneioInscricao.torneio_id' => $torneio_id,
-				'ClienteCliente.usuario_id' => $dados_cliente_cliente['ClienteCliente']['usuario_id'],
+				'TorneioInscricaoJogador.cliente_cliente_id' => $dados_cliente_cliente['ClienteCliente']['id'],
+				'ClienteCliente.usuario_id' => null,
 				'not' => [
 					'TorneioInscricao.confirmado' => 'R'
 				]
@@ -71,28 +76,28 @@ class TorneioInscricao extends AppModel {
 			'link' => ['TorneioInscricaoJogador' => ['ClienteCliente']]
 		]);
 
-		if ( count($second_check) > 0 ) {
 
-			foreach( $second_check as $key => $inscricao ) {
+		$second_check = 0;
+		if ($dados_cliente_cliente['ClienteCliente']['usuario_id'] != null) {
 
-				if ( $inscricao['TorneioInscricao']['torneio_categoria_id'] == $categoria_id ) {
-					return $inscricao;
-				}
-
-			}
-
-			if ( $dados_torneio['Torneio']['max_inscricoes_por_jogador'] <= count($second_check) ) {
-				return $second_check[0];
-			}
+			$second_check = $this->find('count',[
+				'conditions' => [
+					'TorneioInscricao.torneio_id' => $torneio_id,
+					'ClienteCliente.usuario_id' => $dados_cliente_cliente['ClienteCliente']['usuario_id'],
+					'not' => [
+						'TorneioInscricao.confirmado' => 'R'
+					]
+				],
+				'link' => ['TorneioInscricaoJogador' => ['ClienteCliente']]
+			]);
 
 		}
 
-		if ( count($second_check) > 0 )
-			return $second_check;
+		if ( $dados_torneio['Torneio']['max_inscricoes_por_jogador'] <= $second_check+$first_check ) {
+			return true;
+		}
 
-		return false;
-
-		
+		return false;		
 
 	}
 

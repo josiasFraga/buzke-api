@@ -5,7 +5,7 @@ class ProdutoAdicional extends AppModel {
 		'Produto' => array('foreignKey' => 'produto_id')
 	);
 	public $hasMany = array(
-		'ClienteComandaProdutoAdicional' => array('foreignKey' => 'produto_adicional_id')
+		'ClienteClienteComandaProdutoAdicional' => array('foreignKey' => 'produto_adicional_id')
 	);
 
 	public function listar($cliente_id, $aditional_conditions = []) {
