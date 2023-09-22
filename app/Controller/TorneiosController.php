@@ -50,12 +50,13 @@ class TorneiosController extends AppController {
                 $this->loadModel('ClienteCliente');
                 $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
                 $conditions = array_merge($conditions, [
-                    'TorneioInscricaoJogador.cliente_cliente_id' => $meus_ids_de_cliente,  
+                    'TorneioInscricaoJogador.cliente_cliente_id' => $meus_ids_de_cliente,
+                    'Torneio.inicio <=' => date('Y-m-d'),
                 ]);
             }
         } else {
             $conditions = array_merge($conditions, [
-                //'Torneio.fim >=' => date('Y-m-d'),
+                'Torneio.inicio <=' => date('Y-m-d'),
             ]);
 
         }
@@ -598,6 +599,69 @@ class TorneiosController extends AppController {
         $this->cancelShcedulingInRanges($quadras);
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tudo certo! O torneio foi cadastrado com sucesso!'))));
+    }
+
+    public function alteraImagem(){
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), false);
+        }elseif ( gettype($dados) == 'array' ) {
+            $dados = json_decode(json_encode($dados), false);
+        }
+
+
+        if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        if ( !isset($dados->torneio_id) || $dados->torneio_id == '' || $dados->torneio_id == null ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Torneio não informado.'))));
+        }
+
+        if (!isset($this->request->params['form']['image']) || $this->request->params['form']['image'] == '' || $this->request->params['form']['image']['error'] != 0) {
+            throw new BadRequestException('Imagem não informada', 400);
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+        
+        //se é uma empresa cadastrando
+        if ( $dados_usuario['Usuario']['nivel_id'] != 2 ){
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Sem permissão para alterar imagem de torneio.'))));
+        }
+
+        $this->loadModel('Torneio');
+        $dados_torneio = $this->Torneio->find('first',[
+            'fields' => ['*'],
+            'conditions' => [
+                'Torneio.id' => $dados->torneio_id,
+                'Torneio.cliente_id' => $dados_usuario['Usuario']['cliente_id'],
+            ],
+            'link' => [],
+        ]);
+
+        if ( count($dados_torneio) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Dados do torneio não encontrados.'))));
+        }
+
+        $dados_salvar = array(
+            'Torneio' => array(
+                'id' => $dados->torneio_id, 
+                'img' => $this->request->params['form']['image'], 
+            )
+        );
+
+        if (!$this->Torneio->save($dados_salvar)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar a imagem.'))));
+        }
+       
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tudo certo! a iamgem foi alterada com sucesso!'))));
     }
 
     private function cancelShcedulingInRanges($ranges = []) {
@@ -1741,7 +1805,7 @@ class TorneiosController extends AppController {
 
         //deprecated - busca os próximos horários disponíveis por categoria
         //busca os próximos horários disponíveis
-        $proximos_horarios = $this->getNextAvailableTimes($max_horario_gerado, $horarios, true);
+        $proximos_horarios = $this->getNextAvailableTimes($max_horario_gerado, $horarios, false);
 
         //busca os dados dos confrontos das próximas fases
         $confrontos_proximas_fases = $this->buscaDadosProximasFases($grupos_por_categoria);
@@ -2104,7 +2168,7 @@ class TorneiosController extends AppController {
             $max_horario_gerado = $this->getMaxTimeGenerated($confrontos);
         
             //busca os próximos horários disponíveis
-            $horarios = $this->getNextAvailableTimes($max_horario_gerado, $horarios, true);
+            $horarios = $this->getNextAvailableTimes($max_horario_gerado, $horarios, false);
 
         }
         
