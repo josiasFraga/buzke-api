@@ -79,6 +79,7 @@ class TorneiosController extends AppController {
                 'De '.date('d/m',strtotime($trn['Torneio']['inicio'])).
                 ' até '.date('d/m',strtotime($trn['Torneio']['fim']));
             $torneios[$key]['Torneio']['img'] = $this->images_path."torneios/".$trn['Torneio']['img'];
+            $torneios[$key]['Torneio']['img_thumb'] = $this->images_path."torneios/thumb_".$trn['Torneio']['img'];
             $torneios[$key]['Torneio']['_owner'] = $owner;
             $torneios[$key]['Torneio']['_old'] = ($trn['Torneio']['fim'] < date('Y-m-d'));
 
@@ -163,7 +164,9 @@ class TorneiosController extends AppController {
         $dados['Torneio']['_periodo'] = 
             'De '.date('d/m',strtotime($dados['Torneio']['inicio'])).
             ' até '.date('d/m',strtotime($dados['Torneio']['fim']));
-        $dados['Torneio']['img'] = $this->images_path."torneios/".$dados['Torneio']['img'];
+        $img = $dados['Torneio']['img'];
+        $dados['Torneio']['img'] = $this->images_path."torneios/" . $img;
+        $dados['Torneio']['img_thumb'] = $this->images_path."torneios/thumb_" . $img;
         $dados['Torneio']['_owner'] = $owner;
         $dados['Torneio']['_periodo_inscricao'] = 
             'de '.
