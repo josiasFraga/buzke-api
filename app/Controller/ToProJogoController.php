@@ -514,8 +514,15 @@ class ToProJogoController extends AppController {
         $this->loadModel('ClienteSubcategoria');
         $subcategorias = $this->ClienteSubcategoria->getArrIdsSubcategoriaByBusinessId($dados['cliente_id']);
 
-        $hora_selecionada = json_decode($dados['horaSelecionada'], true);
-        $day = json_decode($dados['day'], true);
+        $hora_selecionada = $dados['horaSelecionada'];
+        if ( !is_array($hora_selecionada) ) {
+            $hora_selecionada = json_decode($dados['horaSelecionada'], true);
+        }
+
+        $day = $dados['day'];
+        if ( !$day ) {
+            $day = json_decode($dados['day'], true);
+        }
 
         $this->loadModel('ToProJogo');
 

@@ -914,6 +914,7 @@ class AgendamentosController extends AppController {
                     'cliente_cliente_id' => $dados_agendamento['ClienteCliente']['id'],
                     'horario' => $dados->horario,
                     'cancelado_por' => $cancelado_por,
+                    'cancelado_por_id' => $dados_usuario['Usuario']['id'],
                 ];
 
                 if ( !$this->AgendamentoFixoCancelado->save($dados_salvar) ) {
@@ -928,7 +929,8 @@ class AgendamentosController extends AppController {
         }
 
         $dados_salvar['Agendamento']['id'] = $dados_agendamento['Agendamento']['id'];
-        $dados_salvar['Agendamento']['cancelado'] = 'Y';
+        $dados_salvar['Agendamento']['cancelado'] = 'Y';        
+        $dados_salvar['Agendamento']['cancelado_por_id'] = $dados_usuario['Usuario']['id'];
 
         if ( !$this->Agendamento->save($dados_salvar) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cancelar o agendamento. Por favor, tente mais tarde!'))));

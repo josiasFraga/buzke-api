@@ -781,6 +781,13 @@ class TorneiosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve informar a categoria para realizar sua inscrição em um torneio.'))));
         }
 
+        if ( !isset($dados->telefone_dupla_ddi) ) {
+            $dados->telefone_dupla_ddi = "55";
+        }
+
+        if ( !isset($dados->telefone_ddi) ) {
+            $dados->telefone_ddi = "55";
+        }
        
         //impedimentos da dupla
         $impedimentos_jogador_1 = [];
@@ -2139,17 +2146,17 @@ class TorneiosController extends AppController {
             
                 $horario = $horarios[0];
 
-                //semifinais sao, preferencialmente no domingo a tarde >= 13:00:00
+                //semifinais sao, preferencialmente no domingo a tarde >= 10:00:00
                 if ( $confronto['fase_nome'] == 'Semi Final' ) {
-                    $check_time = $this->buscaHorarioDomingo($horarios, '13:00');
+                    $check_time = $this->buscaHorarioDomingo($horarios, '10:00');
                     if ( $check_time ) {
                         $horario = $check_time;
                     }
                 }
 
-                //finais sao, preferencialmente no domingo a tarde >= 13:00:00
+                //finais sao, preferencialmente no domingo a tarde >= 10:00:00
                 if ( $confronto['fase_nome'] == 'Final' ) {
-                    $check_time = $this->buscaHorarioDomingo($horarios, '13:00');
+                    $check_time = $this->buscaHorarioDomingo($horarios, '10:00');
                     if ( $check_time ) {
                         $horario = $check_time;
                     }

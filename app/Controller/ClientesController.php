@@ -1666,6 +1666,7 @@ class ClientesController extends AppController {
 
         $this->layout = 'ajax';
         $dados = $this->request->query;
+
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
