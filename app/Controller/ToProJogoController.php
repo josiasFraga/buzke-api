@@ -520,7 +520,9 @@ class ToProJogoController extends AppController {
         }
 
         $day = $dados['day'];
-        if ( !$day ) {
+        
+
+        if ( !$day || gettype($day) === 'string') {
             $day = json_decode($dados['day'], true);
         }
 

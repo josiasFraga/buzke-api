@@ -2247,13 +2247,34 @@ class TorneiosController extends AppController {
                     }
     
                     $horario = $horarios[0];
+
+                    /*debug($horario);
+                    debug($confronto);
+                    debug('false ' . $this->verificaHorarioAtribuido($confronto, $confrontos, $horario));
+                    debug('true ' . $this->verificaIntervaloMinimo($confronto, $confrontos, $horario));
+                    debug('true ' . $this->verificaImpedimentos($confronto, $horario));
+                    debug('-------------------------------------------------------------------');*/
     
                     // Verifica se uma das inscrições já tem um horário atribuído
-                    if ($this->verificaHorarioAtribuido($confronto, $confrontos, $horario) || !$this->verificaIntervaloMinimo($confronto, $confrontos, $horario)) {
-                        // Inscrição já tem um horário atribuído ou intervalo mínimo não respeitado, procurar outro horário
+                    if (
+                        $this->verificaHorarioAtribuido($confronto, $confrontos, $horario) // Verifica se o o horário ja foi atribuido a algum cofronto, se ja foi, temos que procurar outro
+                        || !$this->verificaIntervaloMinimo($confronto, $confrontos, $horario) // Verifica se o horário está respeitando o itervalo mínimo entre um jogo e outro, se não está, temos que procurar outro
+                        || !$this->verificaImpedimentos($confronto, $horario) // Verifica se a inscrição ou um dos jogadores tem algum impedimento no horário do jogo, se tiver, temos que procurar outro
+                    ) {
+                        // Inscrição já tem um horário atribuído ou intervalo mínimo não respeitado ou alguém tem impedimento no horário, procurar outro horário
                         $horarioEncontrado = false;
                         foreach ($horarios as $keyHorario => $horarioAtual) {
-                            if (!$this->verificaHorarioAtribuido($confronto, $confrontos, $horarioAtual) && $this->verificaIntervaloMinimo($confronto, $confrontos, $horarioAtual)) {
+
+                            /*debug($horarioAtual);
+                            debug($confronto);
+                            debug('false ' . $this->verificaHorarioAtribuido($confronto, $confrontos, $horarioAtual));
+                            debug('true ' . $this->verificaIntervaloMinimo($confronto, $confrontos, $horarioAtual));
+                            debug('true ' . $this->verificaImpedimentos($confronto, $horarioAtual));
+                            debug('-------------------------------------------------------------------');*/
+
+                            if (// Se não tem nehum horário atribudo nesse horário, está com intervalo mínimo respeitado e não tem impedimentos no horário, atribui o jogo nesse horário
+                                !$this->verificaHorarioAtribuido($confronto, $confrontos, $horarioAtual) && $this->verificaIntervaloMinimo($confronto, $confrontos, $horarioAtual) && $this->verificaImpedimentos($confronto, $horarioAtual)
+                            ) {
                                 $horario = $horarioAtual;
                                 $horarioEncontrado = true;
                                 unset($horarios[$keyHorario]);
@@ -2302,38 +2323,134 @@ class TorneiosController extends AppController {
     
         return false;
     }
+    
+    private function verificaImpedimentos($confronto, $horario) {
+    
+        $inscricao1 = $confronto[0]['inscricao_id'];
+        $inscricao2 = $confronto[1]['inscricao_id'];
 
-    private function verificaIntervaloMinimo($confronto, $confrontos, $horario) {
+        $this->loadModel('TorneioInscricaoImpedimento');
+        $this->loadModel('TorneioInscricaoJogador');
+        $this->loadModel('TorneioInscricaoJogadorImpedimento');
+
+        $horarioInicial = new DateTime($horario['horario']);
+        $duracao = new DateInterval('PT' . explode(':', $horario['duracao'])[0] . 'H' . explode(':', $horario['duracao'])[1] . 'M' . explode(':', $horario['duracao'])[2] . 'S');
+        $horarioFinal = $horarioInicial->add($duracao);
+        $horarioFinal = $horarioFinal->format('Y-m-d H:i:s');
+
+        $n_impedimentos_encontrados = $this->TorneioInscricaoImpedimento->find('count',[
+            'conditions' => [
+                'TorneioInscricaoImpedimento.torneio_inscricao_id IN' => [$inscricao1, $inscricao2],
+                'OR' => [
+                    [
+                        ['TorneioInscricaoImpedimento.inicio <=' => $horario['horario']],
+                        ['TorneioInscricaoImpedimento.fim >=' => $horario['horario']]
+
+                    ],
+                    [                        
+                        ['TorneioInscricaoImpedimento.inicio <=' => $horarioFinal],
+                        ['TorneioInscricaoImpedimento.fim >=' => $horarioFinal]
+                    ]
+                ]
+            ],
+            'link' => []
+        ]);    
+ 
+
+        if ( $n_impedimentos_encontrados > 0 ) {
+            return false;
+        }
+
+
+        $jogadores = $this->TorneioInscricaoJogador->find('list',[
+            'fields' => [
+                'TorneioInscricaoJogador.id',
+                'TorneioInscricaoJogador.id'
+            ],
+            'conditions' => [
+                'TorneioInscricaoJogador.torneio_inscricao_id' => [$inscricao1, $inscricao2]
+            ],
+            'link' => []
+        ]);
+
+
+        $jogadores = array_values($jogadores);
+
+        $n_impedimentos_encontrados = $this->TorneioInscricaoJogadorImpedimento->find('count',[
+            'conditions' => [
+                'TorneioInscricaoJogadorImpedimento.torneio_inscricao_jogador_id IN' => $jogadores,                
+                'OR' => [
+                    [
+                        ['TorneioInscricaoJogadorImpedimento.inicio <=' => $horario['horario']],
+                        ['TorneioInscricaoJogadorImpedimento.fim >=' => $horario['horario']]
+
+                    ],
+                    [                        
+                        ['TorneioInscricaoJogadorImpedimento.inicio <=' => $horarioFinal],
+                        ['TorneioInscricaoJogadorImpedimento.fim >=' => $horarioFinal]
+                    ]
+                ]
+            ],
+            'link' => []
+        ]);
+
+
+        if ( $n_impedimentos_encontrados > 0 ) {
+
+            $teste = $this->TorneioInscricaoJogadorImpedimento->find('all',[
+                'fields' => ['*'],
+                'conditions' => [
+                    'TorneioInscricaoJogadorImpedimento.torneio_inscricao_jogador_id IN' => $jogadores,                
+                    'OR' => [
+                        [
+                            ['TorneioInscricaoJogadorImpedimento.inicio <=' => $horario['horario']],
+                            ['TorneioInscricaoJogadorImpedimento.fim >=' => $horario['horario']]
+    
+                        ],
+                        [                        
+                            ['TorneioInscricaoJogadorImpedimento.inicio <=' => $horarioFinal],
+                            ['TorneioInscricaoJogadorImpedimento.fim >=' => $horarioFinal]
+                        ]
+                    ]
+                ],
+                'link' => ['TorneioInscricaoJogador']
+            ]);
+            
+            return false;
+        }
+
+        return true;
+
+
+      
+    }
+
+    private function verificaIntervaloMinimo($confronto, $confrontos, $horarioProposto) {
         $inscricaoId1 = $confronto[0]['inscricao_id'];
         $inscricaoId2 = $confronto[1]['inscricao_id'];
+        $horarioInicioProposto = strtotime($horarioProposto['horario']);
+        $duracaoSegundos = strtotime($horarioProposto['duracao']) - strtotime('00:00:00');
+        $horarioFimProposto = $horarioInicioProposto + $duracaoSegundos;
     
-        // Verifica os últimos horários atribuídos para os IDs de inscrição
-        $ultimosHorarios = [];
         foreach ($confrontos as $dados_confronto) {
-            if (count($dados_confronto['confrontos']) > 0) {
-                $arr_confrontos = $dados_confronto['confrontos'];
+            foreach ($dados_confronto['confrontos'] as $confronto_existente) {
+                if (isset($confronto_existente['horario'])) {
+                    $inscricao1 = $confronto_existente[0]['inscricao_id'];
+                    $inscricao2 = $confronto_existente[1]['inscricao_id'];
+                    $horarioExistenteInicio = strtotime($confronto_existente['horario']['horario']);
+                    $duracaoExistente = strtotime($confronto_existente['horario']['duracao']) - strtotime('00:00:00');
+                    $horarioExistenteFim = $horarioExistenteInicio + $duracaoExistente;
     
-                foreach ($arr_confrontos as $confronto_existente) {
-                    if (isset($confronto_existente['horario']) && $confronto_existente['horario']['horario'] != $horario['horario']) {
-                        $inscricao1 = $confronto_existente[0]['inscricao_id'];
-                        $inscricao2 = $confronto_existente[1]['inscricao_id'];
-    
-                        if (($inscricao1 == $inscricaoId1 || $inscricao1 == $inscricaoId2) || ($inscricao2 == $inscricaoId1 || $inscricao2 == $inscricaoId2)) {
-                            $ultimosHorarios[] = $confronto_existente['horario'];
-                        }
+                    // Verifica se há sobreposição para inscricaoId1 ou inscricaoId2
+                    if (($inscricao1 == $inscricaoId1 || $inscricao1 == $inscricaoId2 || $inscricao2 == $inscricaoId1 || $inscricao2 == $inscricaoId2) &&
+                        ( ($horarioFimProposto >= $horarioExistenteInicio && $horarioFimProposto <= $horarioExistenteFim) || ($horarioInicioProposto >= $horarioExistenteInicio && $horarioInicioProposto <= $horarioExistenteFim) )) {
+                        return false; // Existe sobreposição de horário, não permitindo o agendamento
                     }
                 }
             }
         }
     
-        if (!empty($ultimosHorarios)) {
-            $segundos = strtotime($horario['duracao']) - strtotime('00:00:00');
-            $ultimoHorario = end($ultimosHorarios);
-            $intervalo = strtotime($horario['horario']) - strtotime($ultimoHorario['horario']);
-            return $intervalo >= $segundos+60; // duração do confronto em segundos
-        }
-    
-        return true;
+        return true; // Não existe sobreposição, permitindo o agendamento
     }
 
 
@@ -2787,12 +2904,12 @@ class TorneiosController extends AppController {
 
         $data_hora_en = $this->datetimeBrEn($dados->data . ' ' . $dados->hora);
 
-        $verifica_quadra_horario = $this->Agendamento->find('first',[
+        $verifica_quadra_e_horario = $this->Agendamento->find('first',[
             'fields' => ['*'],
             'conditions' => [
                 'Agendamento.horario' => $data_hora_en,
                 'Agendamento.torneio_id' => $dados_jogo['Torneio']['id'],
-                'TorneioJogo.torneio_quadra_id' => $dados_jogo['TorneioJogo']['torneio_quadra_id'],
+                'TorneioJogo.torneio_quadra_id' => $dados->torneio_quadra_id
             ],
             'link' => [
                 'TorneioJogo'
@@ -2800,15 +2917,15 @@ class TorneiosController extends AppController {
         ]);
 
         //se há um jogo na quadra e horario selecioando
-        if ( count($verifica_quadra_horario) > 0 ) {
+        if ( count($verifica_quadra_e_horario) > 0 ) {
             $dados_salvar = [
                 [
                     'id' => $dados->torneio_jogo_id,
-                    'agendamento_id' => $verifica_quadra_horario['TorneioJogo']['agendamento_id'],
-                    'torneio_quadra_id' => $verifica_quadra_horario['TorneioJogo']['torneio_quadra_id'],
+                    'agendamento_id' => $verifica_quadra_e_horario['TorneioJogo']['agendamento_id'],
+                    'torneio_quadra_id' => $verifica_quadra_e_horario['TorneioJogo']['torneio_quadra_id'],
                 ],
                 [
-                    'id' => $verifica_quadra_horario['TorneioJogo']['id'],
+                    'id' => $verifica_quadra_e_horario['TorneioJogo']['id'],
                     'agendamento_id' => $dados_jogo['TorneioJogo']['agendamento_id'],
                     'torneio_quadra_id' => $dados_jogo['TorneioJogo']['torneio_quadra_id'],
                 ]
@@ -2852,7 +2969,7 @@ class TorneiosController extends AppController {
             'cliente_id' => $dados_jogo['Torneio']['cliente_id'],
             'torneio_id' => $dados_jogo['Torneio']['id'],
             'horario' => $data_hora_en,
-            'duracao' => $check_horario[0]['duracao'],
+            'duracao' => $check_horario[0]['duracao']
         ];
 
         $dados_agendamento_salvo = $this->Agendamento->save($dados_agendamento_salvar);
