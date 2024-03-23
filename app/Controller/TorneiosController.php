@@ -182,6 +182,9 @@ class TorneiosController extends AppController {
         $some_group_generated = false;
         $categorias = $this->TorneioCategoria->getByTournamentId($dados['Torneio']['id']);
 
+        
+        $dados['Torneio']['_subscribed']  = false;
+
         if ( count($categorias) > 0 ) {
             foreach($categorias as $key => $cat){
 
@@ -213,8 +216,13 @@ class TorneiosController extends AppController {
 
                 $categorias[$key]['_is_group_generated'] = $is_group_generated;
                 $categorias[$key]['_is_subscribed'] = $this->TorneioInscricao->checkSubscriptionInCategory($meus_dados_como_cliente, $dados, $cat['id']) > 0;
+
+                if ( $categorias[$key]['_is_subscribed'] ) {
+                    $dados['Torneio']['_subscribed'] = true;
+                }
             }
         }
+
 
         $matches_generated = $this->TorneioJogo->find('count',[
             'conditions' => [
