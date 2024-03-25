@@ -14,6 +14,20 @@
 /app/webroot/img/torneios/*
 /app/webroot/img/usuarios/*
 
+# Exceções para imagens específicas que NÃO devem ser ignoradas
+# Note que você precisa primeiro não ignorar o diretório de forma geral
+# e depois ignorar todo o conteúdo, e por fim, re-incluir os específicos
+!/app/webroot/img/clientes/
+!/app/webroot/img/clientes_clientes/
+!/app/webroot/img/torneios/
+!/app/webroot/img/usuarios/
+
+/app/webroot/img/clientes/*
+/app/webroot/img/clientes_clientes/*
+/app/webroot/img/torneios/*
+/app/webroot/img/usuarios/*
+
+# Agora re-incluir os arquivos específicos que não devem ser ignorados
 !/app/webroot/img/clientes/sem-imagem.jpg
 !/app/webroot/img/usuarios/default.png
 !/app/webroot/img/usuarios/thumb_user.png
@@ -22,6 +36,7 @@
 !/app/webroot/img/clientes_clientes/sem-imagem.jpg
 !/app/webroot/img/clientes_clientes/thumb_user.png
 !/app/webroot/img/torneios/sem_imagem.jpeg
+
 *.mo
 
 # IDE and editor specific files #
