@@ -912,6 +912,89 @@ class UsuariosController extends AppController {
 
     }
 
+    public function eu() {
+        $this->layout = 'ajax';
+        
+        $dados = $this->request->query;
+
+        
+        if ((!isset($dados['token']) || $dados['token'] == "") ||  (!isset($dados['email']) || $dados['email'] == "")) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Usuario');
+        $usuario = $this->Usuario->find('first', array(
+            'conditions' => array(
+                'Usuario.email' => $email,
+                'Token.token' => $token
+            ),
+            'link' => array(
+                'Cliente',
+                'Token',
+            ),
+            'fields' => array(
+                'Usuario.*',
+                'Cliente.*',
+                'Token.*'
+            )
+        ));
+
+        if (count($usuario) == 0) {
+            throw new BadRequestException('Login e/ou Senha não conferem.', 401);
+        }
+
+        $cadastro_horarios_ok = 'false';
+        $cadastro_categorias_ok = 'false';
+        if ( $usuario['Usuario']['nivel_id'] == 2 ) {
+
+            //verifica se o usuário já definiu o horarios de atendimento
+            $this->loadModel('ClienteHorarioAtendimento');
+            $cadastro_horarios_ok = $this->ClienteHorarioAtendimento->find('count',[
+                'conditions' => [
+                    'ClienteHorarioAtendimento.cliente_id' => $usuario['Usuario']['cliente_id']
+                ]
+            ]) > 0;
+
+            //verifica se o usuário já definiu as subcategorias
+            $this->loadModel('ClienteSubcategoria');
+            $subcategorias = $this->ClienteSubcategoria->find('all',[
+                'fields' => ['*'],
+                'conditions' => [
+                    'ClienteSubcategoria.cliente_id' => $usuario['Usuario']['cliente_id'],
+                ],
+                'link' => ['Subcategoria']
+            ]);
+
+            $usuario['Cliente']['is_paddle_court'] = $this->ClienteSubcategoria->checkIsPaddleCourt($usuario['Usuario']['cliente_id']);
+            $usuario['Cliente']['is_court'] = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
+
+            $cadastro_categorias_ok = count($subcategorias) > 0;
+        }
+
+        unset($usuario['Usuario']['senha']);
+
+        $dados_retornar = array_merge(
+            $usuario, 
+            [
+                'cadastro_horarios_ok' => $cadastro_horarios_ok, 
+                'cadastro_categorias_ok' => $cadastro_categorias_ok
+            ]
+        );
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(['status' => 'ok', 'dados' => $dados_retornar])));
+      
+
+    }
+
     public function altera_dados_pessoais() {
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];

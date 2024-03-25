@@ -35,9 +35,9 @@ class AppController extends Controller {
     //public $images_path = "http://192.168.1.3/buzke/api/app/webroot/img/";
     //public $images_painel_path = "http://192.168.1.3/buzke/app/webroot/img/";
     //public $files_path = "http://192.168.1.3/buzke/app/webroot/api/app/webroot/img/anexos";
-    public $images_path = "https://buzke.com.br/app/webroot/api/app/webroot/img/";
-    public $images_painel_path = "https://buzke.com.br/webroot/api/app/webroot/img/";
-    public $files_path = "https://buzke.com.br/app/webroot/api/app/webroot/img/anexos";
+    public $images_path = "https://api.buzke.com.br/app/webroot/img/";
+    public $images_painel_path = "https://api.buzke.com.br/webroot/img/";
+    public $files_path = "https://api.buzke.com.br/app/webroot/img/anexos";
     public $dias_semana_str = array('Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado');
     public $dias_semana_abrev = array('dom','seg','ter','qua','qui','sex','sab');
     public $dias_mes_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
