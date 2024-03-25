@@ -4,7 +4,6 @@ App::uses('Controller', 'Controller');
 class AppController extends Controller {
 
     public $images_path;
-    public $images_painel_path;
     public $files_path;
     public $dias_semana_str = array('Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado');
     public $dias_semana_abrev = array('dom','seg','ter','qua','qui','sex','sab');
@@ -873,7 +872,6 @@ class AppController extends Controller {
     public function __construct($request = null, $response = null) {
         parent::__construct($request, $response);
         $this->images_path = getenv('IMAGES_PATH');
-        $this->images_painel_path = getenv('IMAGES_CPANEL_PATH');
         $this->files_path = getenv('FILES_PATH');
     }
 

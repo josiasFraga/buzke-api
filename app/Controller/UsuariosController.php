@@ -104,6 +104,7 @@ class UsuariosController extends AppController {
 
             $usuario['Cliente']['is_paddle_court'] = $this->ClienteSubcategoria->checkIsPaddleCourt($usuario['Usuario']['cliente_id']);
             $usuario['Cliente']['is_court'] = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
+            $usuario['Cliente']['logo'] = $this->images_path.'clientes/'.$usuario['Cliente']['logo'];
 
             $cadastro_categorias_ok = count($subcategorias) > 0;
         }
@@ -980,7 +981,7 @@ class UsuariosController extends AppController {
             $cadastro_categorias_ok = count($subcategorias) > 0;
 
             
-            $usuario['Cliente']['logo'] = $this->images_path.'clientes/'.$agendamento['Cliente']['logo'];
+            $usuario['Cliente']['logo'] = $this->images_path.'clientes/'.$usuario['Cliente']['logo'];
         }
 
         unset($usuario['Usuario']['senha']);
