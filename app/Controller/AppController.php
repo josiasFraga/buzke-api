@@ -1,43 +1,11 @@
 <?php
-/**
- * Application level Controller
- *
- * This file is application-wide controller file. You can put all
- * application-wide controller-related methods here.
- *
- * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- *
- * Licensed under The MIT License
- * For full copyright and license information, please see the LICENSE.txt
- * Redistributions of files must retain the above copyright notice.
- *
- * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
- * @link          http://cakephp.org CakePHP(tm) Project
- * @package       app.Controller
- * @since         CakePHP(tm) v 0.2.9
- * @license       http://www.opensource.org/licenses/mit-license.php MIT License
- */
-
 App::uses('Controller', 'Controller');
 
-/**
- * Application Controller
- *
- * Add your application-wide methods in the class below, your controllers
- * will inherit them.
- *
- * @package		app.Controller
- * @link		http://book.cakephp.org/2.0/en/controllers.html#the-app-controller
- */
- 
 class AppController extends Controller {
-    //public $images_path = "http://192.168.1.3/buzke/api/app/webroot/img/";
-    //public $images_painel_path = "http://192.168.1.3/buzke/app/webroot/img/";
-    //public $files_path = "http://192.168.1.3/buzke/app/webroot/api/app/webroot/img/anexos";
-    public $images_path = "https://api.buzke.com.br/app/webroot/img/";
-    public $images_painel_path = "https://api.buzke.com.br/webroot/img/";
-    public $files_path = "https://api.buzke.com.br/app/webroot/img/anexos";
+
+    public $images_path;
+    public $images_painel_path;
+    public $files_path;
     public $dias_semana_str = array('Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado');
     public $dias_semana_abrev = array('dom','seg','ter','qua','qui','sex','sab');
     public $dias_mes_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
@@ -901,6 +869,14 @@ class AppController extends Controller {
             ],
         ]
     ];
+
+    public function __construct($request = null, $response = null) {
+        parent::__construct($request, $response);
+        $this->images_path = getenv('IMAGES_PATH');
+        $this->images_painel_path = getenv('IMAGES_CPANEL_PATH');
+        $this->files_path = getenv('FILES_PATH');
+    }
+
     
     public function beforeFilter() {
         parent::beforeFilter();

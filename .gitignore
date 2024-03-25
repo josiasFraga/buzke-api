@@ -9,10 +9,19 @@
 /build
 /dist
 /tags
-/app/webroot/painel
-/app/webroot/painel/*
-/app/webroot/placares
-/app/webroot/placares/*
+/app/webroot/img/clientes/*
+/app/webroot/img/clientes_clientes/*
+/app/webroot/img/torneios/*
+/app/webroot/img/usuarios/*
+
+!/app/webroot/img/clientes/sem-imagem.jpg
+!/app/webroot/img/usuarios/default.png
+!/app/webroot/img/usuarios/thumb_user.png
+!/app/webroot/img/usuarios/user.png
+!/app/webroot/img/usuarios/user.jpg
+/app/webroot/img/clientes_clientes/sem-imagem.jpg
+/app/webroot/img/clientes_clientes/thumb_user.png
+!/app/webroot/img/torneios/sem_imagem.jpeg
 *.mo
 
 # IDE and editor specific files #

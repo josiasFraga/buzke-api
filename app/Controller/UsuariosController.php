@@ -978,9 +978,14 @@ class UsuariosController extends AppController {
             $usuario['Cliente']['is_court'] = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
 
             $cadastro_categorias_ok = count($subcategorias) > 0;
+
+            
+            $usuario['Cliente']['logo'] = $this->images_path.'clientes/'.$agendamento['Cliente']['logo'];
         }
 
         unset($usuario['Usuario']['senha']);
+
+        $usuario['Usuario']['img'] = $this->images_path.'usuarios/'.$usuario['Usuario']['img'];
 
         $dados_retornar = array_merge(
             $usuario, 
