@@ -19,8 +19,8 @@
 !/app/webroot/img/usuarios/thumb_user.png
 !/app/webroot/img/usuarios/user.png
 !/app/webroot/img/usuarios/user.jpg
-/app/webroot/img/clientes_clientes/sem-imagem.jpg
-/app/webroot/img/clientes_clientes/thumb_user.png
+!/app/webroot/img/clientes_clientes/sem-imagem.jpg
+!/app/webroot/img/clientes_clientes/thumb_user.png
 !/app/webroot/img/torneios/sem_imagem.jpeg
 *.mo
 
