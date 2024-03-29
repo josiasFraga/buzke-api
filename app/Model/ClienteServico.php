@@ -17,6 +17,12 @@ class ClienteServico extends AppModel {
 		'TorneioQuadra' => array(
 			'foreignKey' => 'servico_id'
 		),
+		'ClienteServicoFoto' => array(
+			'foreignKey' => 'cliente_servico_id'
+		),
+		'ClienteServicoHorario' => array(
+			'foreignKey' => 'cliente_servico_id'
+		),
     );
     
     public $validate = array();

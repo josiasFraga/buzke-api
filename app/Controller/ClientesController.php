@@ -1029,10 +1029,11 @@ class ClientesController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-
         if ( $dado_usuario['Usuario']['nivel_id'] != 2 && !isset($dados['cliente_id']) ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
+
+        $this->loadModel('ClienteServicoHorario');
 
         $order_cliente_servico = [
             'ClienteServico.nome'
@@ -1067,13 +1068,32 @@ class ClientesController extends AppController {
         $servicos = $this->ClienteServico->find('all',[
             'conditions' => $conditions,
             'order' => $order_cliente_servico,
-            'link' => []
+            'contain' => [
+                'ClienteServicoFoto' => [
+                    'fields' => [
+                        'imagem',                        
+                        'id'
+                    ]
+                ]
+            ]
         ]);
 
         if ( count($servicos) > 0 ) {
             foreach($servicos as $key => $servico) {
+
                 $servicos[$key]['ClienteServico']['valor'] = 'R$ '.$this->floatEnBr($servico['ClienteServico']['valor']);
                 $servicos[$key]["ClienteServico"]["cor"] = $this->services_colors[$key];
+                $servicos[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->lsitaDiasSemana($servico['ClienteServico']['id']);
+                
+
+                if ( count($servico['ClienteServicoFoto']) > 0 ) {    
+                    foreach( $servico['ClienteServicoFoto'] as $key_imagem => $imagem){    
+                        $servicos[$key]['ClienteServicoFoto'][$key_imagem]['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
+                    }    
+                } else {
+                    $servicos[$key]['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
+                }
+                
             }
         }
 
