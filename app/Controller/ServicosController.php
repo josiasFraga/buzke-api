@@ -225,8 +225,6 @@ class ServicosController extends AppController {
         }
 
         $dataSource = $this->ClienteServico->getDataSource();
-
-        // Iniciar a transação
         $dataSource->begin();
     
         try {
@@ -257,6 +255,35 @@ class ServicosController extends AppController {
                 ]
             ]);
 
+            $imagens_salvar = [];
+            if (isset($this->request->params['form']['fotos']) && is_array($this->request->params['form']['fotos']) && count($this->request->params['form']['fotos']) > 0) {
+    
+                $fotos = $this->request->params['form']['fotos'];
+    
+                foreach ($fotos['name'] as $index => $name) {
+                    if ($fotos['error'][$index] === UPLOAD_ERR_OK) {
+                        $imagens_salvar[] = [
+                            'imagem' => [
+                                'name' => $fotos['name'][$index],
+                                'type' => $fotos['type'][$index],
+                                'tmp_name' => $fotos['tmp_name'][$index],
+                                'error' => $fotos['error'][$index],
+                                'size' => $fotos['size'][$index],
+                            ],
+                            'cliente_servico_id' => $servico_id
+                        ];
+                        
+                    }
+                }
+                
+             
+            }
+
+
+            // Salva as novas fotos
+            if ( count($imagens_salvar) > 0 ) {
+                $this->ClienteServicoFoto->saveMany($imagens_salvar);
+            }
 
             $horarios_salvar = [];
             foreach( $dados->horarios as $key => $horario ){
