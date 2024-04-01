@@ -429,9 +429,8 @@ class UsuariosController extends AppController {
             $dados = json_decode($dados);
         }
 
-        $this->log($dados,'debug');
+        /*$this->log($dados,'debug');*/
         /*die();*/
-
 
         if (!isset($dados->tipo_cadastro) || $dados->tipo_cadastro   == '') {
             throw new BadRequestException('Tipo de Cadastro não informado', 400);
