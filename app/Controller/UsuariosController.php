@@ -665,12 +665,7 @@ class UsuariosController extends AppController {
 
         $asaas_id = $asaas_dados['id'];
     
-        if ( $this->ambiente == 1 ) {
-            $dados_salvar['Cliente']['asaas_id'] = $asaas_id;
-        }                
-        else if ( $this->ambiente == 2 ) {
-            $dados_salvar['Cliente']['asaas_homologacao_id'] = $asaas_id;
-        }
+        $dados_salvar['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')] = $asaas_id;        
 
         $this->Usuario->set($dados_salvar);
         if ($this->Usuario->saveAssociated($dados_salvar)) {
@@ -1390,15 +1385,8 @@ class UsuariosController extends AppController {
             return false;
         }
 
-        if ( $this->ambiente == 1 ) {
-            $asaas_url = $this->asaas_api_url;
-            $asaas_token = $this->asaas_api_token;
-        }
-        else if ( $this->ambiente == 2 ) {
-            $asaas_url = $this->asaas_sandbox_url;
-            $asaas_token = $this->asaas_sandbox_token;
-        }
-        
+        $asaas_url = getenv('ASAAS_API_URL');
+        $asaas_token = getenv('ASAAS_API_TOKEN');
 
         $curl = curl_init();
 

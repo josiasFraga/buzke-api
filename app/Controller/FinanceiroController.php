@@ -16,17 +16,9 @@ class FinanceiroController extends AppController {
 
         $this->loadModel('Cliente');
 
-        if ( $this->ambiente == 1 ) {
-            $conditions = [
-                'Cliente.asaas_id' => null,
-            ];
-        }
-        else if ( $this->ambiente == 2 ) {
-            $conditions = [
-                'Cliente.asaas_homologacao_id' => null
-            ];
-        }
-
+        $conditions = [
+            'Cliente.' . getenv('CAMPO_CLIENTE_GATEWAY_ID') => null,
+        ];
 
         $clientes_sem_cadastro_no_asaas = $this->Cliente->find('all',[
             'fields' => ['cliente.*', 'Usuario.nome', 'Usuario.email'],
@@ -55,13 +47,8 @@ class FinanceiroController extends AppController {
                     'id' => $cliente['Cliente']['id'],
                 ];
     
-                if ( $this->ambiente == 1 ) {
-                    $dados_salvar['asaas_id'] = $asaas_id;
-                }                
-                else if ( $this->ambiente == 2 ) {
-                    $dados_salvar['asaas_homologacao_id'] = $asaas_id;
-                }
-
+                $dados_salvar[getenv('CAMPO_CLIENTE_GATEWAY_ID')] = $asaas_id;
+    
                 if ( !$this->Cliente->save($dados_salvar) ){
                     echo 'Erro ao salvar o cliente: ' . $cliente['Cliente']['id']."<br />";
                     continue;
@@ -82,15 +69,8 @@ class FinanceiroController extends AppController {
             return false;
         }
 
-        if ( $this->ambiente == 1 ) {
-            $asaas_url = $this->asaas_api_url;
-            $asaas_token = $this->asaas_api_token;
-        }
-        else if ( $this->ambiente == 2 ) {
-            $asaas_url = $this->asaas_sandbox_url;
-            $asaas_token = $this->asaas_sandbox_token;
-        }
-        
+        $asaas_url = getenv('ASAAS_API_URL');
+        $asaas_token = getenv('ASAAS_API_TOKEN');        
 
         $curl = curl_init();
 
