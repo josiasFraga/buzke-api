@@ -662,14 +662,9 @@ class UsuariosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro no servidor do gerenciador de pagamentos. ['.$asaas_dados['errors'][0]['description'].'] Por favor, tente mais tarde!'))));
         }
 
-        $asaas_id = $asaas_dados['id'];
-    
-        if ( $this->ambiente == 1 ) {
-            $dados_salvar['Cliente']['asaas_id'] = $asaas_id;
-        }                
-        else if ( $this->ambiente == 2 ) {
-            $dados_salvar['Cliente']['asaas_homologacao_id'] = $asaas_id;
-        }
+        $asaas_id = $asaas_dados['id'];    
+ 
+        $dados_salvar['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')] = $asaas_id; 
 
         $this->Usuario->set($dados_salvar);
         if ($this->Usuario->saveAssociated($dados_salvar)) {

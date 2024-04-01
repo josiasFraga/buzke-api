@@ -16,16 +16,10 @@ class FinanceiroController extends AppController {
 
         $this->loadModel('Cliente');
 
-        if ( $this->ambiente == 1 ) {
-            $conditions = [
-                'Cliente.asaas_id' => null,
-            ];
-        }
-        else if ( $this->ambiente == 2 ) {
-            $conditions = [
-                'Cliente.asaas_homologacao_id' => null
-            ];
-        }
+
+        $conditions = [
+            'Cliente.' . getenv('CAMPO_CLIENTE_GATEWAY_ID') => null,
+        ];
 
 
         $clientes_sem_cadastro_no_asaas = $this->Cliente->find('all',[
@@ -55,12 +49,7 @@ class FinanceiroController extends AppController {
                     'id' => $cliente['Cliente']['id'],
                 ];
     
-                if ( $this->ambiente == 1 ) {
-                    $dados_salvar['asaas_id'] = $asaas_id;
-                }                
-                else if ( $this->ambiente == 2 ) {
-                    $dados_salvar['asaas_homologacao_id'] = $asaas_id;
-                }
+                $dados_salvar[getenv('CAMPO_CLIENTE_GATEWAY_ID')] = $asaas_id;
 
                 if ( !$this->Cliente->save($dados_salvar) ){
                     echo 'Erro ao salvar o cliente: ' . $cliente['Cliente']['id']."<br />";

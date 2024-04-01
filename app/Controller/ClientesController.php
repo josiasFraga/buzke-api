@@ -1734,12 +1734,7 @@ class ClientesController extends AppController {
         $asaas_url = getenv('ASAAS_API_URL');
         $asaas_token = getenv('ASAAS_API_TOKEN');   
 
-        if ( $this->ambiente == 1 ) {         
-            $asaas_cliente_id = $cliente['Cliente']['asaas_id'];
-        }
-        else if ( $this->ambiente == 2 ) {
-            $asaas_cliente_id = $cliente['Cliente']['asaas_homologacao_id'];
-        }
+        $asaas_cliente_id = $cliente['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')];
 
         $params = [
             'customer' => $asaas_cliente_id,
@@ -1826,13 +1821,9 @@ class ClientesController extends AppController {
         
         $asaas_url = getenv('ASAAS_API_URL');
         $asaas_token = getenv('ASAAS_API_TOKEN');    
+       
+        $asaas_cliente_id = $cliente['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')];
 
-        if ( $this->ambiente == 1 ) {        
-            $asaas_cliente_id = $cliente['Cliente']['asaas_id'];
-        }
-        else if ( $this->ambiente == 2 ) {
-            $asaas_cliente_id = $cliente['Cliente']['asaas_homologacao_id'];
-        }
 
         $params = [
             'customer' => $asaas_cliente_id,
