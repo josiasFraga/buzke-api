@@ -429,8 +429,8 @@ class UsuariosController extends AppController {
             $dados = json_decode($dados);
         }
 
-        /*$this->log($dados,'debug');
-        die();*/
+        $this->log($dados,'debug');
+        /*die();*/
 
 
         if (!isset($dados->tipo_cadastro) || $dados->tipo_cadastro   == '') {
@@ -1389,16 +1389,9 @@ class UsuariosController extends AppController {
         if ( count($cliente) == 0 ) {
             return false;
         }
-
-        if ( $this->ambiente == 1 ) {
-            $asaas_url = $this->asaas_api_url;
-            $asaas_token = $this->asaas_api_token;
-        }
-        else if ( $this->ambiente == 2 ) {
-            $asaas_url = $this->asaas_sandbox_url;
-            $asaas_token = $this->asaas_sandbox_token;
-        }
-        
+  
+        $asaas_url = getenv('ASAAS_API_URL');
+        $asaas_token = getenv('ASAAS_API_TOKEN');        
 
         $curl = curl_init();
 

@@ -1730,15 +1730,14 @@ class ClientesController extends AppController {
         $hoje = date('Y-m-d');
         $hoje_time = strtotime($hoje);
         $one_month_more = date("Y-m-d", strtotime("+1 month", $hoje_time));
+        
+        $asaas_url = getenv('ASAAS_API_URL');
+        $asaas_token = getenv('ASAAS_API_TOKEN');   
 
-        if ( $this->ambiente == 1 ) {
-            $asaas_url = $this->asaas_api_url;
-            $asaas_token = $this->asaas_api_token;            
+        if ( $this->ambiente == 1 ) {         
             $asaas_cliente_id = $cliente['Cliente']['asaas_id'];
         }
         else if ( $this->ambiente == 2 ) {
-            $asaas_url = $this->asaas_sandbox_url;
-            $asaas_token = $this->asaas_sandbox_token;
             $asaas_cliente_id = $cliente['Cliente']['asaas_homologacao_id'];
         }
 
@@ -1824,15 +1823,14 @@ class ClientesController extends AppController {
         $hoje = date('Y-m-d');
         $hoje_time = strtotime($hoje);
         $one_month_more = date("Y-m-d", strtotime("+1 month", $hoje_time));
+        
+        $asaas_url = getenv('ASAAS_API_URL');
+        $asaas_token = getenv('ASAAS_API_TOKEN');    
 
-        if ( $this->ambiente == 1 ) {
-            $asaas_url = $this->asaas_api_url;
-            $asaas_token = $this->asaas_api_token;            
+        if ( $this->ambiente == 1 ) {        
             $asaas_cliente_id = $cliente['Cliente']['asaas_id'];
         }
         else if ( $this->ambiente == 2 ) {
-            $asaas_url = $this->asaas_sandbox_url;
-            $asaas_token = $this->asaas_sandbox_token;
             $asaas_cliente_id = $cliente['Cliente']['asaas_homologacao_id'];
         }
 
