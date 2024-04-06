@@ -50,8 +50,6 @@ class UsuariosController extends AppController {
 			$dados->notifications_id = null;
 		}
 
-        $this->log($dados,'debug');
-
         $email = $dados->email;
         $senha = $dados->password;
 
@@ -80,33 +78,23 @@ class UsuariosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Seu cadastro ainda está inativado.'))));
         }
 
-        $cadastro_horarios_ok = 'false';
         $cadastro_categorias_ok = 'false';
         if ( $usuario['Usuario']['nivel_id'] == 2 ) {
 
-            //verifica se o usuário já definiu o horarios de atendimento
-            $this->loadModel('ClienteHorarioAtendimento');
-            $cadastro_horarios_ok = $this->ClienteHorarioAtendimento->find('count',[
-                'conditions' => [
-                    'ClienteHorarioAtendimento.cliente_id' => $usuario['Usuario']['cliente_id']
-                ]
-            ]) > 0;
-
             //verifica se o usuário já definiu as subcategorias
             $this->loadModel('ClienteSubcategoria');
-            $subcategorias = $this->ClienteSubcategoria->find('all',[
-                'fields' => ['*'],
+            $subcategorias = $this->ClienteSubcategoria->find('count',[
                 'conditions' => [
                     'ClienteSubcategoria.cliente_id' => $usuario['Usuario']['cliente_id'],
                 ],
-                'link' => ['Subcategoria']
+                'link' => []
             ]);
 
             $usuario['Cliente']['is_paddle_court'] = $this->ClienteSubcategoria->checkIsPaddleCourt($usuario['Usuario']['cliente_id']);
             $usuario['Cliente']['is_court'] = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
             $usuario['Cliente']['logo'] = $this->images_path.'clientes/'.$usuario['Cliente']['logo'];
 
-            $cadastro_categorias_ok = count($subcategorias) > 0;
+            $cadastro_categorias_ok = $subcategorias > 0;
         }
 
         unset($usuario['Usuario']['senha']);
@@ -152,6 +140,7 @@ class UsuariosController extends AppController {
         $this->Token->create();
         $this->Token->set($dados_salvar);
         $dados_token = $this->Token->save($dados_salvar);
+
         if ($dados_token) {
             if ( $usuario['Usuario']['img'] == '' || $usuario['Usuario']['img'] == null ) {
                 $usuario['Usuario']['img'] = $this->images_path."usuarios/default.png";
@@ -159,24 +148,25 @@ class UsuariosController extends AppController {
                 $usuario['Usuario']['img'] = $this->images_path."usuarios/".$usuario['Usuario']['img'];
             }
 
-            if ( $cadastro_categorias_ok && $cadastro_horarios_ok && $usuario['Usuario']['nivel_id'] == 2 ) {
+            if ( $cadastro_categorias_ok && $usuario['Usuario']['nivel_id'] == 2 ) {
                 $this->loadModel('ClienteAssinatura');
                 $dados_assinatura = $this->ClienteAssinatura->getLastByClientId($usuario['Usuario']['cliente_id']);
 
                 if ( count($dados_assinatura) == 0 || $dados_assinatura['ClienteAssinatura']['status'] == 'INACTIVE' ) {
-                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Sua assinatura venceu, clique no botao abaixo para resolver.', 'button_text' => 'Renovar Assinatura', 'dados' => array_merge($usuario, $dados_token, ['cadastro_horarios_ok' => true, 'cadastro_categorias_ok' => true])))));
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Sua assinatura venceu, clique no botao abaixo para resolver.', 'button_text' => 'Renovar Assinatura', 'dados' => array_merge($usuario, $dados_token, ['cadastro_categorias_ok' => true])))));
                 }
 
                 if ( $dados_assinatura['ClienteAssinatura']['status'] == 'OVERDUE' ) {
-                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Você possui pendencias financeiras com o Buzke, clique no botao abaixo para resolver.', 'button_text' => 'Resolver', 'dados' => array_merge($usuario, $dados_token, ['cadastro_horarios_ok' => true, 'cadastro_categorias_ok' => true])))));
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Você possui pendencias financeiras com o Buzke, clique no botao abaixo para resolver.', 'button_text' => 'Resolver', 'dados' => array_merge($usuario, $dados_token, ['cadastro_categorias_ok' => true])))));
                 }
             }
 
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => array_merge($usuario, $dados_token, ['cadastro_horarios_ok' => $cadastro_horarios_ok, 'cadastro_categorias_ok' => $cadastro_categorias_ok])))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => array_merge($usuario, $dados_token, ['cadastro_categorias_ok' => $cadastro_categorias_ok])))));
         } else {
             throw new BadRequestException('Erro ao salvar o Token', 500);
         }
     }
+	
 	
     public function entrarVisitante() {
         $this->layout = 'ajax';

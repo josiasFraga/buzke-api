@@ -150,6 +150,117 @@ class ClientesController extends AppController {
 
     }
 
+    public function cadastrou_categoria() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dado_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dado_usuario['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('ClienteSubcategoria');
+        $cadastrou_categoria = $this->ClienteSubcategoria->find('count',[
+            'conditions' => [
+                'ClienteSubcategoria.cliente_id' => $dado_usuario['Usuario']['cliente_id']
+            ],
+            'link' => []
+        ]);
+
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $cadastrou_categoria > 0))));
+
+    }
+
+    public function cadastrou_servico() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dado_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dado_usuario['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('ClienteServico');
+        $cadastrou_servico = $this->ClienteServico->find('count',[
+            'conditions' => [
+                'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id']
+            ],
+            'link' => []
+        ]);
+
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $cadastrou_servico > 0))));
+
+    }
+
+    public function cadastrou_horario() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dado_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dado_usuario['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('ClienteHorarioAtendimento');
+        $cadastrou_horarios = $this->ClienteHorarioAtendimento->find('count',[
+            'conditions' => [
+                'ClienteHorarioAtendimento.cliente_id' => $dado_usuario['Usuario']['cliente_id']
+            ],
+            'link' => []
+        ]);
+
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $cadastrou_horarios > 0))));
+
+    }
+
     private function procuraHorariosHoje($horarios = null) {
 
         if ( $horarios == null || count($horarios) == 0) {
@@ -886,129 +997,6 @@ class ClientesController extends AppController {
 
     }
 
-    public function horarios_atendimento() {
-
-        $this->layout = 'ajax';
-        $dados = $this->request->query;
-        if ( !isset($dados['token']) || $dados['token'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
-        }
-        if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
-        }
-
-        $token = $dados['token'];
-        $email = $dados['email'];
-
-        $dado_usuario = $this->verificaValidadeToken($token, $email);
-
-        if ( !$dado_usuario ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
-        if ( $dado_usuario['Usuario']['nivel_id'] != 2 ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
-
-        $this->loadModel('Cliente');
-        $dados_cliente = $this->Cliente->find('first',[
-            'conditions' => [
-                'Cliente.id' => $dado_usuario['Usuario']['cliente_id']
-            ],
-            'link' => []
-        ]);
-
-
-        $this->loadModel('ClienteHorarioAtendimento');
-        $this->loadModel('ClienteSubcategoria');
-        $this->loadModel('ClienteServico');
-        $horarios_atendimento = $this->ClienteHorarioAtendimento->find('all',[
-            'conditions' => [
-                'ClienteHorarioAtendimento.cliente_id' => $dado_usuario['Usuario']['cliente_id']
-            ],
-            'order' => [
-                'ClienteHorarioAtendimento.horario_dia_semana'
-            ],
-            'link' => []
-        ]);
-
-        $isCourt = $this->ClienteSubcategoria->checkIsCourt($dado_usuario['Usuario']['cliente_id']);
-        $nServicos = $this->ClienteServico->contaServicos($dado_usuario['Usuario']['cliente_id']);
-
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_atendimento, 'isCourt' => $isCourt, 'nServicos' => $nServicos))));
-
-    }
-
-    public function altera_horarios_atendimento() {
-        $this->layout = 'ajax';
-        $dados = $this->request->data['dados'];
-
-        if ( is_array($dados) ) {
-            $dados = json_decode(json_encode($dados, true));
-
-        }else {
-            $dados = json_decode($dados);
-        }
-
-
-        if ((!isset($dados->token) || $dados->token == "") ||  (!isset($dados->email) || $dados->email == "")) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
-        }
-        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
-        if ( !$dados_usuario ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
-        $dados_turnos = [];
-        foreach($dados as $key_dado => $dado) {
-
-            if ( strpos($key_dado, 'turnos_') !== false ) {
-                list($discart, $dia_semana_abrev) = explode('turnos_', $key_dado);
-                $dados_turnos[$dia_semana_abrev] = $dado;
-            }
-
-        }
-
-        if ( count($dados_turnos) == 0) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deve adicionar ao menos um turno antes de clicar em salvar!'))));
-        }
-
-        
-        $dados_turnos = json_decode(json_encode($dados_turnos), true);
-
-
-        $turnos_salvar = [];
-        $index = 0;
-        foreach( $dados_turnos as $dia_semana_abrev => $turnos) {
-            $dia_semana_n = array_search($dia_semana_abrev, $this->dias_semana_abrev);
-            foreach($turnos as $key_turno => $turno) {
-                if ( !isset($turno['abertura']) || $turno['abertura'] == "" || !isset($turno['fechamento']) || $turno['fechamento'] == "" || !isset($turno['vagas']) || $turno['vagas'] == "" || !isset($turno['intervalo']) || $turno['intervalo'] == "") {
-                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deixou um campo obrigatório em branco em lagum turno de '.$dia_semana_abrev.'!'))));
-                }
-                $turnos_salvar[$index]['horario_dia_semana'] = $dia_semana_n;
-                $turnos_salvar[$index]['cliente_id'] = $dados_usuario['Usuario']['cliente_id'];
-                $turnos_salvar[$index]['abertura'] = $turno['abertura'];
-                $turnos_salvar[$index]['fechamento'] = $turno['fechamento'];
-                $turnos_salvar[$index]['vagas_por_horario'] = $turno['vagas'];
-                $turnos_salvar[$index]['intervalo_horarios'] = $turno['intervalo'];
-                if ( isset($turno['domicilio']) && $turno['domicilio']) {
-                    $turnos_salvar[$index]['a_domicilio'] = 1;
-                }
-                $index++;
-            }
-        }
-
-        $this->LoadModel('ClienteHorarioAtendimento');
-        $this->ClienteHorarioAtendimento->deleteAll(['ClienteHorarioAtendimento.cliente_id' => $dados_usuario['Usuario']['cliente_id']]);
-        if ( !$this->ClienteHorarioAtendimento->saveMany($turnos_salvar) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao atualizar seus horários de atendimento. Por favor, tente novamente mais tarde!'))));
-        }
-    
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Seus dados de atendimento foram atualizados com sucesso!'))));
-
-    }
-
     public function servicos() {
 
         $this->layout = 'ajax';
@@ -1099,57 +1087,6 @@ class ClientesController extends AppController {
 
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $servicos))));
-
-    }
-
-    public function altera_servicos() {
-        $this->layout = 'ajax';
-        $dados = $this->request->data['dados'];
-
-        if ( is_array($dados) ) {
-            $dados = json_decode(json_encode($dados, true));
-
-        }else {
-            $dados = json_decode($dados);
-        }
-
-        if ((!isset($dados->token) || $dados->token == "") ||  (!isset($dados->email) || $dados->email == "")) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
-        }
-        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
-        if ( !$dados_usuario ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
-        $dados_servicos = isset($dados->servicos) ? json_decode(json_encode($dados->servicos), true) : [];
-
-        if ( count($dados_servicos) == 0 ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você deve adicionar pelo menos um serviço antes de clicar em salvar!'))));
-        }
-
-        $ids_setados = [];
-
-        foreach( $dados_servicos as $key => $servico) {
-            $dados_servicos[$key]['cliente_id'] = $dados_usuario['Usuario']['cliente_id'];
-            if ( isset($servico['id']) && $servico['id'] != '' )
-                $ids_setados[] = $servico['id'];
-        }
-        
-        $this->loadModel('ClienteServico');
-
-        $this->ClienteServico->deleteAll(['ClienteServico.cliente_id' => $dados_usuario['Usuario']['cliente_id'], 'not' => ['ClienteServico.id' => $ids_setados]], true);
-
-        if ( !$this->ClienteServico->saveMany($dados_servicos) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao atualizar seus horários de atendimento. Por favor, tente novamente mais tarde!'))));
-        }
-
-        $this->LoadModel('ClienteHorarioAtendimento');
-        $this->ClienteHorarioAtendimento->updateAll(
-            array('ClienteHorarioAtendimento.vagas_por_horario' => count($dados_servicos)),
-            array('ClienteHorarioAtendimento.cliente_id' => $dados_usuario['Usuario']['cliente_id'])
-        );
-    
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Seus dados de atendimento foram atualizados com sucesso!'))));
 
     }
 
