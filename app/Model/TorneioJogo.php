@@ -28,66 +28,90 @@ class TorneioJogo extends AppModel {
 			return 0;
 		}
 	
-		// Primeiro, encontramos todos os jogos relevantes
-		$conditions = ['OR' => [
-			'TorneioJogo.time_1' => $inscricao_id,
-			'TorneioJogo.time_2' => $inscricao_id
-		], 'TorneioJogoPlacar.tipo' => ['Set', 'Tiebreak']];
+		$conditions = [
+			'OR' => [
+				'TorneioJogo.time_1' => $inscricao_id,
+				'TorneioJogo.time_2' => $inscricao_id
+			],
+			'TorneioJogoPlacar.tipo' => ['Set', 'Tiebreak']
+		];
 	
-		if ($fase != null) {
+		if ($fase !== null) {
 			$conditions['TorneioJogo.fase'] = $fase;
 		}
 	
 		$jogos = $this->find('all', [
 			'conditions' => $conditions,
-			'fields' => ['TorneioJogo.id', 'TorneioJogo.time_1', 'TorneioJogo.time_2', 'TorneioJogoPlacar.tipo', 'TorneioJogoPlacar.time_1_placar', 'TorneioJogoPlacar.time_2_placar'],
-			'group' => ['TorneioJogoPlacar.torneio_jogo_id', 'TorneioJogoPlacar.tipo'],
+			'fields' => [
+				'TorneioJogo.id',
+				'TorneioJogo.time_1',
+				'TorneioJogo.time_2',
+				'TorneioJogoPlacar.tipo',
+				'TorneioJogoPlacar.time_1_placar',
+				'TorneioJogoPlacar.time_2_placar'
+			],
 			'link' => ['TorneioJogoPlacar']
 		]);
 	
-		$vitorias = 0;
-	
-		// Processar cada jogo para contar vitórias
 		$resultados = [];
 	
+		// Processar cada jogo para contar sets e tiebreaks
 		foreach ($jogos as $jogo) {
 			$idJogo = $jogo['TorneioJogo']['id'];
 			$tipo = $jogo['TorneioJogoPlacar']['tipo'];
 			$placarTime1 = $jogo['TorneioJogoPlacar']['time_1_placar'];
 			$placarTime2 = $jogo['TorneioJogoPlacar']['time_2_placar'];
 	
-			// Inicializar contadores de sets vencidos, se necessário
 			if (!isset($resultados[$idJogo])) {
-				$resultados[$idJogo] = ['time_1' => 0, 'time_2' => 0, 'tiebreak' => null];
+				$resultados[$idJogo] = [
+					'sets_time_1' => 0, 
+					'sets_time_2' => 0, 
+					'tiebreak_vencedor' => null, 
+					'time_1' => $jogo['TorneioJogo']['time_1'], 
+					'time_2' => $jogo['TorneioJogo']['time_2']
+				];
 			}
 	
-			// Contar sets vencidos
 			if ($tipo === 'Set') {
 				if ($placarTime1 > $placarTime2) {
-					$resultados[$idJogo]['time_1']++;
-				} elseif ($placarTime2 > $placarTime1) {
-					$resultados[$idJogo]['time_2']++;
+					$resultados[$idJogo]['sets_time_1']++;
+				} else if ($placarTime2 > $placarTime1) {
+					$resultados[$idJogo]['sets_time_2']++;
 				}
-			} elseif ($tipo === 'Tiebreak') {
-				// Guardar resultado do tiebreak
-				$resultados[$idJogo]['tiebreak'] = $placarTime1 > $placarTime2 ? 'time_1' : 'time_2';
+			} else if ($tipo === 'Tiebreak') {
+				$resultados[$idJogo]['tiebreak_vencedor'] = $placarTime1 > $placarTime2 ? 'time_1' : 'time_2';
 			}
 		}
 	
-		// Avaliar os resultados para contar vitórias
-		foreach ($resultados as $resultado) {
-			if ($resultado['time_1'] > $resultado['time_2']) {
-				$vitorias += $inscricao_id == $jogos[0]['TorneioJogo']['time_1'] ? 1 : 0;
-			} elseif ($resultado['time_2'] > $resultado['time_1']) {
-				$vitorias += $inscricao_id == $jogos[0]['TorneioJogo']['time_2'] ? 1 : 0;
-			} elseif ($resultado['tiebreak'] !== null) {
-				// Empate, decidido por tiebreak
-				$vitorias += $resultado['tiebreak'] == ($inscricao_id == $jogos[0]['TorneioJogo']['time_1'] ? 'time_1' : 'time_2') ? 1 : 0;
+		$vitorias = 0;
+	
+		// Avaliar os resultados acumulados para contar vitórias
+		foreach ($resultados as $idJogo => $resultado) {
+			$totalSetsTime1 = $resultado['sets_time_1'];
+			$totalSetsTime2 = $resultado['sets_time_2'];
+			$tiebreakVencedor = $resultado['tiebreak_vencedor'];
+			$time_1 = $resultado['time_1'];
+			$time_2 = $resultado['time_2'];
+	
+			if ($totalSetsTime1 == $totalSetsTime2 && $tiebreakVencedor !== null) {
+				// Empate nos sets, decide pelo tiebreak
+				if (($tiebreakVencedor === 'time_1' && $time_1 == $inscricao_id) || 
+					($tiebreakVencedor === 'time_2' && $time_2 == $inscricao_id)) {
+					$vitorias++;
+				}
+			} else {
+				// Não houve empate nos sets, decide pelo maior número de sets vencidos
+				if ($totalSetsTime1 > $totalSetsTime2 && $time_1 == $inscricao_id) {
+					$vitorias++;
+				} else if ($totalSetsTime2 > $totalSetsTime1 && $time_2 == $inscricao_id) {
+					$vitorias++;
+				}
 			}
 		}
 	
 		return $vitorias;
 	}
+	
 
 	public function buscaSaldoSets($inscricao_id = null, $fase = null) {
 		if ($inscricao_id == null) {
