@@ -412,21 +412,11 @@ class ClientesController extends AppController {
         }
 
         $subcategorias = [];
-        $dados_turnos = [];
-        $ids_quadras = $this->Subcategoria->buscaSubcategoriasQuadras(true);
-        $isCourt = false;
         foreach($dados as $key_dado => $dado) {
 
             if ( strpos($key_dado, 'item_') !== false ) {
                 list($discart, $subcategoria_id) = explode('item_', $key_dado);
                 $subcategorias[] = $subcategoria_id;
-                if ( in_array($subcategoria_id, $ids_quadras) )
-                    $isCourt = true;
-            }
-
-            if ( strpos($key_dado, 'turnos_') !== false ) {
-                list($discart, $dia_semana_abrev) = explode('turnos_', $key_dado);
-                $dados_turnos[$dia_semana_abrev] = $dado;
             }
 
         }
@@ -435,48 +425,11 @@ class ClientesController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Selecione a subcategoria do seu negócio antes de clicar em salvar!'))));
         }
 
-        if ( count($dados_turnos) == 0) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você deve adicionar ao menos um turno antes de clicar em salvar!'))));
-        }
-
         $subcategorias = json_decode(json_encode($subcategorias), true);
-        $dados_turnos = json_decode(json_encode($dados_turnos), true);
-        $dados_servicos = isset($dados->servicos) ? json_decode(json_encode($dados->servicos), true) : [];
-
-        if ( $isCourt ) {
-            if ( count($dados_servicos) == 0 ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Você deve adicionar pelo menos uma quadra antes de clicar em salvar!'))));
-            }
-        } else {
-            $dados_servicos = [];
-        }
 
         $subcategorias_salvar = [];
         foreach( $subcategorias as $key => $sbc) {
             $subcategorias_salvar[]['subcategoria_id'] = $sbc;
-        }
-
-        $turnos_salvar = [];
-        $index = 0;
-        foreach( $dados_turnos as $dia_semana_abrev => $turnos) {
-            $dia_semana_n = array_search($dia_semana_abrev, $this->dias_semana_abrev);
-            foreach($turnos as $key_turno => $turno) {
-                if ( isset($dados->item_7) && $dados->item_7 ) {
-                    $turno['vagas'] = count($dados_servicos);
-                }
-                if ( !isset($turno['abertura']) || $turno['abertura'] == "" || !isset($turno['fechamento']) || $turno['fechamento'] == "" || !isset($turno['vagas']) || $turno['vagas'] == "" || !isset($turno['intervalo']) || $turno['intervalo'] == "") {
-                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Você deixou um campo obrigatório em branco em lagum turno de '.$dia_semana_abrev.'!'))));
-                }
-                $turnos_salvar[$index]['horario_dia_semana'] = $dia_semana_n;
-                $turnos_salvar[$index]['abertura'] = $turno['abertura'];
-                $turnos_salvar[$index]['fechamento'] = $turno['fechamento'];
-                $turnos_salvar[$index]['vagas_por_horario'] = $turno['vagas'];
-                $turnos_salvar[$index]['intervalo_horarios'] = $turno['intervalo'];
-                if ( isset($turno['domicilio']) && $turno['domicilio'] ) {
-                    $turnos_salvar[$index]['a_domicilio'] = 1;
-                }
-                $index++;
-            }
         }
 
         $dados_plano = $this->Plano->find('first',[
@@ -585,7 +538,6 @@ class ClientesController extends AppController {
                 'fixo_tipo' => (!isset($dados->agendamento_fixo_tipo) || $dados->agendamento_fixo_tipo == '' ? 'Nenhum' : $dados->agendamento_fixo_tipo),
             ],
             'ClienteSubcategoria' => $subcategorias_salvar,
-            'ClienteHorarioAtendimento' => $turnos_salvar,
             'ClienteAssinatura' => [
                 [
                     'plano_id' => $dados->plano,
@@ -618,26 +570,11 @@ class ClientesController extends AppController {
             ]);
         }
 
-        
-        if ( isset($dados_servicos) && count($dados_servicos) > 0 ) {
-            $dados_salvar = array_merge($dados_salvar,[
-                'ClienteServico' => $dados_servicos
-            ]);
-        }
-
         $this->loadModel('Cliente');
 
         $this->Cliente->set($dados_salvar);
         if ($this->Cliente->saveAssociated($dados_salvar)) {
-
   
-            $this->loadModel('ClienteHorarioAtendimento');
-            $cadastro_horarios_ok = $this->ClienteHorarioAtendimento->find('count',[
-                'conditions' => [
-                    'ClienteHorarioAtendimento.cliente_id' => $dados_token['Usuario']['cliente_id']
-                ]
-            ]) > 0;
-
             $this->loadModel('ClienteSubcategoria');
             $cadastro_categorias_ok = $this->ClienteSubcategoria->find('count',[
                 'conditions' => [
@@ -645,7 +582,7 @@ class ClientesController extends AppController {
                 ]
             ]) > 0;
 
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cadastrado com sucesso!', 'cadastro_horarios_ok' => $cadastro_horarios_ok, 'cadastro_categorias_ok' => $cadastro_categorias_ok))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cadastrado com sucesso!', 'cadastro_categorias_ok' => $cadastro_categorias_ok))));
         } else {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
         }

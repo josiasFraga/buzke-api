@@ -6,32 +6,24 @@ class ServicosController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->query;
 
-        if ( !isset($dados['token']) || $dados['token'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
-        }
-
-        $token = $dados['token'];
-        $email = null;
-
-        if ( isset($dados['email']) && $dados['email'] != "" ) {
-            $email = $dados['email'];
-        }
-
-        $dados_token = $this->verificaValidadeToken($token, $email);
-
-        if ( !$dados_token ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
         $this->loadModel('ClienteServico');
         $this->loadModel('ClienteServicoHorario');
 
         $conditions = [];
+        $order = ['ClienteServico.nome'];
         if ( isset($dados['tipo']) && $dados['tipo'] == 'meus' ) {
-
-            if ( !isset($dados_token['Usuario']) ) {
-                throw new BadRequestException('Usuario não logado!', 401);
+    
+            if ( !isset($dados['token']) || $dados['token'] == "" ) {
+                throw new BadRequestException('Dados de usuário não informado!', 401);
             }
+            if ( !isset($dados['email']) || $dados['email'] == "" ) {
+                throw new BadRequestException('Dados de usuário não informado!', 401);
+            }
+    
+            $token = $dados['token'];
+            $email = $dados['email'];
+    
+            $dado_usuario = $this->verificaValidadeToken($token, $email);
 
             if ( $dados_token['Usuario']['cliente_id'] == null ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
@@ -41,45 +33,29 @@ class ServicosController extends AppController {
                 'ClienteServico.cliente_id' => $dados_token['Usuario']['cliente_id']
             ]);
 
-        } else {
+        } else if ( isset($dados['cliente_id']) && $dados['cliente_id'] != '' ) {
+            
+            $conditions = [
+                'ClienteServico.cliente_id' => $dados['cliente_id']
+            ];
 
-            if ( isset($dados['cliente_id']) && $dados['cliente_id'] != '' ) {
-                $conditions = [
-                    'ClienteServico.cliente_id' => $dados['cliente_id']
+            if ( $dados['cliente_id'] == 55 ) {
+                $order = [
+                    'ClienteServico.id'
                 ];
-
-                if ( $dados['cliente_id'] == 55 ) {
-                    $order_cliente_servico = [
-                        'ClienteServico.id'
-                    ];
-        
-                }
-            } else {
-                $conditions = [
-                    'ClienteServico.cliente_id' => $dados_token['Usuario']['cliente_id']
-                ];
-
-                if ( $dados_token['Usuario']['cliente_id'] == 55 ) {
-                    $order_cliente_servico = [
-                        'ClienteServico.id'
-                    ];
-        
-                }
             }
+            
+        } else {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'error', 'msg' => 'Quadra não informada!'))));
         }
 
-        $order_quadras = ['ClienteServico.nome'];
-
-        if ( $dados_token['Usuario']['cliente_id'] == 55 ) {
-            $order_quadras = ['ClienteServico.id'];
-        }
 
         $quadras = $this->ClienteServico->find('all',[
             'fields' => [
                 'ClienteServico.*'
             ],
             'conditions' => $conditions,
-            'order' => $order_quadras,
+            'order' => $order,
             'contain' => [
                 'ClienteServicoFoto' => [
                     'fields' => [
@@ -93,7 +69,12 @@ class ServicosController extends AppController {
         foreach($quadras as $key => $qua){
 
             $quadras[$key]['ClienteServico']['_valor'] = number_format($qua['ClienteServico']['valor'],2,',','.');
-            $quadras[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->lsitaDiasSemana($qua['ClienteServico']['id']);
+
+            if ( isset($dados['day']) && !empty($dados['day']) ) {
+                $quadras[$key]["ClienteServico"]["_horarios"] = $this->ClienteServicoHorario->listaHorarios($qua['ClienteServico']['id'], $dados['day']);
+            } else {
+                $quadras[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($qua['ClienteServico']['id']);
+            }
 
             if ( count($qua['ClienteServicoFoto']) > 0 ) {
                 foreach( $qua['ClienteServicoFoto'] as $key_imagem => $imagem){
