@@ -1265,6 +1265,68 @@ class AppController extends Controller {
 
         return json_decode($response, true);
     }
+
+    public function quadra_horarios($servico_id, $data, $oferece_agendamento_fixo) {
+
+        $this->loadModel('AgendamentoFixoCancelado');
+        $this->loadModel('ClienteServicoHorario');
+        $this->loadModel('TorneioQuadraPeriodo');
+        $this->loadModel('Agendamento');
+
+
+        $horarios = $this->ClienteServicoHorario->listaHorarios($servico_id, $data);
+
+        if ( count($horarios) > 0 ) {
+
+            foreach( $horarios as $key => $horario ) {
+
+                $agendamentos_padrao = $this->Agendamento->agendamentosHorario($servico_id, $data, $horario['time']);
+                $agendamentos_fixos = $this->Agendamento->agendamentosHorarioFixo($servico_id, $data, $horario['time']);
+                $horarios[$key]['enable_fixed_scheduling'] = $oferece_agendamento_fixo === 'Y';
+
+                if ( count($agendamentos_fixos) > 0 ) {
+                    $horarios[$key]['enable_fixed_scheduling'] = false;
+             
+                    $n_fixos_cancelados = $this->AgendamentoFixoCancelado->find('count',[
+                        'conditions' => [
+                            'AgendamentoFixoCancelado.horario' => $data . ' ' . $horario['time'],
+                            'Agendamento.servico_id' => $servico_id
+                        ],
+                        'link' => [
+                            'Agendamento'
+                        ]
+                    ]);
+    
+                    $agendamentos_fixos = array_slice($agendamentos_fixos, $n_fixos_cancelados);                
+                    
+                }
+
+                $reservas_torneio = $this->TorneioQuadraPeriodo->verificaReservaTorneio($servico_id, $data, $horario['time']);
+
+                $motivo_indisponivel = null;
+
+                if ( count($reservas_torneio) > 0 ) {
+                    $motivo_indisponivel = "Haverá torneio nessa quadra nesse dia e hora.";
+                }
+
+                if ( ($horarios[$key]['vacancies_per_time'] - count($agendamentos_padrao) - count($agendamentos_fixos)) < 0 ) {
+                    $motivo_indisponivel = "Horário ocupado por outro usuário";
+                }
+
+                if ( $data." ".$horarios[$key]['time'] < date('Y-m-d H:i:s') ) {
+                    $motivo_indisponivel = "Horário já passou";
+                }
+
+                $horarios[$key]['active'] = count($reservas_torneio) == 0 && ($horarios[$key]['vacancies_per_time'] - count($agendamentos_padrao) - count($agendamentos_fixos)) > 0 && $data." ".$horarios[$key]['time'] > date('Y-m-d H:i:s');
+                $horarios[$key]['motivo'] = $motivo_indisponivel;
+
+
+            }
+
+        }
+
+        return $horarios;
+    }
     
     public function dateHourEnBr( $data , $r_data, $r_hora ){
 		if ($r_data && $r_hora) {
