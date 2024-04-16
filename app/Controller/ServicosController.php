@@ -5,9 +5,13 @@ class ServicosController extends AppController {
 
         $this->layout = 'ajax';
         $dados = $this->request->query;
-
+        
         $this->loadModel('ClienteServico');
+        $this->loadModel('ClienteSubcategoria');
         $this->loadModel('ClienteServicoHorario');
+        $this->loadModel('Agendamento');
+        $this->loadModel('AgendamentoFixoCancelado');
+        $this->loadModel('TorneioQuadraPeriodo');
 
         $conditions = [];
         $order = ['ClienteServico.nome'];
@@ -71,7 +75,7 @@ class ServicosController extends AppController {
             $quadras[$key]['ClienteServico']['_valor'] = number_format($qua['ClienteServico']['valor'],2,',','.');
 
             if ( isset($dados['day']) && !empty($dados['day']) ) {
-                $quadras[$key]["ClienteServico"]["_horarios"] = $this->ClienteServicoHorario->listaHorarios($qua['ClienteServico']['id'], $dados['day']);
+                $quadras[$key]["ClienteServico"]["_horarios"] = $this->quadra_horarios($qua['ClienteServico']['id'], $dados['day'], false);
             } else {
                 $quadras[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($qua['ClienteServico']['id']);
             }
@@ -297,6 +301,94 @@ class ServicosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => $e->getMessage()))));
         }
 
+    }
+
+    public function dados_para_agendamento() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        $this->loadModel('ClienteServico');
+        $this->loadModel('ClienteSubcategoria');
+        $this->loadModel('ClienteServicoHorario');
+        $this->loadModel('Agendamento');
+        $this->loadModel('AgendamentoFixoCancelado');
+        $this->loadModel('TorneioQuadraPeriodo');
+
+        $conditions = [
+            'ClienteServico.id' => $dados['servico_id']
+        ];
+
+        $dados_servico = $this->ClienteServico->find('first',[
+            'fields' => [
+                'ClienteServico.*',
+                'ClienteConfiguracao.*'
+            ],
+            'conditions' => $conditions,
+            'link' => ['Cliente' => ['ClienteConfiguracao']]
+        ]);
+
+        if ( count($dados_servico) == 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Serviço não encontrado!'))));
+        }
+        
+        $isCourt = $this->ClienteSubcategoria->checkIsCourt($dados_servico['ClienteServico']['cliente_id']);
+        $isPaddleCourt = $this->ClienteSubcategoria->checkIsPaddleCourt($dados_servico['ClienteServico']['cliente_id']);
+
+        $horarios = $this->quadra_horarios($dados['servico_id'], $dados['day'], $dados_servico['ClienteConfiguracao']['horario_fixo']);
+
+        $dados_retornar = [
+            'is_court' => $isCourt,
+            'is_paddle_court' => $isPaddleCourt,
+            'enable_fixed_shedulling' => $dados_servico['ClienteConfiguracao']['horario_fixo'] === 'Y',
+            'fixed_shedulling' => $dados_servico['ClienteConfiguracao']['fixo_tipo'],
+            'tipo' => $dados_servico['ClienteServico']['tipo'],
+            'horarios' => $horarios
+        ];
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_retornar))));
+
+    }
+
+    public function quadra_horarios($servico_id, $data, $oferece_agendamento_fixo) {
+
+        $horarios = $this->ClienteServicoHorario->listaHorarios($servico_id, $data);
+
+        if ( count($horarios) > 0 ) {
+
+            foreach( $horarios as $key => $horario ) {
+
+                $agendamentos_padrao = $this->Agendamento->agendamentosHorario($servico_id, $data, $horario['time']);
+                $agendamentos_fixos = $this->Agendamento->agendamentosHorarioFixo($servico_id, $data, $horario['time']);
+                $horarios[$key]['enable_fixed_scheduling'] = $oferece_agendamento_fixo === 'Y';
+
+                if ( count($agendamentos_fixos) > 0 ) {
+                    $horarios[$key]['enable_fixed_scheduling'] = false;
+             
+                    $n_fixos_cancelados = $this->AgendamentoFixoCancelado->find('count',[
+                        'conditions' => [
+                            'AgendamentoFixoCancelado.horario' => $data . ' ' . $horario['time'],
+                            'Agendamento.servico_id' => $servico_id
+                        ],
+                        'link' => [
+                            'Agendamento'
+                        ]
+                    ]);
+    
+                    $agendamentos_fixos = array_slice($agendamentos_fixos, $n_fixos_cancelados);                
+                    
+                }
+
+                $reservas_torneio = $this->TorneioQuadraPeriodo->verificaReservaTorneio($servico_id, $data, $horario['time']);
+
+                $horarios[$key]['active'] = count($reservas_torneio) == 0 && ($horarios[$key]['vacancies_per_time'] - count($agendamentos_padrao) - count($agendamentos_fixos)) > 0 && $data." ".$horarios[$key]['time'] > date('Y-m-d H:i:s');
+
+
+            }
+
+        }
+
+        return $horarios;
     }
 
 }

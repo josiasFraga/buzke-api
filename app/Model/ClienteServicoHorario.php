@@ -66,8 +66,6 @@ class ClienteServicoHorario extends AppModel {
         
     }
 
-    
-
     public function listaHorarios($servico_id = null, $dia = null) {
         if (is_null($servico_id) || is_null($dia)) {
             return []; // Retorna vazio se algum dos parâmetros não for fornecido
@@ -95,7 +93,11 @@ class ClienteServicoHorario extends AppModel {
                 if ($fim_intervalo <= $fim && $fim_intervalo <= $fim) { // Verifica se não excede o horário de fim
                     $intervalos[] = [
                         'label' => $inicio->format('H:i') . ' - ' . $fim_intervalo->format('H:i'),
-                        'active' => true
+                        'active' => true,
+                        'time' => $inicio->format('H:i:s'),
+                        'duration' => $duracao->format('H:i:s'),
+                        'vacancies_per_time' => $horario['ClienteServicoHorario']['vagas_por_horario'],
+                        'at_home' => $horario['ClienteServicoHorario']['a_domicilio'] === '1' ? true : false,
                     ];
                 }
     

@@ -784,4 +784,48 @@ class Agendamento extends AppModel {
 
     }
 
+    public function agendamentosHorario ($servico_id = null, $data = null, $hora = null) {
+
+        if ( $servico_id == null || $data == null || $hora == null ) {
+            return false;
+        }
+
+        $conditions = [
+            'Agendamento.servico_id' => $servico_id,
+            'DATE(Agendamento.horario)' => $data,
+            'TIME(Agendamento.horario)' => $hora,
+            'Agendamento.cancelado' => 'N',
+        ];
+
+
+        return $this->find('all', [
+            'conditions' => $conditions,
+            'link' => []
+        ]);
+
+    }
+
+    public function agendamentosHorarioFixo ($servico_id = null, $data = null, $hora = null) {
+
+        if ( $servico_id == null || $data == null || $hora == null ) {
+            return false;
+        }
+
+        $conditions = [
+            'Agendamento.servico_id' => $servico_id,
+            'or' => [
+                'dia_semana' => date('w',strtotime($data)),
+                'dia_mes' => (int)date('d',strtotime($data)),
+            ],
+            'TIME(Agendamento.horario)' => $hora,
+            'Agendamento.cancelado' => 'N',
+        ];
+
+        return $this->find('all', [
+            'conditions' => $conditions,
+            'link' => []
+        ]);
+
+    }
+
 }
