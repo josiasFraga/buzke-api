@@ -176,6 +176,18 @@ class AgendamentosController extends AppController {
                 $agendamentos[$key]['Agendamento']['data'] = date('d/m/Y',strtotime($agendamento['Agendamento']['horario']));
                 $agendamentos[$key]['Agendamento']['hora'] = date('H:i',strtotime($agendamento['Agendamento']['horario']));
                 $agendamentos[$key]['Agendamento']['tipo'] = 'padrao';
+
+                $horario = $agendamento['Agendamento']['horario'];
+                $duracao = $agendamento['Agendamento']['duracao'];
+
+                $dateTime = new DateTime($horario);
+                list($hours, $minutes, $seconds) = explode(':', $duracao);
+                $interval = new DateInterval("PT{$hours}H{$minutes}M{$seconds}S");
+                $dateTime->add($interval);;
+
+                $fim_agendamento = $dateTime->format('H:i');
+
+                $agendamentos[$key]['Agendamento']['fim_agendamento'] = $fim_agendamento;
                 
                 if ( isset($agendamento['Agendamento']['torneio_id']) && $agendamento['Agendamento']['torneio_id'] != null ) 
                     $agendamentos[$key]['Agendamento']['tipo'] = 'tournament';
@@ -614,6 +626,7 @@ class AgendamentosController extends AppController {
             'endereco' => $dados->endereco,
             'dia_semana' => $agendamento_dia_semana,
             'dia_mes' => $agendamento_dia_mes,
+            'duracao' => $horario_x_horario_selecionado['duration'],
         ];
 
         if ( isset($dados->convites_tpj) && is_array($dados->convites_tpj)) {
@@ -624,10 +637,10 @@ class AgendamentosController extends AppController {
             $dados->convites_grl = (object)$dados->convites_grl;
         }
 
-        //$this->Agendamento->create();
-        //$this->Agendamento->set($dados_salvar);
-        //$dados_agendamento_salvo = $this->Agendamento->save($dados_salvar);
-        $dados_agendamento_salvo = true;
+        $this->Agendamento->create();
+        $this->Agendamento->set($dados_salvar);
+        $dados_agendamento_salvo = $this->Agendamento->save($dados_salvar);
+        //$dados_agendamento_salvo = true;
         if ( !$dados_agendamento_salvo ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cadastrar seu agendamento!'))));
         }
@@ -666,7 +679,16 @@ class AgendamentosController extends AppController {
 
         $this->enviaConvites($dados, $dados_agendamento_salvo, $dados_cliente['Localidade']);
         
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Tudo certo! Agendamento cadastrado com sucesso!'))));
+        return new CakeResponse([
+            'type' => 'json', 
+            'body' => json_encode(
+                [
+                    'status' => 'ok', 
+                    'msg' => 'Tudo certo! Agendamento cadastrado com sucesso!',
+                    'cliente_cliente_id' => $cliente_cliente_id
+                ]
+            )
+        ]);
     }
 
     public function convitesAdicionais(){

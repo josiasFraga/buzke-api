@@ -24,7 +24,48 @@ class UsuariosController extends AppController {
 
     public function index() {
         $this->layout = 'ajax';
-        die('teste');
+        
+        $dados = $this->request->query;      
+    
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( $dado_usuario['Usuario']['cliente_id'] == null ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
+        }
+
+        $usuarios = $this->Usuario->find('all',[
+            'fields' => [
+                'Usuario.id',
+                'Usuario.nome',
+                'Usuario.img'
+            ],
+            'conditions' => [
+                'Usuario.cliente_id' => $dado_usuario['Usuario']['cliente_id']
+            ],
+            'link' => []
+        ]);
+
+        $usuarios_retornar = [];
+
+        foreach($usuarios as $key => $usuario){
+            $usuarios_retornar[] = [
+                'id' => $usuario['Usuario']['id'],
+                'nome' => $usuario['Usuario']['nome'],
+                'img' => $this->images_path . "usuarios/" . $usuario['Usuario']['img']
+            ];
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $usuarios_retornar))));
 	}
 	
     public function login() {
@@ -166,8 +207,7 @@ class UsuariosController extends AppController {
             throw new BadRequestException('Erro ao salvar o Token', 500);
         }
     }
-	
-	
+
     public function entrarVisitante() {
         $this->layout = 'ajax';
         

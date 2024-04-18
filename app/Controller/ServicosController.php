@@ -29,12 +29,12 @@ class ServicosController extends AppController {
     
             $dado_usuario = $this->verificaValidadeToken($token, $email);
 
-            if ( $dados_token['Usuario']['cliente_id'] == null ) {
+            if ( $dado_usuario['Usuario']['cliente_id'] == null ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
             }
 
             $conditions = array_merge($conditions, [
-                'ClienteServico.cliente_id' => $dados_token['Usuario']['cliente_id']
+                'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id']
             ]);
 
         } else if ( isset($dados['cliente_id']) && $dados['cliente_id'] != '' ) {
