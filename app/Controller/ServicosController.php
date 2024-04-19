@@ -367,7 +367,7 @@ class ServicosController extends AppController {
                 'ClienteServico.*'
             ],
             'conditions' => $conditions,
-            'link' => ['']
+            'link' => []
         ]);
 
         if ( count($dados_servico) == 0 ) {

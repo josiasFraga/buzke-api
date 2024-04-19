@@ -19,6 +19,9 @@ class Agendamento extends AppModel {
 		'Torneio' => array(
 			'foreignKey' => 'torneio_id'
         ),
+		'Usuario' => array(
+			'foreignKey' => 'profissional_id'
+        ),
     );
 
     public $hasMany = array(

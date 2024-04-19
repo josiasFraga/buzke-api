@@ -1273,6 +1273,7 @@ class AppController extends Controller {
         $this->loadModel('TorneioQuadraPeriodo');
         $this->loadModel('Agendamento');
         $this->loadModel('ClienteServico');
+        $this->loadModel('ClienteServicoProfissional');
 
         $dados_servico = $this->ClienteServico->find('first',[
             'conditions' => [
@@ -1311,30 +1312,53 @@ class AppController extends Controller {
                     
                 }
 
-                if ( $dados_servico['ClienteServico']['tipo'] === 'Quadra' ) {
-                    $vagas_por_horario = 1;
-                } else {
-                    $vagas_por_horario = count($dados_servico['ClienteServicoProfissional']);
-                }
-
-                $reservas_torneio = $this->TorneioQuadraPeriodo->verificaReservaTorneio($servico_id, $data, $horario['time']);
-
                 $motivo_indisponivel = null;
-
-                if ( count($reservas_torneio) > 0 ) {
-                    $motivo_indisponivel = "Haverá torneio nessa quadra nesse dia e hora.";
-                }
-
-                if ( ($vagas_por_horario - count($agendamentos_padrao) - count($agendamentos_fixos)) < 0 ) {
-                    $motivo_indisponivel = "Horário ocupado por outro usuário";
-                }
 
                 if ( $data." ".$horarios[$key]['time'] < date('Y-m-d H:i:s') ) {
                     $motivo_indisponivel = "Horário já passou";
                 }
 
-                $horarios[$key]['active'] = count($reservas_torneio) == 0 && ($vagas_por_horario - count($agendamentos_padrao) - count($agendamentos_fixos)) > 0 && $data." ".$horarios[$key]['time'] > date('Y-m-d H:i:s');
-                $horarios[$key]['motivo'] = $motivo_indisponivel;
+                if ( $dados_servico['ClienteServico']['tipo'] === 'Quadra' ) {
+
+                    $vagas_por_horario = 1;
+                    $reservas_torneio = $this->TorneioQuadraPeriodo->verificaReservaTorneio($servico_id, $data, $horario['time']);
+
+                    if ( count($reservas_torneio) > 0 ) {
+                        $motivo_indisponivel = "Haverá torneio nessa quadra nesse dia e hora.";
+                    }
+    
+                    if ( ($vagas_por_horario - count($agendamentos_padrao) - count($agendamentos_fixos)) < 0 ) {
+                        $motivo_indisponivel = "Horário ocupado por outro usuário";
+                    }
+    
+                    $horarios[$key]['active'] = count($reservas_torneio) == 0 && ($vagas_por_horario - count($agendamentos_padrao) - count($agendamentos_fixos)) > 0 && $data." ".$horarios[$key]['time'] > date('Y-m-d H:i:s');
+                    $horarios[$key]['motivo'] = $motivo_indisponivel;
+            
+                } else {         
+
+                    if ( $motivo_indisponivel !== null ) {
+                        $horarios[$key]['active'] = false;
+                        $horarios[$key]['motivo'] = $motivo_indisponivel;
+                        $horarios[$key]['prof_disponiveis'] = [];
+                        continue;
+                    }           
+
+                    $profissionais_disponiveis = [];
+
+                    foreach( $dados_servico['ClienteServicoProfissional'] as $key_profissional => $profissional ) {
+
+                        $verifica_disponibilidade = $this->ClienteServicoProfissional->verifica_disponibilidade($profissional['usuario_id'], $data." ".$horarios[$key]['time']);
+                        if ( $verifica_disponibilidade ) {
+                            $profissionais_disponiveis[] = $profissional['usuario_id'];
+                        }
+
+                    }
+
+                    $horarios[$key]['active'] = count($profissionais_disponiveis) > 0;
+                    $horarios[$key]['motivo'] = count($profissionais_disponiveis) === 0 ? "Profissionais indisponíves no horário." : null;
+                    $horarios[$key]['prof_disponiveis'] = array_unique($profissionais_disponiveis);
+
+                }
 
 
             }

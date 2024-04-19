@@ -39,8 +39,12 @@ class UsuariosController extends AppController {
 
         $dado_usuario = $this->verificaValidadeToken($token, $email);
 
-        if ( $dado_usuario['Usuario']['cliente_id'] == null ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
+        if ( $dado_usuario['Usuario']['cliente_id'] == null && isset($dados['cliente_id']) && !empty($dados['cliente_id']) ) {
+            $cliente_id = $dados['cliente_id'];
+        } else if ( $dado_usuario['Usuario']['cliente_id'] == null ) {
+            $cliente_id = $dado_usuario['Usuario']['cliente_id'];
+        } else {
+            throw new BadRequestException('Dados de usuário não informado!', 400);
         }
 
         $usuarios = $this->Usuario->find('all',[
@@ -50,7 +54,7 @@ class UsuariosController extends AppController {
                 'Usuario.img'
             ],
             'conditions' => [
-                'Usuario.cliente_id' => $dado_usuario['Usuario']['cliente_id']
+                'Usuario.cliente_id' => $cliente_id
             ],
             'link' => []
         ]);
