@@ -23,6 +23,9 @@ class ClienteServico extends AppModel {
 		'ClienteServicoHorario' => array(
 			'foreignKey' => 'cliente_servico_id'
 		),
+		'ClienteServicoProfissional' => array(
+			'foreignKey' => 'cliente_servico_id'
+		),
     );
     
     public $validate = array();

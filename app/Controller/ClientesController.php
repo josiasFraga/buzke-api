@@ -533,10 +533,6 @@ class ClientesController extends AppController {
                 'plano_id' => $dados->plano,
                 'id' => $dados_token['Usuario']['cliente_id'],
             ],
-            'ClienteConfiguracao' => [
-                'horario_fixo' => (isset($dados->agendamentos_fixos) && ($dados->agendamentos_fixos == 1 || $dados->agendamentos_fixos) ? 'Y' : 'N'),
-                'fixo_tipo' => (!isset($dados->agendamento_fixo_tipo) || $dados->agendamento_fixo_tipo == '' ? 'Nenhum' : $dados->agendamento_fixo_tipo),
-            ],
             'ClienteSubcategoria' => $subcategorias_salvar,
             'ClienteAssinatura' => [
                 [
@@ -1226,10 +1222,7 @@ class ClientesController extends AppController {
         $this->loadModel('ClienteSubcategoria');
         $dados = $this->Cliente->find('first',[
             'fields' => ['*'],
-            'conditions' => ['Cliente.id' =>  $cliente_id],
-            'link' => [
-                'ClienteConfiguracao'
-            ]
+            'conditions' => ['Cliente.id' =>  $cliente_id]
         ]);
 
         if ( count($dados) > 0 ) {
@@ -1442,25 +1435,13 @@ class ClientesController extends AppController {
                 'ui_cidade' => $ui_cidade,
                 'prazo_maximo_para_canelamento' => $dados->prazo_maximo_para_canelamento != "00:00" && $dados->prazo_maximo_para_canelamento != "" ? $dados->prazo_maximo_para_canelamento : null,
                 'tempo_aviso_usuarios' => $dados->avisar_com,
-            ],
-            'ClienteConfiguracao' => [
-                //'id' => $dados->configuracoes_id,
-                'horario_fixo' => (isset($dados->agendamentos_fixos) && ($dados->agendamentos_fixos == 1 || $dados->agendamentos_fixos) ? 'Y' : 'N'),
-                'fixo_tipo' => (!isset($dados->agendamento_fixo_tipo) || $dados->agendamento_fixo_tipo == '' ? 'Nenhum' : $dados->agendamento_fixo_tipo),
-            ],
+            ]
         ];
 
         if (isset($this->request->params['form']['logo']) && $this->request->params['form']['logo'] != '' && $this->request->params['form']['logo']['error'] == 0) {
             $dados_salvar['Cliente'] = array_merge($dados_salvar['Cliente'],
             [
                 'logo' => $this->request->params['form']['logo']
-            ]);
-        }
-
-        if (isset($dados->configuracoes_id) && $dados->configuracoes_id != '') {
-            $dados_salvar['ClienteConfiguracao'] = array_merge($dados_salvar['ClienteConfiguracao'],
-            [
-                'id' => $dados->configuracoes_id
             ]);
         }
 

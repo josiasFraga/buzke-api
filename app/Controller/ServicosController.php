@@ -1,6 +1,13 @@
 <?php
 class ServicosController extends AppController {
 
+    public $components = array('RequestHandler');
+
+    public function beforeFilter() {
+        parent::beforeFilter();
+        header("Access-Control-Allow-Origin: *");
+    }
+
     public function index() {
 
         $this->layout = 'ajax';
@@ -28,6 +35,10 @@ class ServicosController extends AppController {
             $email = $dados['email'];
     
             $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+            if ( !$dado_usuario ) {
+                throw new BadRequestException('Usuário não logado!', 401);
+            }
 
             if ( $dado_usuario['Usuario']['cliente_id'] == null ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
@@ -93,64 +104,13 @@ class ServicosController extends AppController {
 
     }
 
-    public function view($id = null) {
-
-        $this->layout = 'ajax';
-        $dados = $this->request->query;
-
-        $this->loadModel('ClienteServico');
-        $this->loadModel('ClienteServicoHorario');
-
-        $conditions = [
-            'ClienteServico.id' => $id
-        ];
-
-        $dados_servico = $this->ClienteServico->find('first',[
-            'fields' => [
-                'ClienteServico.*'
-            ],
-            'conditions' => $conditions,
-            'contain' => [
-                'ClienteServicoFoto' => [
-                    'fields' => [
-                        'id',
-                        'imagem'
-                    ]
-                ],
-                'ClienteServicoHorario' => [
-                    'fields' => [
-                        'id',
-                        'cliente_servico_id',
-                        'inicio',
-                        'fim',
-                        'dia_semana',
-                        'duracao',
-                        'vagas_por_horario',
-                        'a_domicilio'
-                    ]
-                ]
-            ]
-        ]);
-
-        $dados_servico['ClienteServico']['_valor'] = number_format($dados_servico['ClienteServico']['valor'],2,',','.');
-        //$dados_servico["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->lsitaDiasSemana($qua['ClienteServico']['id']);
-        
-        if ( count($dados_servico['ClienteServicoFoto']) > 0 ) {
-            foreach( $dados_servico['ClienteServicoFoto'] as $key_imagem => $imagem){
-                $dados_servico['ClienteServicoFoto'][$key_imagem]['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
-            }
-        } else {
-            $dados_servico['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
-        }
-        
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_servico))));
-
-    }
-
-    public function add() {
+    public function add(){
         
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];
+
+        //$this->log($dados, 'debug');
+        //die();
 
         if ( is_array($dados) ) {
             $dados = json_decode(json_encode($dados, true));
@@ -182,6 +142,7 @@ class ServicosController extends AppController {
         $this->loadModel('ClienteServico');
         $this->loadModel('ClienteServicoFoto');
         $this->loadModel('ClienteServicoHorario');
+        $this->loadModel('ClienteServicoProfissional');
 
         $dados_salvar = [
             'cliente_id' => $dados_token['Usuario']['cliente_id'],
@@ -190,7 +151,10 @@ class ServicosController extends AppController {
             'descricao' => $dados->descricao,
             'valor' => $this->currencyToFloat($dados->_valor),
             'ativo' => $dados->ativo,
+            'fixos' => $dados->fixos,
+            'fixos_tipo' => $dados->fixos_tipo,
         ];
+        
 
         // Alterando
         if ( isset($dados->id) && !empty($dados->id) ) {
@@ -221,17 +185,42 @@ class ServicosController extends AppController {
             
             $servico_id = $dados_servico_salvo['ClienteServico']['id'];
 
+            // Remove os profissionais que não estão no post
+            $this->ClienteServicoProfissional->deleteAll([
+                'ClienteServicoProfissional.cliente_servico_id' => $servico_id,
+                'not' => [
+                    'ClienteServicoProfissional.usuario_id' => $dados->profissionais
+                ]
+            ]);
+
+            if ( $dados_salvar['tipo'] === "Serviço" ) {
+
+                $profissionais_salvar = [];
+
+                foreach ( $dados->profissionais as $key => $profissional ) {
+                    $profissionais_salvar[] = [
+                        'usuario_id'=> $profissional,
+                        'cliente_servico_id' => $servico_id
+                    ];
+                }
+
+                if ( !$this->ClienteServicoProfissional->saveMany($profissionais_salvar) ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar salvar os profissionais do serviço!'))));
+                }
+
+            }
+
             $ids_imagens_permanecer = [];    
             // Pega os ids das fotos passadas no post
             if ( isset($dados->fotos) && is_array($dados->fotos) ) {
         
                 $fotos = $dados->fotos;
                 $ids_imagens_permanecer = array_values(array_map(function($foto){
-                    return $foto->id;
+                    return isset($foto->id) ? $foto->id : "";
                 }, $fotos));
     
             }
-            
+
             // Remove as fotos que não estão no post      
             $this->ClienteServicoFoto->deleteAll([
                 'ClienteServicoFoto.cliente_servico_id' => $servico_id,
@@ -279,7 +268,6 @@ class ServicosController extends AppController {
                     "fim" => $horario->fim,
                     "dia_semana" => $horario->dia_semana,
                     "duracao" => $horario->duracao,
-                    "vagas_por_horario" => $dados->tipo === "Quadra" ? 1 : $horario->vagas_por_horario,
                     "a_domicilio" => $dados->tipo === "Quadra" ? 0 : $horario->a_domicilio,
                 ];
     
@@ -303,6 +291,61 @@ class ServicosController extends AppController {
 
     }
 
+    public function view($id = null) {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        $this->loadModel('ClienteServico');
+        $this->loadModel('ClienteServicoHorario');
+
+        $conditions = [
+            'ClienteServico.id' => $id
+        ];
+
+        $dados_servico = $this->ClienteServico->find('first',[
+            'fields' => [
+                'ClienteServico.*'
+            ],
+            'conditions' => $conditions,
+            'contain' => [
+                'ClienteServicoFoto' => [
+                    'fields' => [
+                        'id',
+                        'imagem'
+                    ]
+                ],
+                'ClienteServicoHorario' => [
+                    'fields' => [
+                        'id',
+                        'cliente_servico_id',
+                        'inicio',
+                        'fim',
+                        'dia_semana',
+                        'duracao',
+                        'a_domicilio'
+                    ]
+                ],
+                'ClienteServicoProfissional'
+
+            ]
+        ]);
+
+        $dados_servico['ClienteServico']['_valor'] = number_format($dados_servico['ClienteServico']['valor'],2,',','.');
+        //$dados_servico["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->lsitaDiasSemana($qua['ClienteServico']['id']);
+        
+        if ( count($dados_servico['ClienteServicoFoto']) > 0 ) {
+            foreach( $dados_servico['ClienteServicoFoto'] as $key_imagem => $imagem){
+                $dados_servico['ClienteServicoFoto'][$key_imagem]['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
+            }
+        } else {
+            $dados_servico['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
+        }
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_servico))));
+
+    }
+
     public function dados_para_agendamento() {
 
         $this->layout = 'ajax';
@@ -321,11 +364,10 @@ class ServicosController extends AppController {
 
         $dados_servico = $this->ClienteServico->find('first',[
             'fields' => [
-                'ClienteServico.*',
-                'ClienteConfiguracao.*'
+                'ClienteServico.*'
             ],
             'conditions' => $conditions,
-            'link' => ['Cliente' => ['ClienteConfiguracao']]
+            'link' => ['']
         ]);
 
         if ( count($dados_servico) == 0 ) {
@@ -335,13 +377,13 @@ class ServicosController extends AppController {
         $isCourt = $this->ClienteSubcategoria->checkIsCourt($dados_servico['ClienteServico']['cliente_id']);
         $isPaddleCourt = $this->ClienteSubcategoria->checkIsPaddleCourt($dados_servico['ClienteServico']['cliente_id']);
 
-        $horarios = $this->quadra_horarios($dados['servico_id'], $dados['day'], $dados_servico['ClienteConfiguracao']['horario_fixo']);
+        $horarios = $this->quadra_horarios($dados['servico_id'], $dados['day'], $dados_servico['ClienteServico']['fixos']);
 
         $dados_retornar = [
             'is_court' => $isCourt,
             'is_paddle_court' => $isPaddleCourt,
-            'enable_fixed_shedulling' => $dados_servico['ClienteConfiguracao']['horario_fixo'] === 'Y',
-            'fixed_shedulling' => $dados_servico['ClienteConfiguracao']['fixo_tipo'],
+            'enable_fixed_shedulling' => $dados_servico['ClienteServico']['fixos'] === 'Y',
+            'fixed_shedulling' => $dados_servico['ClienteServico']['fixos_tipo'],
             'tipo' => $dados_servico['ClienteServico']['tipo'],
             'horarios' => $horarios
         ];

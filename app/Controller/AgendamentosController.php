@@ -543,12 +543,12 @@ class AgendamentosController extends AppController {
 
         //busca os dados da empresa
         $dados_cliente = $this->Cliente->find('first',[
-            'fields' => ['Cliente.id', 'Localidade.loc_no', 'Localidade.ufe_sg', 'ClienteConfiguracao.*'],
+            'fields' => ['Cliente.id', 'Localidade.loc_no', 'Localidade.ufe_sg'],
             'conditions' => [
                 'Cliente.id' => $cliente_id,
                 'Cliente.ativo' => 'Y'
             ],
-            'link' => ['Localidade', 'ClienteConfiguracao']
+            'link' => ['Localidade']
         ]);
 
         if (count($dados_cliente) == 0) {
@@ -568,7 +568,7 @@ class AgendamentosController extends AppController {
         }
 
         // Busca os horários do serviço disponíveis para o dia selecionado
-        $horarios = $this->quadra_horarios($dados->servico_id, $data_selecionada, $dados_cliente['ClienteConfiguracao']['horario_fixo']);
+        $horarios = $this->quadra_horarios($dados->servico_id, $data_selecionada, $dados_servico['ClienteServico']['fixos']);
 
         if ( count($horarios) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Lamentamos. A empresa não informou os horários de atendimento deste serviço nesse dia! ;('))));
@@ -600,19 +600,15 @@ class AgendamentosController extends AppController {
             if (!$horario_x_horario_selecionado['enable_fixed_scheduling'] ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Lamentamos. Esse horário fixo já pertence a outro usuário! ;('))));
             }
-  
-            if ( $dados_cliente['ClienteConfiguracao']['horario_fixo'] == null ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Lamentamos. Ocorreu um erro ao buscar as configurações da empresa selecionada! ;('))));
-            }
             
-            if ( $dados_cliente['ClienteConfiguracao']['horario_fixo'] != 'Y' || $dados_cliente['ClienteConfiguracao']['fixo_tipo'] == 'Nenhum' ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Infelizmente a empresa selecioanda não aceita agendamentos fixos'))));
+            if ( $dados_servico['ClienteServico']['fixos'] != 'Y' || $dados_servico['ClienteServico']['fixos_tipo'] == 'Nenhum' ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Infelizmente o serviço selecioando não aceita agendamentos fixos'))));
             }
 
-            if ( $dados_cliente['ClienteConfiguracao']['fixo_tipo'] == 'Semanal' ) {
+            if ( $dados_servico['ClienteServico']['fixos_tipo'] == 'Semanal' ) {
                 $agendamento_dia_semana = date('w',strtotime($data_selecionada.' '.$horario_selecionado));
             }
-            else if ( $dados_cliente['ClienteConfiguracao']['fixo_tipo'] == 'Mensal' ) {
+            else if ( $dados_servico['ClienteServico']['fixos_tipo'] == 'Mensal' ) {
                 $agendamento_dia_mes = (int)date('d',strtotime($data_selecionada.' '.$horario_selecionado));
             }
         }

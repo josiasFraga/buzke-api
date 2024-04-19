@@ -1272,6 +1272,16 @@ class AppController extends Controller {
         $this->loadModel('ClienteServicoHorario');
         $this->loadModel('TorneioQuadraPeriodo');
         $this->loadModel('Agendamento');
+        $this->loadModel('ClienteServico');
+
+        $dados_servico = $this->ClienteServico->find('first',[
+            'conditions' => [
+                'ClienteServico.id' => $servico_id
+            ],
+            'contain' => [
+                'ClienteServicoProfissional'
+            ]
+        ]);
 
 
         $horarios = $this->ClienteServicoHorario->listaHorarios($servico_id, $data);
@@ -1301,6 +1311,12 @@ class AppController extends Controller {
                     
                 }
 
+                if ( $dados_servico['ClienteServico']['tipo'] === 'Quadra' ) {
+                    $vagas_por_horario = 1;
+                } else {
+                    $vagas_por_horario = count($dados_servico['ClienteServicoProfissional']);
+                }
+
                 $reservas_torneio = $this->TorneioQuadraPeriodo->verificaReservaTorneio($servico_id, $data, $horario['time']);
 
                 $motivo_indisponivel = null;
@@ -1309,7 +1325,7 @@ class AppController extends Controller {
                     $motivo_indisponivel = "Haverá torneio nessa quadra nesse dia e hora.";
                 }
 
-                if ( ($horarios[$key]['vacancies_per_time'] - count($agendamentos_padrao) - count($agendamentos_fixos)) < 0 ) {
+                if ( ($vagas_por_horario - count($agendamentos_padrao) - count($agendamentos_fixos)) < 0 ) {
                     $motivo_indisponivel = "Horário ocupado por outro usuário";
                 }
 
@@ -1317,7 +1333,7 @@ class AppController extends Controller {
                     $motivo_indisponivel = "Horário já passou";
                 }
 
-                $horarios[$key]['active'] = count($reservas_torneio) == 0 && ($horarios[$key]['vacancies_per_time'] - count($agendamentos_padrao) - count($agendamentos_fixos)) > 0 && $data." ".$horarios[$key]['time'] > date('Y-m-d H:i:s');
+                $horarios[$key]['active'] = count($reservas_torneio) == 0 && ($vagas_por_horario - count($agendamentos_padrao) - count($agendamentos_fixos)) > 0 && $data." ".$horarios[$key]['time'] > date('Y-m-d H:i:s');
                 $horarios[$key]['motivo'] = $motivo_indisponivel;
 
 

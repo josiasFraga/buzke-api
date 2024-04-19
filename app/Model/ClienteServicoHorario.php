@@ -96,7 +96,7 @@ class ClienteServicoHorario extends AppModel {
                         'active' => true,
                         'time' => $inicio->format('H:i:s'),
                         'duration' => $duracao->format('H:i:s'),
-                        'vacancies_per_time' => $horario['ClienteServicoHorario']['vagas_por_horario'],
+                        //'vacancies_per_time' => $horario['ClienteServicoHorario']['vagas_por_horario'],
                         'at_home' => $horario['ClienteServicoHorario']['a_domicilio'] === '1' ? true : false,
                     ];
                 }
