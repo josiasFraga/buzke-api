@@ -2854,6 +2854,8 @@ class TorneiosController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];
 
+        //$this->log($dados, 'debug');
+
         if ( gettype($dados) == 'string' ) {
             $dados = json_decode($dados);
             $dados = json_decode(json_encode($dados), false);
@@ -2988,9 +2990,9 @@ class TorneiosController extends AppController {
 
         $dados_jogo_salvar = [
             'id' => $dados_jogo['TorneioJogo']['id'],
+            'torneio_quadra_id' => $dados->torneio_quadra_id,
             'agendamento_id' => $dados_agendamento_salvo['Agendamento']['id'],
         ];
-
  
         if ( !$this->TorneioJogo->save($dados_jogo_salvar) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar o horário do jogo.'))));
