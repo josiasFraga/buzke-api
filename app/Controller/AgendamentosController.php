@@ -60,9 +60,10 @@ class AgendamentosController extends AppController {
                 'Localidade.loc_no',
                 'ClienteServico.id',
                 'ClienteServico.valor',
-                'ClienteServico.nome'
+                'ClienteServico.nome',
+                'Usuario.nome'
             ],
-            'link' => ['ClienteCliente' => ['Localidade'], 'Cliente', 'ClienteServico']
+            'link' => ['ClienteCliente' => ['Localidade'], 'Cliente', 'ClienteServico', 'Usuario']
         ]);
 
         if ( count($agendamento) > 0 ) {
@@ -158,6 +159,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('AgendamentoFixoCancelado');
         $this->loadModel('ClienteSubcategoria');
         $this->loadModel('AgendamentoConvite');
+        $this->loadModel('Usuario');
 
         $agendamentos = $this->Agendamento->buscaAgendamentoUsuario($meus_ids_de_cliente);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
@@ -222,6 +224,25 @@ class AgendamentosController extends AppController {
                     else
                         $cancelable_return = true;
                 }
+
+                $agendamentos[$key]['Agendamento']['_profissional'] = null;
+
+                if ( !empty($agendamento['Agendamento']['profissional_id']) ) {
+                    $dados_profissional = $this->Usuario->find('first', [
+                        'fields' => ['Usuario.nome', 'Usuario.img'],
+                        'conditions' => [
+                            'Usuario.id' => $agendamento['Agendamento']['profissional_id']
+                        ],
+                        'link' => []
+                    ]);
+
+                    $agendamentos[$key]['Agendamento']['_profissional'] = [
+                        'nome' => $dados_profissional['Usuario']['nome'],
+                        'foto' => $this->images_path . 'usuarios/' . $dados_profissional['Usuario']['img']
+                    ];
+
+                }
+
 
                 $agendamentos[$key]['Agendamento']['cancelable'] = $cancelable_return;
                 unset($agendamentos[$key]['AgendamentoConvite']);
@@ -467,7 +488,7 @@ class AgendamentosController extends AppController {
 
         if ( !isset($dados->servico_id) || $dados->servico_id == "" || !is_numeric($dados->servico_id) ) {
             throw new BadRequestException('Serviço não informado!', 401);
-        }        
+        }
 
         $data_selecionada = $dados->day;
         $horario_selecionado = $dados->time;
@@ -613,6 +634,15 @@ class AgendamentosController extends AppController {
             }
         }
 
+        $profissional_id = null;
+        if ( $dados_servico["ClienteServico"]["tipo"] === "Serviço" ) {
+            if ( !isset($dados->profissional_id) || empty($dados->profissional_id) ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Profissional não informado.'))));
+            }
+
+            $profissional_id = $dados->profissional_id;
+        }
+
         $dados_salvar = [
             'cliente_id' => $cliente_id,
             'cliente_cliente_id' => $cliente_cliente_id,
@@ -623,6 +653,7 @@ class AgendamentosController extends AppController {
             'dia_semana' => $agendamento_dia_semana,
             'dia_mes' => $agendamento_dia_mes,
             'duracao' => $horario_x_horario_selecionado['duration'],
+            'profissional_id' => $profissional_id
         ];
 
         if ( isset($dados->convites_tpj) && is_array($dados->convites_tpj)) {
