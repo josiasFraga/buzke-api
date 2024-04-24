@@ -369,7 +369,6 @@ class ServicosController extends AppController {
         if ( !$dado_usuario ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
-        
 
         $this->loadModel('ClienteServico');
         $this->loadModel('ClienteSubcategoria');

@@ -524,12 +524,12 @@ class AgendamentosController extends AppController {
         //verifico quem está tentando salvar o agendamento, se é uma empresa ou um usuário
         if ( $dados_usuario['Usuario']['cliente_id'] != '' && $dados_usuario['Usuario']['cliente_id'] != null ) {
 
-            if ( !isset($dados->client_client_id) || $dados->client_client_id == "" ) {
+            if ( !isset($dados->cliente_cliente_id) || $dados->cliente_cliente_id == "" ) {
                 throw new BadRequestException('Cliente não informado!', 401);
             }
     
             $cliente_id = $dados_usuario['Usuario']['cliente_id'];
-            $cliente_cliente_id = $dados->client_client_id;
+            $cliente_cliente_id = $dados->cliente_cliente_id;
             $cadastrado_por = 'cliente';
             $dados_cliente_cliente = $this->ClienteCliente->buscaDadosClienteCliente($cliente_cliente_id, $dados->cliente_id);
     
