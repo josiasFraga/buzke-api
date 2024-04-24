@@ -498,9 +498,17 @@ class Agendamento extends AppModel {
                 'ClienteCliente.img',
                 'ClienteServico.nome',
                 'ClienteServico.id',
-                'Agendamento.cliente_id'
+                'Agendamento.cliente_id',
+                'Agendamento.profissional_id',
+                'Usuario.img'
             ],
-            'link' => ['ClienteCliente', 'ClienteServico'],
+            'link' => [
+                'ClienteCliente' => [
+                    'Usuario'
+                ], 
+                'ClienteServico',
+                //'Usuario'
+            ],
             'order' => ['Agendamento.horario']
         ]);
 
@@ -555,13 +563,15 @@ class Agendamento extends AppModel {
                 'ClienteCliente.img',
                 'ClienteServico.nome',
                 'ClienteServico.id',
-                'Agendamento.cliente_id'
+                'Agendamento.cliente_id',
+                'Agendamento.profissional_id',
+                'Usuario.img'
             ],
             'conditions' => $conditions,
             'order' => [
                 'Agendamento.horario'
             ],
-            'link' => ['ClienteCliente', 'ClienteServico']
+            'link' => ['ClienteCliente' => ['Usuario'], 'ClienteServico']
         ]);
 
     }
@@ -594,13 +604,15 @@ class Agendamento extends AppModel {
                 'ClienteCliente.img',
                 'ClienteServico.nome',
                 'ClienteServico.id',
-                'Agendamento.cliente_id'
+                'Agendamento.cliente_id',
+                'Agendamento.profissional_id',
+                'Usuario.img'
             ],
             'conditions' => $conditions,
             'order' => [
                 'Agendamento.horario'
             ],
-            'link' => ['ClienteCliente', 'ClienteServico']
+            'link' => ['ClienteCliente' => ['Usuario'], 'ClienteServico']
         ]);
 
     }

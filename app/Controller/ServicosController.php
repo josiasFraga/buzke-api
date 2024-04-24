@@ -22,14 +22,10 @@ class ServicosController extends AppController {
 
         $conditions = [];
         $order = ['ClienteServico.nome'];
-        if ( isset($dados['tipo']) && $dados['tipo'] == 'meus' ) {
+
     
-            if ( !isset($dados['token']) || $dados['token'] == "" ) {
-                throw new BadRequestException('Dados de usuário não informado!', 401);
-            }
-            if ( !isset($dados['email']) || $dados['email'] == "" ) {
-                throw new BadRequestException('Dados de usuário não informado!', 401);
-            }
+        // Se o usuário está passando autenticação
+        if ( isset($dados['token']) && $dados['token'] != "" && isset($dados['email']) && $dados['email'] != "" ) {
     
             $token = $dados['token'];
             $email = $dados['email'];
@@ -40,13 +36,27 @@ class ServicosController extends AppController {
                 throw new BadRequestException('Usuário não logado!', 401);
             }
 
-            if ( $dado_usuario['Usuario']['cliente_id'] == null ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
+            // É uma empresa buscando
+            if ( !empty($dado_usuario['Usuario']['cliente_id']) ) {
+
+                $conditions = array_merge($conditions, [
+                    'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id']
+                ]);
+
             }
 
-            $conditions = array_merge($conditions, [
-                'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id']
-            ]);
+            // É um usuário final mas não passou o código da emrpesa
+            else if ( $dado_usuario['Usuario']['cliente_id'] == null && (!isset($dados['cliente_id']) || $dados['cliente_id'] == '') ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Empresa não informada'))));
+            } 
+
+            // É um usuário final e passou o código da empresa
+            else {               
+
+                $conditions = array_merge($conditions, [
+                    'ClienteServico.cliente_id' => $dados['cliente_id']
+                ]);
+            }
 
         } else if ( isset($dados['cliente_id']) && $dados['cliente_id'] != '' ) {
             
@@ -351,6 +361,16 @@ class ServicosController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->query;
 
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dado_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+        
+
         $this->loadModel('ClienteServico');
         $this->loadModel('ClienteSubcategoria');
         $this->loadModel('ClienteServicoHorario');
@@ -380,6 +400,7 @@ class ServicosController extends AppController {
         $horarios = $this->quadra_horarios($dados['servico_id'], $dados['day'], $dados_servico['ClienteServico']['fixos']);
 
         $dados_retornar = [
+            'origem' => !empty($dado_usuario['Usuario']['cliente_id']) ? 'empresa' : 'cliente',
             'is_court' => $isCourt,
             'is_paddle_court' => $isPaddleCourt,
             'enable_fixed_shedulling' => $dados_servico['ClienteServico']['fixos'] === 'Y',

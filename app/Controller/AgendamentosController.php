@@ -385,7 +385,11 @@ class AgendamentosController extends AppController {
                     $agend['ClienteCliente']['nome'] = "Jogo de Torneio";
                     $imagem .= "torneios/".$agend['Torneio']['img'];
                 } else {
-                    $imagem .= 'clientes_clientes/'.$agend['ClienteCliente']['img'];
+                    if ( isset($agend['Usuario']['img']) && !empty($agend['Usuario']['img']) ) {
+                        $imagem .= 'usuarios/'.$agend['Usuario']['img'];
+                    } else {
+                        $imagem .= 'clientes_clientes/'.$agend['ClienteCliente']['img'];
+                    }
                 }
 
                 if ( $ultimo_horario != $agend['Agendamento']['horario'] ) {

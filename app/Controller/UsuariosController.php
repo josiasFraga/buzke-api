@@ -41,7 +41,7 @@ class UsuariosController extends AppController {
 
         if ( $dado_usuario['Usuario']['cliente_id'] == null && isset($dados['cliente_id']) && !empty($dados['cliente_id']) ) {
             $cliente_id = $dados['cliente_id'];
-        } else if ( $dado_usuario['Usuario']['cliente_id'] == null ) {
+        } else if ( !empty($dado_usuario['Usuario']['cliente_id']) ) {
             $cliente_id = $dado_usuario['Usuario']['cliente_id'];
         } else {
             throw new BadRequestException('Dados de usuário não informado!', 400);
