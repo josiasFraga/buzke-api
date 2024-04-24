@@ -288,12 +288,20 @@ class AgendamentosController extends AppController {
 
         $aditional_conditions = [];
 
-        if ( isset($dados["cliente_cliente_id"]) && $dados["cliente_cliente_id"] ) {
+        if ( isset($dados["cliente_cliente_id"]) && !empty($dados["cliente_cliente_id"]) ) {
             $aditional_conditions["Agendamento.cliente_cliente_id"] = $dados["cliente_cliente_id"];
         }
 
         if ( isset($dados["services_ids"]) ) {
             $aditional_conditions["Agendamento.servico_id"] = $dados["services_ids"];
+        }
+
+        if ( isset($dados["servicos"]) && is_array($dados["servicos"]) && count($dados["servicos"]) > 0 ) {
+            $aditional_conditions["Agendamento.servico_id"] = $dados["servicos"];
+        }
+
+        if ( isset($dados["profissionais"]) && is_array($dados["profissionais"]) && count($dados["profissionais"]) > 0 ) {
+            $aditional_conditions["Agendamento.profissional_id"] = $dados["profissionais"];
         }
 
         $agendamentos = $this->Agendamento->buscaAgendamentoEmpresa($dados_token['Usuario']['cliente_id'],$type,$data,$year_week,$aditional_conditions);

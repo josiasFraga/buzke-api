@@ -311,6 +311,21 @@ class ClientesController extends AppController {
             ]
         ];
 
+        if ( isset($dados['search']) && $dados['search'] != "" ) {
+
+            $conditions = [
+                'or' => [
+                    [
+                        'Categoria.titulo like' => "%".$dados['search']."%"
+                    ],
+                    [
+                        'Subcategoria.nome like' => "%".$dados['search']."%"
+                    ]
+                ]
+            ];
+            
+        }
+
         if ( isset($dados['address']) && $dados['address'] != '' ) {
 
             if ( isset($dados['address'][1]) && (trim($dados['address'][1]) == "Uruguai" || trim($dados['address'][1]) == "Uruguay") ) {
