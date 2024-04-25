@@ -841,6 +841,6 @@ class Agendamento extends AppModel {
             'link' => []
         ]);
 
-    }
+    }    
 
 }

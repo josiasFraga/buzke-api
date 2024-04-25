@@ -107,5 +107,53 @@ class ClienteServicoHorario extends AppModel {
     
         return $intervalos; // Retorna os intervalos de horário calculados
     }
+    
+    public function checkStatus($agendamentos = []) {
+
+        if ( count($agendamentos) == 0 ) {
+            return [];
+        }
+
+        foreach($agendamentos as $key => $agendamento) {
+
+            //se ja setou o status passa batido
+            if ( isset($agendamento['Agendamento']['status']) ) {
+                continue;
+            }
+
+            //se é um agendamento de torneio passa batido
+            if ( isset($agendamento['Agendamento']['torneio_id']) && $agendamento['Agendamento']['torneio_id'] != null ) {
+                $agendamentos[$key]['Agendamento']['status'] = 'confirmed';
+                $agendamentos[$key]['Agendamento']['motive'] = '';
+                continue;
+            }
+
+            list($data,$hora) = explode(' ',$agendamento['Agendamento']['horario']);
+
+            $dados_horario_atendimento = $this->find('first',[
+                'conditions' => [
+                    'ClienteServico.cliente_id' => $agendamento['Agendamento']['cliente_id'],
+                    'ClienteServicoHorario.dia_semana' => date('w',strtotime($data)),
+                    'ClienteServicoHorario.inicio <=' => $hora,
+                    'ClienteServicoHorario.fim >=' => $hora,
+                ],
+                'link' => ['ClienteServico']
+            ]);
+
+            if ( count($dados_horario_atendimento) > 0 ) {
+                $agendamentos[$key]['Agendamento']['status'] = 'confirmed';
+                $agendamentos[$key]['Agendamento']['motive'] = '';
+            } else {
+                $agendamentos[$key]['Agendamento']['status'] = 'cancelled';
+                $agendamentos[$key]['Agendamento']['motive'] = 'A empresa não atende mais nesse período nesse dia da semana';
+
+            }
+
+
+        }
+
+        return $agendamentos;
+
+    }
 
 }

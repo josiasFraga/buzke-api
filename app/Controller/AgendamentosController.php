@@ -285,6 +285,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('ClienteHorarioAtendimento');
         $this->loadModel('ClienteHorarioAtendimentoExcessao');
         $this->loadModel('AgendamentoFixoCancelado');
+        $this->loadModel('ClienteServicoHorario');
 
         $aditional_conditions = [];
 
@@ -306,22 +307,13 @@ class AgendamentosController extends AppController {
 
         $agendamentos = $this->Agendamento->buscaAgendamentoEmpresa($dados_token['Usuario']['cliente_id'],$type,$data,$year_week,$aditional_conditions);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
-        $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
+        $agendamentos = $this->ClienteServicoHorario->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->AgendamentoFixoCancelado->checkStatus($agendamentos);
-        //debug($agendamentos); die();
 
         if ( count($agendamentos) > 0 ) {
             usort($agendamentos, function($a, $b) {
                 return $a['Agendamento']['horario'] <=> $b['Agendamento']['horario'];
             });
-        
-            /*foreach($agendamentos as $key => $agendamento){
-                
-                $agendamentos[$key]['Agendamento']['horario_str'] = date('d/m',strtotime($agendamento['Agendamento']['horario']))." às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
-                $agendamentos[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$agendamento['Cliente']['logo'];
-                $agendamentos[$key]['Agendamento']['data'] = date('d/m/Y',strtotime($agendamento['Agendamento']['horario']));
-                $agendamentos[$key]['Agendamento']['hora'] = date('H:i',strtotime($agendamento['Agendamento']['horario']));
-            }*/
         }
     
 
@@ -329,6 +321,70 @@ class AgendamentosController extends AppController {
         //$dados_retornar = json_encode($dados_retornar, true);
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_retornar))));
+    }
+
+    public function proximo() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Agendamento');
+        $this->loadModel('ClienteHorarioAtendimentoExcessao');
+        $this->loadModel('ClienteServicoHorario');
+        $this->loadModel('AgendamentoFixoCancelado');
+    
+        $data = date('Y-m-d');
+        $year_week = date('oW',strtotime($data. ' +1 day'));
+
+        $agendamentos = $this->Agendamento->buscaAgendamentoEmpresa($dados_token['Usuario']['cliente_id'],1,$data,$year_week,[]);
+        $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
+        $agendamentos = $this->ClienteServicoHorario->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
+        $agendamentos = $this->AgendamentoFixoCancelado->checkStatus($agendamentos);
+
+        if ( count($agendamentos) > 0 ) {
+            usort($agendamentos, function($a, $b) {
+                return $a['Agendamento']['horario'] <=> $b['Agendamento']['horario'];
+            });
+        }
+    
+
+        $dados_retornar = $this->formataAgendamentos($agendamentos, $data, 1);
+
+        $proximo_agendamento = [];
+        foreach( $dados_retornar as $agendamento_data => $agendamento_agendamentos ){
+
+            if ( $agendamento_data >= date('Y-m-d') && count($agendamento_agendamentos) > 0 && count($proximo_agendamento) === 0 ) {
+
+                foreach( $agendamento_agendamentos as $key_ag => $agendamento ){
+
+                    if ( $agendamento['name'].":00" >= date('H:i:s') && $agendamento['status'] == 'confirmed' && count($proximo_agendamento) == 0 ) {
+
+                        $proximo_agendamento = $agendamento;
+                        break;
+
+                    }
+
+                }
+            }
+
+        }
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $proximo_agendamento))));
     }
 
     private function formataAgendamentos($agendamentos = [], $data = '', $type = '') {
