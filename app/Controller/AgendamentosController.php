@@ -786,6 +786,81 @@ class AgendamentosController extends AppController {
         ]);
     }
 
+    public function usuarios_verificar() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Agendamento');
+
+        //$dataLimite = date('Y-m-d H:i:s', strtotime('-2 weeks'));
+        $dataLimite = date('Y-m-d H:i:s', strtotime('-4 years'));
+
+        $usuarios_verificar = $this->Agendamento->find('all',[
+            'fields' => [
+                'Usuario.id',
+                'Usuario.nome',
+                'Usuario.img',
+                'Usuario.created',
+                'Usuario.telefone_ddi',
+                'Usuario.telefone',
+                'Usuario.email',
+                'ClienteCliente.endereco',
+
+                'ClienteCliente.id',
+                'ClienteCliente.nacionalidade',
+                'ClienteCliente.pais',
+                'ClienteCliente.bairro',
+                'ClienteCliente.endreceo_n',
+                'ClienteCliente.cep',
+                'Localidade.loc_no',
+                'Uf.ufe_sg',
+            ],
+            'conditions' => [
+                'Agendamento.cliente_id' => $dados_token['Usuario']['cliente_id'],
+                'Usuario.created >=' => $dataLimite
+            ],
+            'link' => [
+                'ClienteCliente' => [
+                    'Usuario',
+                    'Localidade',
+                    'Uf'
+                ],
+                'ClienteServico'
+            ],
+            'group' => [
+                'Usuario.id'
+            ]
+        ]);
+
+
+        foreach( $usuarios_verificar as $key => $usuario ){ 
+            $usuarios_verificar[$key]['ClienteCliente']['telefone_ddi'] = $usuarios_verificar[$key]['Usuario']['telefone_ddi'];
+            $usuarios_verificar[$key]['ClienteCliente']['telefone'] = $usuarios_verificar[$key]['Usuario']['telefone'];
+            $usuarios_verificar[$key]['ClienteCliente']['telefone'] = $usuarios_verificar[$key]['Usuario']['telefone'];
+            $usuarios_verificar[$key]['ClienteCliente']['nome'] = $usuarios_verificar[$key]['Usuario']['nome'];
+            $usuarios_verificar[$key]['ClienteCliente']['email'] = $usuarios_verificar[$key]['Usuario']['email'];
+            $usuarios_verificar[$key]['ClienteCliente']['img'] = $this->images_path.'usuarios/'.$usuario['Usuario']['img'];
+        }
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $usuarios_verificar))));
+    }
+
     public function convitesAdicionais(){
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];
