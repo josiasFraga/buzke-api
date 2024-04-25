@@ -95,7 +95,7 @@ class ClientesController extends AppController {
             ],
             'order' => ['Cliente.nome']
         ]);
-        
+
         $this->loadModel('ClienteHorarioAtendimento');
         $this->loadModel('ClienteSubcategoria');
 
@@ -128,7 +128,7 @@ class ClientesController extends AppController {
                 ]
             ]);
 
-            $clientes[$key]['Cliente']['subcategorias_str'] = implode(`,`,$subcategorias);
+            $clientes[$key]['Cliente']['subcategorias_str'] = implode(", ",$subcategorias);
         }
 
         $subcategorias = $this->ClienteSubcategoria->find('all',[

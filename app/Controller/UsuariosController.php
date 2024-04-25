@@ -402,6 +402,9 @@ class UsuariosController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];
 
+        //$this->log($dados, 'debug');
+        //die();
+
         if ( is_array($dados) ) {
             $dados = json_decode(json_encode($dados, true));
 
@@ -428,10 +431,16 @@ class UsuariosController extends AppController {
 
         $dados_address = json_decode($dados->dados_address);
 
+
+        $lat = isset($dados_address->lat) ? $dados_address->lat : null;
+        $lon = isset($dados_address->lon) ? $dados_address->lon : null;
+
         $dados_salvar = [
             'token_id' => $dados_token['Token']['id'],
             'location_data' => $dados->dados_address,
-            'description' => $dados_address->description
+            'description' => $dados_address->description,
+            'lat' => $lat,
+            'lon' => $lon
         ];
 
         if ( isset($dados_token['Usuario']) && isset($dados_token['Usuario']['id']) && $dados_token['Usuario']['id'] != null) {

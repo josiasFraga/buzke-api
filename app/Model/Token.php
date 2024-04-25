@@ -13,6 +13,9 @@ class Token extends AppModel {
 	public $hasMany = array(
 		'UsuarioLocalizacao' => array(
 			'foreignKey' => 'token_id'
+		),
+		'Pesquisa' => array(
+			'foreignKey' => 'token_id'
 		)
 	);
 
