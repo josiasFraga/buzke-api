@@ -154,7 +154,7 @@ class AgendamentosController extends AppController {
         }
 
         $this->loadModel('Agendamento');
-        $this->loadModel('ClienteHorarioAtendimento');
+        $this->loadModel('ClienteServicoHorario');
         $this->loadModel('ClienteHorarioAtendimentoExcessao');
         $this->loadModel('AgendamentoFixoCancelado');
         $this->loadModel('ClienteSubcategoria');
@@ -163,7 +163,7 @@ class AgendamentosController extends AppController {
 
         $agendamentos = $this->Agendamento->buscaAgendamentoUsuario($meus_ids_de_cliente);
         $agendamentos = $this->ClienteHorarioAtendimentoExcessao->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
-        $agendamentos = $this->ClienteHorarioAtendimento->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
+        $agendamentos = $this->ClienteServicoHorario->checkStatus($agendamentos);//obs, não inverter a ordem senão as excessoes serão ignoradas
         $agendamentos = $this->AgendamentoFixoCancelado->checkStatus($agendamentos);
 
         if ( count($agendamentos) > 0 ) {
