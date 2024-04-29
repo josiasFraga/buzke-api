@@ -49,7 +49,7 @@ class PesquisasController extends AppController {
             'OR' => [
                 'Cliente.nome LIKE' => "%".$dados['search']."%",
                 'Categoria.titulo LIKE' => "%".$dados['search']."%",                
-                'SubCategoria.nome LIKE' => "%".$dados['search']."%"
+                'Subcategoria.nome LIKE' => "%".$dados['search']."%"
 
             ]
         ];
@@ -57,7 +57,9 @@ class PesquisasController extends AppController {
         $conditions_servicos['OR']["ClienteServico.nome LIKE"] = "%".$dados['search']."%";
         $conditions_servicos['OR']["ClienteServico.descricao LIKE"] = "%".$dados['search']."%";
         $conditions_servicos["ClienteServico.tipo"] = 'Serviço';
-
+    
+        $conditions_quadras['OR']["ClienteServico.nome LIKE"] = "%".$dados['search']."%";
+        $conditions_quadras['OR']["ClienteServico.descricao LIKE"] = "%".$dados['search']."%";
         $conditions_quadras["ClienteServico.tipo"] = 'Quadra';
 
 

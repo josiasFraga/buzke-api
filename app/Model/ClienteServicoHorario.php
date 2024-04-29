@@ -75,7 +75,7 @@ class ClienteServicoHorario extends AppModel {
         $horarios = $this->find('all', [
             'conditions' => [
                 'ClienteServicoHorario.cliente_servico_id' => $servico_id,
-                'ClienteServicoHorario.dia_semana' => date('N', strtotime($dia)) - 1 // Ajusta para base 0 (MySQL WEEKDAY)
+                'ClienteServicoHorario.dia_semana' => (int)date('w', strtotime($dia))
             ]
         ]);
     
@@ -98,6 +98,7 @@ class ClienteServicoHorario extends AppModel {
                         'duration' => $duracao->format('H:i:s'),
                         //'vacancies_per_time' => $horario['ClienteServicoHorario']['vagas_por_horario'],
                         'at_home' => $horario['ClienteServicoHorario']['a_domicilio'] === '1' ? true : false,
+                        'only_at_home' => $horario['ClienteServicoHorario']['apenas_a_domocilio'] === '1' ? true : false
                     ];
                 }
     

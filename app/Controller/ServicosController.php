@@ -279,6 +279,7 @@ class ServicosController extends AppController {
                     "dia_semana" => $horario->dia_semana,
                     "duracao" => $horario->duracao,
                     "a_domicilio" => $dados->tipo === "Quadra" ? 0 : $horario->a_domicilio,
+                    "apenas_a_domocilio" => $dados->tipo === "Quadra" ? 0 : $horario->apenas_a_domocilio,
                 ];
     
                 if ( is_numeric($horario->id) ) {
@@ -333,7 +334,8 @@ class ServicosController extends AppController {
                         'fim',
                         'dia_semana',
                         'duracao',
-                        'a_domicilio'
+                        'a_domicilio',
+                        'apenas_a_domocilio'
                     ]
                 ],
                 'ClienteServicoProfissional'
