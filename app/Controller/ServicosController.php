@@ -409,8 +409,87 @@ class ServicosController extends AppController {
             'tipo' => $dados_servico['ClienteServico']['tipo'],
             'horarios' => $horarios
         ];
-        
+
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_retornar))));
+
+    }
+
+    public function horarios_disponiveis_hoje() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dado_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $data = date('Y-m-d');
+        $this->loadModel('ClienteServico');
+
+        $servicos = $this->ClienteServico->find('all',[
+            'fields' => [
+                'ClienteServico.id',
+                'ClienteServico.nome'
+            ],
+            'conditions' => [
+                'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id'],
+                'ClienteServico.ativo' => "Y"
+            ],
+            'link' => [],
+            'group' => [
+                'ClienteServico.id'
+            ]
+        ]);
+
+        $dados_retornar = [];
+
+        $horarios = [];
+        foreach($servicos as $key => $servico){
+            $servicos[$key]['_horarios'] = $this->quadra_horarios($servico['ClienteServico']['id'], $data, false);
+
+            if ( count($servicos[$key]['_horarios']) > 0 ){
+
+                foreach( $servicos[$key]['_horarios'] as $key => $horario ){
+
+                    if ( $horario['active'] ) {
+
+                        $horario['_servico'] = $servico['ClienteServico'];
+                        $dados_retornar[] = $horario;
+
+                    }
+
+                }
+
+            }
+        }
+
+        // Passo 1: Ordenar a array
+        usort($dados_retornar, function ($a, $b) {
+            if ($a['time'] === $b['time']) {
+                return $a['_servico']['id'] <=> $b['_servico']['id'];
+            }
+            return $a['time'] <=> $b['time'];
+        });
+
+        // Passo 2: Reorganizar a array para intercalar os serviços
+        $sortedSlots = [];
+        $times = array_unique(array_column($dados_retornar, 'time')); // Extraí todos os horários únicos
+        foreach ($times as $time) {
+            // Coleta todos os slots para esse horário específico
+            foreach ($dados_retornar as $slot) {
+                if ($slot['time'] === $time) {
+                    $sortedSlots[] = $slot;
+                }
+            }
+        }
+
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $sortedSlots))));
 
     }
 
