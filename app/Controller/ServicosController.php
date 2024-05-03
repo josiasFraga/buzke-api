@@ -434,13 +434,15 @@ class ServicosController extends AppController {
         $servicos = $this->ClienteServico->find('all',[
             'fields' => [
                 'ClienteServico.id',
-                'ClienteServico.nome'
+                'ClienteServico.nome',
+                'ClienteServico.cliente_id',
+                'ClienteServicoFoto.imagem'
             ],
             'conditions' => [
                 'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id'],
                 'ClienteServico.ativo' => "Y"
             ],
-            'link' => [],
+            'link' => ['ClienteServicoFoto'],
             'group' => [
                 'ClienteServico.id'
             ]
@@ -457,6 +459,14 @@ class ServicosController extends AppController {
                 foreach( $servicos[$key]['_horarios'] as $key => $horario ){
 
                     if ( $horario['active'] ) {
+
+                        if ( !empty($servico['ClienteServicoFoto']['id']) ) {
+                            $servico['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
+                        } else {
+                            $servico['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
+                        }
+
+                        $servico['ClienteServico']['foto'] = $servico['ClienteServicoFoto']['imagem'];
 
                         $horario['_servico'] = $servico['ClienteServico'];
                         $dados_retornar[] = $horario;
@@ -487,6 +497,8 @@ class ServicosController extends AppController {
                 }
             }
         }
+
+        $limitedSlots = array_slice($sortedSlots, 0, 10);
 
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $sortedSlots))));
