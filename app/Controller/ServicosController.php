@@ -338,7 +338,15 @@ class ServicosController extends AppController {
                         'apenas_a_domocilio'
                     ]
                 ],
-                'ClienteServicoProfissional'
+                'ClienteServicoProfissional',
+                'ClienteServicoAvaliacao' => [
+                    'Usuario' => [
+                        'fields' => [
+                            'nome',
+                            'img'
+                        ]
+                    ]
+                ]
 
             ]
         ]);
@@ -353,6 +361,13 @@ class ServicosController extends AppController {
         } else {
             $dados_servico['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
         }
+
+        if ( isset($dados_servico['ClienteServicoAvaliacao']) && count($dados_servico['ClienteServicoAvaliacao']) > 0 ) {
+            foreach( $dados_servico['ClienteServicoAvaliacao'] as $key => $avaliacao ){
+                $dados_servico['ClienteServicoAvaliacao'][$key]['Usuario']['img'] = $this->images_path . "usuarios/" . $avaliacao['Usuario']['img'];
+            }
+        }
+
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_servico))));
 

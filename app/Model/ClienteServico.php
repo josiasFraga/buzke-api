@@ -3,6 +3,10 @@ class ClienteServico extends AppModel {
     public $useTable = 'clientes_servicos';
 
     public $name = 'ClienteServico';
+    
+    public $virtualFields = array(
+        'avg_avaliacao' => 'SELECT AVG(ClienteServicoAvaliacao.avaliacao) FROM cliente_servico_avaliacoes ClienteServicoAvaliacao WHERE ClienteServicoAvaliacao.cliente_servico_id = ClienteServico.id'
+    );
 
     public $belongsTo = array(
 		'Cliente' => array(
@@ -10,23 +14,26 @@ class ClienteServico extends AppModel {
 		),
     );
 
-    public $hasMany = array(
-		'Agendamento' => array(
+    public $hasMany = [
+		'Agendamento' => [
 			'foreignKey' => 'servico_id'
-		),
-		'TorneioQuadra' => array(
+		],
+		'TorneioQuadra' => [
 			'foreignKey' => 'servico_id'
-		),
-		'ClienteServicoFoto' => array(
+		],
+		'ClienteServicoFoto' => [
 			'foreignKey' => 'cliente_servico_id'
-		),
-		'ClienteServicoHorario' => array(
+		],
+		'ClienteServicoHorario' => [
 			'foreignKey' => 'cliente_servico_id'
-		),
-		'ClienteServicoProfissional' => array(
+		],
+		'ClienteServicoProfissional' => [
 			'foreignKey' => 'cliente_servico_id'
-		),
-    );
+		],
+        'ClienteServicoAvaliacao' => [
+			'foreignKey' => 'cliente_servico_id'
+        ]
+    ];
     
     public $validate = array();
 

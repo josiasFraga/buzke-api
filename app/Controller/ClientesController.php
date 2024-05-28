@@ -5,6 +5,8 @@ App::uses('CakeEmail', 'Network/Email');
 
 class ClientesController extends AppController {
 
+    public $components = array('RequestHandler');
+
     public function index($categoria_id = null) {
         $this->layout = 'ajax';
         $dados = $this->request->query;
