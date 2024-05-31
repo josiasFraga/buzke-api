@@ -8,6 +8,47 @@ class AvaliacoesController extends AppController {
         header("Access-Control-Allow-Origin: *");
     }
 
+    public function index() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        $this->loadModel('ClienteServicoAvaliacao');
+
+        $conditions = [];
+
+        if ( isset($dados['cliente_id']) && !empty($dados['cliente_id']) ) {
+            $conditions['ClienteServico.cliente_id'] = $dados['cliente_id'];
+        }       
+
+        $avaliacoes = $this->ClienteServicoAvaliacao->find('all',[
+            'fields' => [
+                'ClienteServicoAvaliacao.*',
+                'ClienteServico.nome',
+                'Usuario.nome',
+                'Usuario.img'
+            ],
+            'conditions' => $conditions,
+            'link' => [
+                'ClienteServico',
+                'Usuario'
+            ],
+            'group' => [
+                'ClienteServicoAvaliacao.id'
+            ],
+            'order' => [
+                'ClienteServicoAvaliacao.created DESC'
+            ]
+        ]);
+
+        foreach ( $avaliacoes as $key => $avaliacao ) {
+            $avaliacoes[$key]['Usuario']['img'] = $this->images_path.'usuarios/'.$avaliacao['Usuario']['img'];
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $avaliacoes))));
+
+    }
+
     public function add(){
         
         $this->layout = 'ajax';
@@ -139,7 +180,11 @@ class AvaliacoesController extends AppController {
             'conditions' => [
                 'Agendamento.cliente_cliente_id' => $dado_de_usuario_como_cliente,
                 'Agendamento.horario <' => date('Y-m-d H:i:s'),
-                'Agendamento.cancelado' => 'N'
+                'Agendamento.cancelado' => 'N',
+                'Agendamento.torneio_id' => null,
+                'not' => [
+                    'ClienteServico.id' => null
+                ]
             ],
             'link' => [
                 'Cliente',
@@ -153,6 +198,9 @@ class AvaliacoesController extends AppController {
             ],
             'group' => [
                 'Agendamento.servico_id'
+            ],
+            'order' => [
+                'Agendamento.horario DESC'
             ]
         ]);
 
@@ -169,6 +217,7 @@ class AvaliacoesController extends AppController {
 
             if ( $verifica_avaliou > 0 ) {
                 unset($servicos[$key]);
+                continue;
             }
 
             if ( !empty($servicos[$key]['ClienteServicoFoto']['imagem']) ) {
@@ -207,14 +256,17 @@ class AvaliacoesController extends AppController {
                 'ClienteServico.*',
                 'ClienteServicoAvaliacao.*',
                 'Cliente.nome',
-                'Cliente.logo'
+                'Cliente.logo',
+                'Usuario.img'
             ],
             'conditions' => [
                 'ClienteServicoAvaliacao.usuario_id' => $dado_usuario['Usuario']['id']
             ],
             'link' => [
                 'Cliente',
-                'ClienteServicoAvaliacao'
+                'ClienteServicoAvaliacao' => [
+                    'Usuario'
+                ]
             ],
             'order' => [
                 'ClienteServicoAvaliacao.created'
@@ -230,6 +282,7 @@ class AvaliacoesController extends AppController {
             }
 
             $servicos[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$servico['Cliente']['logo'];
+            $servicos[$key]['Usuario']['img'] = $this->images_path.'usuarios/'.$servico['Usuario']['img'];
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $servicos))));
