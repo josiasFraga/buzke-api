@@ -808,8 +808,8 @@ class AgendamentosController extends AppController {
 
         $this->loadModel('Agendamento');
 
-        //$dataLimite = date('Y-m-d H:i:s', strtotime('-2 weeks'));
-        $dataLimite = date('Y-m-d H:i:s', strtotime('-4 years'));
+        $dataLimite = date('Y-m-d H:i:s', strtotime('-2 weeks'));
+        //$dataLimite = date('Y-m-d H:i:s', strtotime('-4 years'));
 
         $usuarios_verificar = $this->Agendamento->find('all',[
             'fields' => [
