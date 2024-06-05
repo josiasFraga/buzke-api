@@ -705,9 +705,10 @@ class UsuariosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro no servidor do gerenciador de pagamentos. ['.$asaas_dados['errors'][0]['description'].'] Por favor, tente mais tarde!'))));
         }
 
-        $asaas_id = $asaas_dados['id'];    
- 
-        $dados_salvar['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')] = $asaas_id; 
+
+        $asaas_id = $asaas_dados['id'];
+    
+        $dados_salvar['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')] = $asaas_id;        
 
         $this->Usuario->set($dados_salvar);
         if ($this->Usuario->saveAssociated($dados_salvar)) {
@@ -1426,9 +1427,9 @@ class UsuariosController extends AppController {
         if ( count($cliente) == 0 ) {
             return false;
         }
-  
+
         $asaas_url = getenv('ASAAS_API_URL');
-        $asaas_token = getenv('ASAAS_API_TOKEN');        
+        $asaas_token = getenv('ASAAS_API_TOKEN');
 
         $curl = curl_init();
 
