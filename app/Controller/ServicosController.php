@@ -263,13 +263,13 @@ class ServicosController extends AppController {
              
             }
 
-
             // Salva as novas fotos
             if ( count($imagens_salvar) > 0 ) {
                 $this->ClienteServicoFoto->saveMany($imagens_salvar);
             }
 
             $horarios_salvar = [];
+            $horarios_permanecer = [];
             foreach( $dados->horarios as $key => $horario ){
     
                 $horarios_salvar[$key] = [
@@ -284,9 +284,18 @@ class ServicosController extends AppController {
     
                 if ( is_numeric($horario->id) ) {
                     $horarios_salvar[$key]['id'] = $horario->id;
+                    $horarios_permanecer[] = $horario->id;
                 }
     
             }
+
+            // Remove os horarios que não estão no post      
+            $this->ClienteServicoHorario->deleteAll([
+                'ClienteServicoHorario.cliente_servico_id' => $servico_id,
+                'not' => [
+                    'ClienteServicoHorario.id' => $horarios_permanecer
+                ]
+            ]);
 
             $this->ClienteServicoHorario->saveMany($horarios_salvar);
 
