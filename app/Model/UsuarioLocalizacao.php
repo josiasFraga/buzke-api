@@ -19,6 +19,9 @@ class UsuarioLocalizacao extends AppModel {
     public $hasMany = array(
 		'ToProJogo' => array(
 			'foreignKey' => 'localizacao_id'
+        ),
+		'Pesquisa' => array(
+			'foreignKey' => 'usuario_localizacao_id'
         )
     );
     
@@ -72,6 +75,39 @@ class UsuarioLocalizacao extends AppModel {
                     $dados_retornar[] = $palyer['ClienteCliente']['id'];
                 } 
             }
+        }
+
+        return $dados_retornar;
+    }
+
+    public function filterByLastByTokenAndUserId($token_id = null, $usuario_id) {
+
+        if ( empty($token_id) ) {
+            return [];
+        }
+
+        $dados_retornar = $this->find('first',[
+            'conditions' => [
+                'UsuarioLocalizacao.token_id' => $token_id
+            ],
+            'link' => [],
+            'order' => [
+                'UsuarioLocalizacao.id DESC'
+            ]
+        ]);
+
+        if ( !empty($usuario_id) && count($dados_retornar) == 0 ) {
+
+            $dados_retornar = $this->find('first',[
+                'conditions' => [
+                    'UsuarioLocalizacao.usuario_id' => $usuario_id
+                ],
+                'link' => [],
+                'order' => [
+                    'UsuarioLocalizacao.id DESC'
+                ]
+            ]);
+
         }
 
         return $dados_retornar;

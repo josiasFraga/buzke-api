@@ -30,6 +30,7 @@ class ToProJogo extends AppModel {
     }
 
 	public function findUsers($horario = null, $data = null, $usuario_id, $subcategorias, $dados_empresa) {
+
 		if ( $horario == null || $data == null) {
 			return [];
 		}
@@ -73,7 +74,7 @@ class ToProJogo extends AppModel {
 			'link' => ['ToProJogoEsporte', 'UsuarioLocalizacao', 'ClienteCliente' => ['Usuario' => ['UsuarioDadosPadel']]],
 			'order' => ['ClienteCliente.nome'],
 		]);
-		$this->log($dados, 'debug');
+		//$this->log($dados, 'debug');
 		return $dados;
 
 	}

@@ -69,6 +69,10 @@ class Cliente extends AppModel {
 			'foreignKey' => 'ui_departamento'
 		),
     );
+
+	public $virtualFields = array(
+        'avg_avaliacao' => 'SELECT AVG(avaliacao) FROM cliente_servico_avaliacoes WHERE cliente_servico_avaliacoes.cliente_servico_id IN (SELECT id FROM clientes_servicos WHERE clientes_servicos.cliente_id = Cliente.id)'
+    );
     
     public $validate = array();
 

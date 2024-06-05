@@ -1265,6 +1265,108 @@ class AppController extends Controller {
 
         return json_decode($response, true);
     }
+
+    public function quadra_horarios($servico_id, $data, $oferece_agendamento_fixo) {
+
+        $this->loadModel('AgendamentoFixoCancelado');
+        $this->loadModel('ClienteServicoHorario');
+        $this->loadModel('TorneioQuadraPeriodo');
+        $this->loadModel('Agendamento');
+        $this->loadModel('ClienteServico');
+        $this->loadModel('ClienteServicoProfissional');
+
+        $dados_servico = $this->ClienteServico->find('first',[
+            'conditions' => [
+                'ClienteServico.id' => $servico_id
+            ],
+            'contain' => [
+                'ClienteServicoProfissional'
+            ]
+        ]);
+
+
+        $horarios = $this->ClienteServicoHorario->listaHorarios($servico_id, $data);
+
+        if ( count($horarios) > 0 ) {
+
+            foreach( $horarios as $key => $horario ) {
+
+                $agendamentos_padrao = $this->Agendamento->agendamentosHorario($servico_id, $data, $horario['time']);
+                $agendamentos_fixos = $this->Agendamento->agendamentosHorarioFixo($servico_id, $data, $horario['time']);
+                $horarios[$key]['enable_fixed_scheduling'] = $oferece_agendamento_fixo === 'Y';
+
+                if ( count($agendamentos_fixos) > 0 ) {
+                    $horarios[$key]['enable_fixed_scheduling'] = false;
+             
+                    $n_fixos_cancelados = $this->AgendamentoFixoCancelado->find('count',[
+                        'conditions' => [
+                            'AgendamentoFixoCancelado.horario' => $data . ' ' . $horario['time'],
+                            'Agendamento.servico_id' => $servico_id
+                        ],
+                        'link' => [
+                            'Agendamento'
+                        ]
+                    ]);
+    
+                    $agendamentos_fixos = array_slice($agendamentos_fixos, $n_fixos_cancelados);                
+                    
+                }
+
+                $motivo_indisponivel = null;
+
+                if ( $data." ".$horarios[$key]['time'] < date('Y-m-d H:i:s') ) {
+                    $motivo_indisponivel = "Horário já passou";
+                }
+
+                if ( $dados_servico['ClienteServico']['tipo'] === 'Quadra' ) {
+
+                    $vagas_por_horario = 1;
+                    $reservas_torneio = $this->TorneioQuadraPeriodo->verificaReservaTorneio($servico_id, $data, $horario['time']);
+
+                    if ( count($reservas_torneio) > 0 ) {
+                        $motivo_indisponivel = "Haverá torneio nessa quadra nesse dia e hora.";
+                    }
+    
+                    if ( ($vagas_por_horario - count($agendamentos_padrao) - count($agendamentos_fixos)) < 0 ) {
+                        $motivo_indisponivel = "Horário ocupado por outro usuário";
+                    }
+    
+                    $horarios[$key]['active'] = count($reservas_torneio) == 0 && ($vagas_por_horario - count($agendamentos_padrao) - count($agendamentos_fixos)) > 0 && $data." ".$horarios[$key]['time'] > date('Y-m-d H:i:s');
+                    $horarios[$key]['motivo'] = $motivo_indisponivel;
+            
+                } else {         
+
+                    if ( $motivo_indisponivel !== null ) {
+                        $horarios[$key]['active'] = false;
+                        $horarios[$key]['motivo'] = $motivo_indisponivel;
+                        $horarios[$key]['prof_disponiveis'] = [];
+                        continue;
+                    }           
+
+                    $profissionais_disponiveis = [];
+
+                    foreach( $dados_servico['ClienteServicoProfissional'] as $key_profissional => $profissional ) {
+
+                        $verifica_disponibilidade = $this->ClienteServicoProfissional->verifica_disponibilidade($profissional['usuario_id'], $data." ".$horarios[$key]['time']);
+                        if ( $verifica_disponibilidade ) {
+                            $profissionais_disponiveis[] = $profissional['usuario_id'];
+                        }
+
+                    }
+
+                    $horarios[$key]['active'] = count($profissionais_disponiveis) > 0;
+                    $horarios[$key]['motivo'] = count($profissionais_disponiveis) === 0 ? "Profissionais indisponíves no horário." : null;
+                    $horarios[$key]['prof_disponiveis'] = array_unique($profissionais_disponiveis);
+
+                }
+
+
+            }
+
+        }
+
+        return $horarios;
+    }
     
     public function dateHourEnBr( $data , $r_data, $r_hora ){
 		if ($r_data && $r_hora) {

@@ -25,6 +25,15 @@ class Usuario extends AppModel {
         ],
         'Sugestao' => [
 			'foreignKey' => 'usuario_id'
+        ],
+        'ClienteServicoProfissional' => [
+			'foreignKey' => 'usuario_id'
+        ],
+        'Agendamento' => [
+			'foreignKey' => 'profissional_id'
+        ],
+        'ClienteServicoAvaliacao' => [
+			'foreignKey' => 'usuario_id'
         ]
     );
 

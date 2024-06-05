@@ -118,4 +118,25 @@ class TorneioQuadraPeriodo extends AppModel {
         
         return $verifica;
     }
+
+    public function verificaReservaTorneio ($servico_id = null, $data = null, $hora = null) {
+
+        if ( $servico_id == null || $data == null || $hora == null ) {
+            return false;
+        }
+
+        $conditions = [
+            'TorneioQuadra.servico_id' => $servico_id,
+            'TorneioQuadraPeriodo.inicio <=' => $data.' '.$hora,
+            'TorneioQuadraPeriodo.fim >=' => $data.' '.$hora
+        ];
+
+        return $this->find('all', [
+            'conditions' => $conditions,
+            'link' => [
+                'TorneioQuadra'
+            ]
+        ]);
+
+    }
 }

@@ -19,6 +19,9 @@ class Agendamento extends AppModel {
 		'Torneio' => array(
 			'foreignKey' => 'torneio_id'
         ),
+		'Usuario' => array(
+			'foreignKey' => 'profissional_id'
+        ),
     );
 
     public $hasMany = array(
@@ -495,9 +498,17 @@ class Agendamento extends AppModel {
                 'ClienteCliente.img',
                 'ClienteServico.nome',
                 'ClienteServico.id',
-                'Agendamento.cliente_id'
+                'Agendamento.cliente_id',
+                'Agendamento.profissional_id',
+                'Usuario.img'
             ],
-            'link' => ['ClienteCliente', 'ClienteServico'],
+            'link' => [
+                'ClienteCliente' => [
+                    'Usuario'
+                ], 
+                'ClienteServico',
+                //'Usuario'
+            ],
             'order' => ['Agendamento.horario']
         ]);
 
@@ -552,13 +563,15 @@ class Agendamento extends AppModel {
                 'ClienteCliente.img',
                 'ClienteServico.nome',
                 'ClienteServico.id',
-                'Agendamento.cliente_id'
+                'Agendamento.cliente_id',
+                'Agendamento.profissional_id',
+                'Usuario.img'
             ],
             'conditions' => $conditions,
             'order' => [
                 'Agendamento.horario'
             ],
-            'link' => ['ClienteCliente', 'ClienteServico']
+            'link' => ['ClienteCliente' => ['Usuario'], 'ClienteServico']
         ]);
 
     }
@@ -591,13 +604,15 @@ class Agendamento extends AppModel {
                 'ClienteCliente.img',
                 'ClienteServico.nome',
                 'ClienteServico.id',
-                'Agendamento.cliente_id'
+                'Agendamento.cliente_id',
+                'Agendamento.profissional_id',
+                'Usuario.img'
             ],
             'conditions' => $conditions,
             'order' => [
                 'Agendamento.horario'
             ],
-            'link' => ['ClienteCliente', 'ClienteServico']
+            'link' => ['ClienteCliente' => ['Usuario'], 'ClienteServico']
         ]);
 
     }
@@ -783,5 +798,49 @@ class Agendamento extends AppModel {
         ]);
 
     }
+
+    public function agendamentosHorario ($servico_id = null, $data = null, $hora = null) {
+
+        if ( $servico_id == null || $data == null || $hora == null ) {
+            return false;
+        }
+
+        $conditions = [
+            'Agendamento.servico_id' => $servico_id,
+            'DATE(Agendamento.horario)' => $data,
+            'TIME(Agendamento.horario)' => $hora,
+            'Agendamento.cancelado' => 'N',
+        ];
+
+
+        return $this->find('all', [
+            'conditions' => $conditions,
+            'link' => []
+        ]);
+
+    }
+
+    public function agendamentosHorarioFixo ($servico_id = null, $data = null, $hora = null) {
+
+        if ( $servico_id == null || $data == null || $hora == null ) {
+            return false;
+        }
+
+        $conditions = [
+            'Agendamento.servico_id' => $servico_id,
+            'or' => [
+                'dia_semana' => date('w',strtotime($data)),
+                'dia_mes' => (int)date('d',strtotime($data)),
+            ],
+            'TIME(Agendamento.horario)' => $hora,
+            'Agendamento.cancelado' => 'N',
+        ];
+
+        return $this->find('all', [
+            'conditions' => $conditions,
+            'link' => []
+        ]);
+
+    }    
 
 }

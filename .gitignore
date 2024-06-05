@@ -13,6 +13,7 @@
 /app/webroot/img/clientes_clientes/*
 /app/webroot/img/torneios/*
 /app/webroot/img/usuarios/*
+/app/webroot/img/servicos/*
 
 # Exceções para imagens específicas que NÃO devem ser ignoradas
 # Note que você precisa primeiro não ignorar o diretório de forma geral

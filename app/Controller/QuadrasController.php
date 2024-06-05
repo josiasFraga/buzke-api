@@ -28,6 +28,7 @@ class QuadrasController extends AppController {
         }
 
         $this->loadModel('ClienteServico');
+        $this->loadModel('ClienteServicoHorario');
 
         $conditions = [];
         if ( $dados['tipo'] == 'meus' ) {
@@ -49,7 +50,6 @@ class QuadrasController extends AppController {
 
         if ( $dados_token['Usuario']['cliente_id'] == 55 ) {
             $order_quadras = ['ClienteServico.id'];
-
         }
 
         $quadras = $this->ClienteServico->find('all',[
@@ -58,14 +58,30 @@ class QuadrasController extends AppController {
             ],
             'conditions' => $conditions,
             'order' => $order_quadras,
-            'link' => []
+            'contain' => [
+                'ClienteServicoFoto' => [
+                    'fields' => [
+                        'imagem',
+                        'id'
+                    ]
+                ]
+            ]
         ]);
         
         //debug($conditions); die();
 
         foreach($quadras as $key => $qua){
-            
+
             $quadras[$key]['ClienteServico']['_valor'] = number_format($qua['ClienteServico']['valor'],2,',','.');
+            $quadras[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->lsitaDiasSemana($qua['ClienteServico']['id']);
+
+            if ( count($qua['ClienteServicoFoto']) > 0 ) {
+                foreach( $qua['ClienteServicoFoto'] as $key_imagem => $imagem){
+                    $quadras[$key]['ClienteServicoFoto'][$key_imagem]['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
+                }
+            } else {
+                $quadras[$key]['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
+            }
         }
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $quadras))));

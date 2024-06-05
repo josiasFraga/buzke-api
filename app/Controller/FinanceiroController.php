@@ -48,7 +48,7 @@ class FinanceiroController extends AppController {
                 ];
     
                 $dados_salvar[getenv('CAMPO_CLIENTE_GATEWAY_ID')] = $asaas_id;
-    
+
                 if ( !$this->Cliente->save($dados_salvar) ){
                     echo 'Erro ao salvar o cliente: ' . $cliente['Cliente']['id']."<br />";
                     continue;
