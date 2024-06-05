@@ -16,11 +16,9 @@ class FinanceiroController extends AppController {
 
         $this->loadModel('Cliente');
 
-
         $conditions = [
             'Cliente.' . getenv('CAMPO_CLIENTE_GATEWAY_ID') => null,
         ];
-
 
         $clientes_sem_cadastro_no_asaas = $this->Cliente->find('all',[
             'fields' => ['cliente.*', 'Usuario.nome', 'Usuario.email'],

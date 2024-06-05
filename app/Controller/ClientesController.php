@@ -1692,12 +1692,10 @@ class ClientesController extends AppController {
         $hoje = date('Y-m-d');
         $hoje_time = strtotime($hoje);
         $one_month_more = date("Y-m-d", strtotime("+1 month", $hoje_time));
-        
-        $asaas_url = getenv('ASAAS_API_URL');
-        $asaas_token = getenv('ASAAS_API_TOKEN');    
-       
-        $asaas_cliente_id = $cliente['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')];
 
+        $asaas_url = getenv('ASAAS_API_URL');
+        $asaas_token = getenv('ASAAS_API_TOKEN');
+        $asaas_cliente_id = $cliente['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')];
 
         $params = [
             'customer' => $asaas_cliente_id,

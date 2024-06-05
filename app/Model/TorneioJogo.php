@@ -23,194 +23,175 @@ class TorneioJogo extends AppModel {
         ),
 	);
 
-	public function buscaNVitorias($inscricao_id =  null, $fase = null) {
- 
-		if ( $inscricao_id == null ){
+	public function buscaNVitorias($inscricao_id = null, $fase = null) {
+		if ($inscricao_id == null) {
 			return 0;
 		}
-
+	
 		$conditions = [
-			'TorneioJogo.time_1' => $inscricao_id,
-			'TorneioJogoPlacar.time_1_placar > TorneioJogoPlacar.time_2_placar',
-			'TorneioJogoPlacar.tipo' => ['Set']
+			'OR' => [
+				'TorneioJogo.time_1' => $inscricao_id,
+				'TorneioJogo.time_2' => $inscricao_id
+			],
+			'TorneioJogoPlacar.tipo' => ['Set', 'Tiebreak']
 		];
-
-		if ( $fase != null ) {
-			$conditions = array_merge($conditions, [
-				'TorneioJogo.fase' => $fase
-			]);
+	
+		if ($fase !== null) {
+			$conditions['TorneioJogo.fase'] = $fase;
 		}
-
-		$vitorias_como_mandante = $this->find('count',[
+	
+		$jogos = $this->find('all', [
 			'conditions' => $conditions,
-			'group' => ['TorneioJogoPlacar.torneio_jogo_id'],
-			'link' => ['TorneioJogoPlacar']
-		]);
-
-		$conditions = [
-			'TorneioJogo.time_2' => $inscricao_id,
-			'TorneioJogoPlacar.time_2_placar > TorneioJogoPlacar.time_1_placar',
-			'TorneioJogoPlacar.tipo' => ['Set']
-		];
-
-		if ( $fase != null ) {
-			$conditions = array_merge($conditions, [
-				'TorneioJogo.fase' => $fase
-			]);
-		}
-
-		$vitorias_como_visitante = $this->find('count',[
-			'conditions' => $conditions,
-			'group' => ['TorneioJogoPlacar.torneio_jogo_id'],
-			'link' => ['TorneioJogoPlacar']
-		]);
-
-		return $vitorias_como_mandante + $vitorias_como_visitante;
-
-	}
-
-	public function buscaSaldoSets($inscricao_id =  null, $fase = null) {
- 
-		if ( $inscricao_id == null ){
-			return 0;
-		}
-
-		/*---------------------------SOMA AS VITÓRIAS DA INCRIÇÃO--------------------------------------*/
-		$conditions = [
-			'TorneioJogo.time_1' => $inscricao_id,
-			'TorneioJogoPlacar.time_1_placar > TorneioJogoPlacar.time_2_placar',
-			'TorneioJogoPlacar.tipo' => ['Set']
-		];
-
-		if ( $fase != null ) {
-			$conditions = array_merge($conditions, [
-				'TorneioJogo.fase' => $fase
-			]);
-		}
-
-		$vitorias_como_mandante = $this->find('count',[
-			'conditions' => $conditions,
-			//'group' => ['TorneioJogoPlacar.torneio_jogo_id'],
-			'link' => ['TorneioJogoPlacar']
-		]);
-
-		$conditions = [
-			'TorneioJogo.time_2' => $inscricao_id,
-			'TorneioJogoPlacar.time_2_placar > TorneioJogoPlacar.time_1_placar',
-			'TorneioJogoPlacar.tipo' => ['Set']
-		];
-
-		if ( $fase != null ) {
-			$conditions = array_merge($conditions, [
-				'TorneioJogo.fase' => $fase
-			]);
-		}
-
-		$vitorias_como_visitante = $this->find('count',[
-			'conditions' => $conditions,
-			//'group' => ['TorneioJogoPlacar.torneio_jogo_id'],
-			'link' => ['TorneioJogoPlacar']
-		]);
-
-
-		/*---------------------------SOMA AS DERROTAS DA INCRIÇÃO--------------------------------------*/
-		$conditions = [
-			'TorneioJogo.time_1' => $inscricao_id,
-			'TorneioJogoPlacar.time_1_placar < TorneioJogoPlacar.time_2_placar',
-			'TorneioJogoPlacar.tipo' => ['Set']
-		];
-
-		if ( $fase != null ) {
-			$conditions = array_merge($conditions, [
-				'TorneioJogo.fase' => $fase
-			]);
-		}
-
-		$derrotas_como_mandante = $this->find('count',[
-			'conditions' => $conditions,
-			//'group' => ['TorneioJogoPlacar.torneio_jogo_id'],
-			'link' => ['TorneioJogoPlacar']
-		]);
-
-		$conditions = [
-			'TorneioJogo.time_2' => $inscricao_id,
-			'TorneioJogoPlacar.time_2_placar < TorneioJogoPlacar.time_1_placar',
-			'TorneioJogoPlacar.tipo' => ['Set']
-		];
-
-		if ( $fase != null ) {
-			$conditions = array_merge($conditions, [
-				'TorneioJogo.fase' => $fase
-			]);
-		}
-
-		$derrotas_como_visitante = $this->find('count',[
-			'conditions' => $conditions,
-			//'group' => ['TorneioJogoPlacar.torneio_jogo_id'],
-			'link' => ['TorneioJogoPlacar']
-		]);
-
-		return $vitorias_como_mandante + $vitorias_como_visitante - $derrotas_como_mandante - $derrotas_como_visitante;
-
-	}
-
-	public function buscaNGames($inscricao_id =  null, $fase = null) {
- 
-		if ( $inscricao_id == null ){
-			return 0;
-		}
-
-		$conditions = [
-			'TorneioJogo.time_1' => $inscricao_id,
-			'TorneioJogoPlacar.tipo' => 'Set',
-		];
-
-		if ( $fase != null ) {
-			$conditions = array_merge($conditions, [
-				'TorneioJogo.fase' => $fase
-			]);
-		}
-
-		$this->virtualFields['_saldo_games'] = '(SUM(TorneioJogoPlacar.time_1_placar) - SUM(TorneioJogoPlacar.time_2_placar))';
-		$saldo_como_mandante = $this->find('first',[
-			'fields' => ['TorneioJogo._saldo_games'],
-			'conditions' => $conditions,
-			'group' => [
-				'TorneioJogo.time_1'
+			'fields' => [
+				'TorneioJogo.id',
+				'TorneioJogo.time_1',
+				'TorneioJogo.time_2',
+				'TorneioJogoPlacar.tipo',
+				'TorneioJogoPlacar.time_1_placar',
+				'TorneioJogoPlacar.time_2_placar'
 			],
 			'link' => ['TorneioJogoPlacar']
 		]);
-
-		$conditions = [
-			'TorneioJogo.time_2' => $inscricao_id,
-			'TorneioJogoPlacar.tipo' => 'Set',
-		];
-
-		if ( $fase != null ) {
-			$conditions = array_merge($conditions, [
-				'TorneioJogo.fase' => $fase
-			]);
+	
+		$resultados = [];
+	
+		// Processar cada jogo para contar sets e tiebreaks
+		foreach ($jogos as $jogo) {
+			$idJogo = $jogo['TorneioJogo']['id'];
+			$tipo = $jogo['TorneioJogoPlacar']['tipo'];
+			$placarTime1 = $jogo['TorneioJogoPlacar']['time_1_placar'];
+			$placarTime2 = $jogo['TorneioJogoPlacar']['time_2_placar'];
+	
+			if (!isset($resultados[$idJogo])) {
+				$resultados[$idJogo] = [
+					'sets_time_1' => 0, 
+					'sets_time_2' => 0, 
+					'tiebreak_vencedor' => null, 
+					'time_1' => $jogo['TorneioJogo']['time_1'], 
+					'time_2' => $jogo['TorneioJogo']['time_2']
+				];
+			}
+	
+			if ($tipo === 'Set') {
+				if ($placarTime1 > $placarTime2) {
+					$resultados[$idJogo]['sets_time_1']++;
+				} else if ($placarTime2 > $placarTime1) {
+					$resultados[$idJogo]['sets_time_2']++;
+				}
+			} else if ($tipo === 'Tiebreak') {
+				$resultados[$idJogo]['tiebreak_vencedor'] = $placarTime1 > $placarTime2 ? 'time_1' : 'time_2';
+			}
 		}
-		unset($this->virtualFields['_saldo_games']);
+	
+		$vitorias = 0;
+	
+		// Avaliar os resultados acumulados para contar vitórias
+		foreach ($resultados as $idJogo => $resultado) {
+			$totalSetsTime1 = $resultado['sets_time_1'];
+			$totalSetsTime2 = $resultado['sets_time_2'];
+			$tiebreakVencedor = $resultado['tiebreak_vencedor'];
+			$time_1 = $resultado['time_1'];
+			$time_2 = $resultado['time_2'];
+	
+			if ($totalSetsTime1 == $totalSetsTime2 && $tiebreakVencedor !== null) {
+				// Empate nos sets, decide pelo tiebreak
+				if (($tiebreakVencedor === 'time_1' && $time_1 == $inscricao_id) || 
+					($tiebreakVencedor === 'time_2' && $time_2 == $inscricao_id)) {
+					$vitorias++;
+				}
+			} else {
+				// Não houve empate nos sets, decide pelo maior número de sets vencidos
+				if ($totalSetsTime1 > $totalSetsTime2 && $time_1 == $inscricao_id) {
+					$vitorias++;
+				} else if ($totalSetsTime2 > $totalSetsTime1 && $time_2 == $inscricao_id) {
+					$vitorias++;
+				}
+			}
+		}
+	
+		return $vitorias;
+	}
+	
 
-		$this->virtualFields['_saldo_games'] = '(SUM(TorneioJogoPlacar.time_2_placar) - SUM(TorneioJogoPlacar.time_1_placar))';
-		$saldo_como_visitante = $this->find('first',[
-			'fields' => ['TorneioJogo._saldo_games'],
-			'conditions' => $conditions,
-			'group' => [
-				'TorneioJogo.time_2'
+	public function buscaSaldoSets($inscricao_id = null, $fase = null) {
+		if ($inscricao_id == null) {
+			return 0;
+		}
+	
+		// Preparar condições base que serão utilizadas em ambas as consultas
+		$baseConditions = [
+			'TorneioJogoPlacar.tipo' => ['Set']
+		];
+	
+		if ($fase != null) {
+			$baseConditions['TorneioJogo.fase'] = $fase;
+		}
+	
+		// Consulta única para contar tanto vitórias quanto derrotas
+		$conditionsVitoria = array_merge($baseConditions, [
+			'OR' => [
+				['TorneioJogo.time_1' => $inscricao_id, 'TorneioJogoPlacar.time_1_placar > TorneioJogoPlacar.time_2_placar'],
+				['TorneioJogo.time_2' => $inscricao_id, 'TorneioJogoPlacar.time_2_placar > TorneioJogoPlacar.time_1_placar']
+			]
+		]);
+	
+		$conditionsDerrota = array_merge($baseConditions,[
+			'OR' => [
+				['TorneioJogo.time_1' => $inscricao_id, 'TorneioJogoPlacar.time_1_placar < TorneioJogoPlacar.time_2_placar'],
+				['TorneioJogo.time_2' => $inscricao_id, 'TorneioJogoPlacar.time_2_placar < TorneioJogoPlacar.time_1_placar']
+			]
+		]);
+	
+		// Realizar as consultas
+		$vitorias = $this->find('count', ['conditions' => $conditionsVitoria, 'link' => ['TorneioJogoPlacar']]);
+		$derrotas = $this->find('count', ['conditions' => $conditionsDerrota, 'link' => ['TorneioJogoPlacar']]);
+	
+		// Calculando o saldo de sets
+		$saldoSets = $vitorias - $derrotas;
+	
+		return $saldoSets;
+	}
+
+	public function buscaNGames($inscricao_id = null, $fase = null) {
+		if ($inscricao_id == null) {
+			return 0;
+		}
+	
+		// Define condições base e inclui a lógica da fase, se aplicável
+		$baseConditions = ['TorneioJogoPlacar.tipo' => 'Set'];
+		if ($fase !== null) {
+			$baseConditions['TorneioJogo.fase'] = $fase;
+		}
+	
+		// Prepara o campo virtual para calcular o saldo de games como mandante e visitante
+		$this->virtualFields['_saldo_games_mandante'] = 'SUM(CASE WHEN TorneioJogo.time_1 = ' . $inscricao_id . ' THEN TorneioJogoPlacar.time_1_placar - TorneioJogoPlacar.time_2_placar ELSE 0 END)';
+		$this->virtualFields['_saldo_games_visitante'] = 'SUM(CASE WHEN TorneioJogo.time_2 = ' . $inscricao_id . ' THEN TorneioJogoPlacar.time_2_placar - TorneioJogoPlacar.time_1_placar ELSE 0 END)';
+	
+		// Realiza a consulta agregando os resultados para mandante e visitante
+		$resultado = $this->find('first', [
+			'fields' => [
+				'_saldo_games_mandante',
+				'_saldo_games_visitante'
+			],
+			'conditions' => [
+				$baseConditions,
+				'OR' => [
+					'TorneioJogo.time_1' => $inscricao_id,
+					'TorneioJogo.time_2' => $inscricao_id,
+				],
 			],
 			'link' => ['TorneioJogoPlacar']
 		]);
-
-
-		unset($this->virtualFields['_saldo_games']);
-
-		$saldo_como_mandante = isset($saldo_como_mandante['TorneioJogo']) && isset($saldo_como_mandante['TorneioJogo']['_saldo_games']) ? $saldo_como_mandante['TorneioJogo']['_saldo_games'] : 0;
-		$saldo_como_visitante = isset($saldo_como_visitante['TorneioJogo']) && isset($saldo_como_visitante['TorneioJogo']['_saldo_games']) ? $saldo_como_visitante['TorneioJogo']['_saldo_games'] : 0;
-
-		return $saldo_como_mandante + $saldo_como_visitante;
-
+	
+		unset($this->virtualFields['_saldo_games_mandante'], $this->virtualFields['_saldo_games_visitante']);
+	
+		// Calcula e retorna o saldo total de games
+		$saldoTotal = 0;
+		if (!empty($resultado)) {
+			$saldoTotal += $resultado['TorneioJogo']['_saldo_games_mandante'] + $resultado['TorneioJogo']['_saldo_games_visitante'];
+		}
+		
+		return $saldoTotal;
 	}
 
 	public function checaJogoNoHorario($quadra_id = null, $horario = null) {
