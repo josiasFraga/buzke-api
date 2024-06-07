@@ -595,7 +595,7 @@ class AgendamentosController extends AppController {
             $cliente_id = $dados_usuario['Usuario']['cliente_id'];
             $cliente_cliente_id = $dados->cliente_cliente_id;
             $cadastrado_por = 'cliente';
-            $dados_cliente_cliente = $this->ClienteCliente->buscaDadosClienteCliente($cliente_cliente_id, $dados->cliente_id);
+            $dados_cliente_cliente = $this->ClienteCliente->buscaDadosClienteCliente($cliente_cliente_id, $cliente_id);
     
             if ( !$dados_cliente_cliente || count($dados_cliente_cliente) == 0) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Lamentamos. Não conseguimos encontrar os dados do cliente! ;('))));

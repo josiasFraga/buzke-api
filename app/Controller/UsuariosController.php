@@ -212,6 +212,123 @@ class UsuariosController extends AppController {
         }
     }
 
+    public function biometricLogin() {
+        $this->layout = 'ajax';
+        
+        $dados = $this->request->data['dados'];
+
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), true);
+        }
+
+        $dados = (object)$dados;
+
+		if ( !isset($dados->email) || !filter_var($dados->email, FILTER_VALIDATE_EMAIL) ) {
+			throw new BadRequestException('Email inválido!', 400);
+		}
+    
+        if (!isset($dados->token) || $dados->token == '') {
+            throw new BadRequestException('Token não informado', 400);
+        }
+		
+		if ( !isset($dados->notifications_id) || $dados->notifications_id == '' ) {
+			$dados->notifications_id = null;
+		}
+
+        $email = $dados->email;
+        $token = $dados->token;
+
+        $this->loadModel('Usuario');
+        $usuario = $this->Usuario->find('first', array(
+            'conditions' => array(
+                'Usuario.email' => $email,
+                'Token.token' => $token,
+                'Usuario.nivel_id' => [2,3],
+                'Token.data_validade >=' => date('Y-m-d')
+            ),
+            'link' => array(
+                'Token', 'Cliente',
+            ),
+            'fields' => array(
+                'Usuario.*',
+                'Token.id',
+                'Cliente.*'
+            )
+        ));
+
+        if (count($usuario) == 0) {
+            throw new BadRequestException('Login e/ou Senha não conferem.', 401);
+        }
+
+        if ( $usuario['Usuario']['ativo'] == 'N' ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Seu cadastro ainda está inativado.'))));
+        }
+
+        $cadastro_categorias_ok = 'false';
+        if ( $usuario['Usuario']['nivel_id'] == 2 ) {
+
+            //verifica se o usuário já definiu as subcategorias
+            $this->loadModel('ClienteSubcategoria');
+            $subcategorias = $this->ClienteSubcategoria->find('count',[
+                'conditions' => [
+                    'ClienteSubcategoria.cliente_id' => $usuario['Usuario']['cliente_id'],
+                ],
+                'link' => []
+            ]);
+
+            $usuario['Cliente']['is_paddle_court'] = $this->ClienteSubcategoria->checkIsPaddleCourt($usuario['Usuario']['cliente_id']);
+            $usuario['Cliente']['is_court'] = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
+            $usuario['Cliente']['logo'] = $this->images_path.'clientes/'.$usuario['Cliente']['logo'];
+
+            $cadastro_categorias_ok = $subcategorias > 0;
+        }
+
+        unset($usuario['Usuario']['senha']);
+
+        $this->loadModel('Token');
+        $dados_salvar = [
+            'id' => $usuario['Token']['id']
+        ];
+
+        $dados_salvar = array_merge($dados_salvar, 
+            [
+                'token' => $token, 
+                'data_validade' => date('Y-m-d', strtotime(date("Y-m-d") . ' + 30 days')), 
+                'usuario_id' => $usuario['Usuario']['id'],
+                'notification_id' => $dados->notifications_id
+            ]
+        );
+
+        $dados_token = $this->Token->save($dados_salvar);
+
+        if ($dados_token) {
+            if ( $usuario['Usuario']['img'] == '' || $usuario['Usuario']['img'] == null ) {
+                $usuario['Usuario']['img'] = $this->images_path."usuarios/default.png";
+            } else if ( !strpos($usuario['Usuario']['img'], 'facebook') ) {
+                $usuario['Usuario']['img'] = $this->images_path."usuarios/".$usuario['Usuario']['img'];
+            }
+
+            if ( $cadastro_categorias_ok && $usuario['Usuario']['nivel_id'] == 2 ) {
+                $this->loadModel('ClienteAssinatura');
+                $dados_assinatura = $this->ClienteAssinatura->getLastByClientId($usuario['Usuario']['cliente_id']);
+
+                if ( count($dados_assinatura) == 0 || $dados_assinatura['ClienteAssinatura']['status'] == 'INACTIVE' ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Sua assinatura venceu, clique no botao abaixo para resolver.', 'button_text' => 'Renovar Assinatura', 'dados' => array_merge($usuario, $dados_token, ['cadastro_categorias_ok' => true])))));
+                }
+
+                if ( $dados_assinatura['ClienteAssinatura']['status'] == 'OVERDUE' ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'no_signature', 'msg' => 'Você possui pendencias financeiras com o Buzke, clique no botao abaixo para resolver.', 'button_text' => 'Resolver', 'dados' => array_merge($usuario, $dados_token, ['cadastro_categorias_ok' => true])))));
+                }
+            }
+
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => array_merge($usuario, $dados_token, ['cadastro_categorias_ok' => $cadastro_categorias_ok])))));
+        } else {
+            throw new BadRequestException('Erro ao salvar o Token', 500);
+        }
+
+    }
+
     public function entrarVisitante() {
         $this->layout = 'ajax';
         
