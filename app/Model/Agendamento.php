@@ -833,6 +833,7 @@ class Agendamento extends AppModel {
                 'dia_mes' => (int)date('d',strtotime($data)),
             ],
             'TIME(Agendamento.horario)' => $hora,
+            'Agendamento.horario <=' => $data.' '.$hora, // Tenho que ignorar agendamentos fixos futuros
             'Agendamento.cancelado' => 'N',
         ];
 
@@ -841,6 +842,30 @@ class Agendamento extends AppModel {
             'link' => []
         ]);
 
-    }    
+    }
+
+    public function agendamentosHorarioFixoFuturo ($servico_id = null, $data = null, $hora = null) {
+
+        if ( $servico_id == null || $data == null || $hora == null ) {
+            return false;
+        }
+
+        $conditions = [
+            'Agendamento.servico_id' => $servico_id,
+            'or' => [
+                'dia_semana' => date('w',strtotime($data)),
+                'dia_mes' => (int)date('d',strtotime($data)),
+            ],
+            'TIME(Agendamento.horario)' => $hora,
+            'Agendamento.horario >' => $data.' '.$hora, // Tenho que ignorar agendamentos fixos futuros
+            'Agendamento.cancelado' => 'N',
+        ];
+
+        return $this->find('all', [
+            'conditions' => $conditions,
+            'link' => []
+        ]);
+
+    }   
 
 }

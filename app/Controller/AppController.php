@@ -1293,6 +1293,7 @@ class AppController extends Controller {
 
                 $agendamentos_padrao = $this->Agendamento->agendamentosHorario($servico_id, $data, $horario['time']);
                 $agendamentos_fixos = $this->Agendamento->agendamentosHorarioFixo($servico_id, $data, $horario['time']);
+                $agendamentos_fixos_futuros = $this->Agendamento->agendamentosHorarioFixoFuturo($servico_id, $data, $horario['time']);
                 $horarios[$key]['enable_fixed_scheduling'] = $oferece_agendamento_fixo === 'Y';
 
                 if ( count($agendamentos_fixos) > 0 ) {
@@ -1310,6 +1311,10 @@ class AppController extends Controller {
     
                     $agendamentos_fixos = array_slice($agendamentos_fixos, $n_fixos_cancelados);                
                     
+                }
+
+                if ( count($agendamentos_fixos_futuros) > 0 ) {
+                    $horarios[$key]['enable_fixed_scheduling'] = false;
                 }
 
                 $motivo_indisponivel = null;
