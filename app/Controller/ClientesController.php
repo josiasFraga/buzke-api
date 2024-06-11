@@ -78,6 +78,7 @@ class ClientesController extends AppController {
                     'Cliente.cidade_id' => $dados_localidade['Localidade']['loc_nu_sequencial'],
                     'Cliente.estado' => $dados_localidade['Localidade']['ufe_sg'],
                 ]);
+
             }
         }
 

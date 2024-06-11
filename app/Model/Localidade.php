@@ -45,6 +45,10 @@ class Localidade extends AppModel {
 			return ['Localidade' => ['loc_nu_sequencial' => -500, 'ufe_sg' => 'RS']];
 		}
 
+		if ( $localidade_nome == "Sant'Ana do Livramento" ) {
+			$localidade_nome = "Santana do Livramento";
+		}
+
 		$dados_localidade = $this->find('first',[
 			'conditions' => [
 				'Localidade.loc_no' => $localidade_nome,
