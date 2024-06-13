@@ -555,7 +555,7 @@ class UsuariosController extends AppController {
         $dados_salvar = [
             'token_id' => $dados_token['Token']['id'],
             'location_data' => $dados->dados_address,
-            'description' => $dados_address->description,
+            'description' => str_replace("'",'',$dados_address->description),
             'lat' => $lat,
             'lon' => $lon
         ];
