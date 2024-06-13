@@ -1,6 +1,8 @@
 <?php
 class ToProJogoController extends AppController {
 
+    public $components = array('RequestHandler');
+
     public function index() {
 
         $this->layout = 'ajax';
@@ -91,7 +93,7 @@ class ToProJogoController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'info', 'msg' => 'Localização não informada. Você deve selecionar sua localização antes de clicar em cadastrar.'))));
         }
 
-        if (!is_array($dados->localizacao) || count($dados->localizacao) == 0) {
+        if (!is_array($dados->localizacao) && count(explode(',',$dados->localizacao)) != 3) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'info', 'msg' => 'Localização inválida. Você deve selecionar sua localização antes de clicar em cadastrar.'))));
         }
 
@@ -109,6 +111,10 @@ class ToProJogoController extends AppController {
 
         if (!isset($dados->hora_ate) || $dados->hora_ate == '') {
             throw new BadRequestException('Hora final não informada', 400);
+        }
+
+        if ( !is_array($dados->localizacao) ) {
+            $dados->localizacao = explode(',',$dados->localizacao);
         }
 
         $data_inicio = null;
