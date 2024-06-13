@@ -70,7 +70,7 @@ class UsuarioLocalizacao extends AppModel {
 
             if ( count($dados_ultima_localizacao) > 0 ) {
                 $verifica_cidade = strpos($dados_ultima_localizacao['UsuarioLocalizacao']['description'], $location['ufe_sg'].',') > -1;
-                $verifica_uf = strpos($dados_ultima_localizacao['UsuarioLocalizacao']['description'], $location['loc_no']) > -1;
+                $verifica_uf = strpos(str_replace("'","",$dados_ultima_localizacao['UsuarioLocalizacao']['description']), str_replace("'","",$location['loc_no'])) > -1;
                 if ( $verifica_cidade && $verifica_uf ) {
                     $dados_retornar[] = $palyer['ClienteCliente']['id'];
                 } 

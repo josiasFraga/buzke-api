@@ -41,7 +41,9 @@ class Localidade extends AppModel {
 		if ( is_array($dados_localidade) ) {
 			$localidade_nome = trim($dados_localidade[0]);
 			$localidade_uf = trim($dados_localidade[1]);
-		} else {
+		} else if ( count(explode(',',$dados_localidade)) === 3) {
+			list($localidade_nome, $localidade_uf) = explode(',',$dados_localidade); 
+		} else {			
 			return ['Localidade' => ['loc_nu_sequencial' => -500, 'ufe_sg' => 'RS']];
 		}
 

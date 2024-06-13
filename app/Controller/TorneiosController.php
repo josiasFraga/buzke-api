@@ -1874,6 +1874,7 @@ class TorneiosController extends AppController {
                 }
             }
         }
+
         foreach( $confrontos_proximas_fases as $key => $dados_confronto ){
             if ( isset($dados_confronto['confrontos']) && is_array($dados_confronto['confrontos']) && count($dados_confronto['confrontos']) ){
 
@@ -1914,6 +1915,7 @@ class TorneiosController extends AppController {
         $this->Agendamento->deleteAll(['Agendamento.torneio_id' => $dados->torneio_id]);
 
         if (!$this->Agendamento->saveAll($dados_salvar, ['deep' => true])) {
+            $this->setaAgendamentosJogadores($dados->torneio_id);
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao gerar os jogos.'))));
         }
 
@@ -2945,6 +2947,8 @@ class TorneiosController extends AppController {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar a data/horário do jogo.'))));
             }
 
+            $this->setaAgendamentosJogadores($dados_jogo['Torneio']['id']);
+
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Data/horário do jogo atualizados com sucesso!'))));
 
         }
@@ -2998,7 +3002,10 @@ class TorneiosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar o horário do jogo.'))));
         }
 
+        // Remove o agendamento que não será mais usado
         $this->Agendamento->delete($dados_jogo['TorneioJogo']['agendamento_id']);
+
+        $this->setaAgendamentosJogadores($dados_jogo['Torneio']['id']);
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Data/horário do jogo atualizados com sucesso!'))));
     }
@@ -3186,5 +3193,116 @@ class TorneiosController extends AppController {
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Jogos liberados com sucesso!'))));
     }
+
+	private function setaAgendamentosJogadores($tonerio_id = null) {
+
+        $this->layout = 'ajax';
+    
+        $this->loadModel('TorneioJogo');
+        $this->loadModel('TorneioInscricaoJogador');
+        $this->loadModel('AgendamentoClienteCliente');
+
+		$jogos = $this->TorneioJogo->find('all',[
+            'conditions' => [
+                'TorneioCategoria.torneio_id' => $tonerio_id,
+                'OR' => [
+                    [
+                        'NOT' => [
+                            'TorneioJogo.time_1' => null
+                        ]
+                    ],
+                    [
+                        'NOT' => [
+                            'TorneioJogo.time_2' => null
+                        ]
+                    ]
+                ]
+            ],
+            'link' => [
+                'TorneioCategoria'
+            ]
+        ]);
+
+        foreach ($jogos as $key => $jogo) {
+    
+            $dados_salvar = [];
+            $ids_jogadores = [];
+            $agendamento_id = $jogo['TorneioJogo']['agendamento_id'];
+        
+            if ( !empty($jogo['TorneioJogo']['time_1']) ) {
+
+                $dados_inscricao = $this->TorneioInscricaoJogador->getBySubscriptionId($jogo['TorneioJogo']['time_1']);
+
+                $clientes_clientes_ids = array_map(function($inscricao){
+                    return $inscricao['TorneioInscricaoJogador']['cliente_cliente_id'];
+                }, $dados_inscricao);
+
+                $ids_jogadores = $clientes_clientes_ids;
+
+                foreach ($clientes_clientes_ids as $cliente_cliente_id) {
+
+                    $check = $this->AgendamentoClienteCliente->find('count',[
+                        'conditions' => [
+                            'agendamento_id' => $agendamento_id,
+                            'cliente_cliente_id' => $cliente_cliente_id
+                        ],
+                        'link' => []
+                    ]);
+
+                    if ( $check === 0 ) {
+                        $dados_salvar[] = [
+                            'agendamento_id' => $agendamento_id,
+                            'cliente_cliente_id' => $cliente_cliente_id
+                        ];
+                    }
+                }
+
+            }
+
+            if ( !empty($jogo['TorneioJogo']['time_2']) ) {
+
+                $dados_inscricao = $this->TorneioInscricaoJogador->getBySubscriptionId($jogo['TorneioJogo']['time_2']);
+
+                $clientes_clientes_ids = array_map(function($inscricao){
+                    return $inscricao['TorneioInscricaoJogador']['cliente_cliente_id'];
+                }, $dados_inscricao);
+
+                $ids_jogadores = array_merge($ids_jogadores, $clientes_clientes_ids);
+
+                foreach ($clientes_clientes_ids as $cliente_cliente_id) {
+
+                    $check = $this->AgendamentoClienteCliente->find('count',[
+                        'conditions' => [
+                            'agendamento_id' => $agendamento_id,
+                            'cliente_cliente_id' => $cliente_cliente_id
+                        ],
+                        'link' => []
+                    ]);
+
+                    if ( $check === 0 ) {
+                        $dados_salvar[] = [
+                            'agendamento_id' => $agendamento_id,
+                            'cliente_cliente_id' => $cliente_cliente_id
+                        ];
+                    }
+                }
+
+            }
+
+            // Remove os jogadores que não são desse agendamento
+            $this->AgendamentoClienteCliente->deleteAll([
+                'AgendamentoClienteCliente.agendamento_id' => $agendamento_id,
+                'NOT' => [
+                    'AgendamentoClienteCliente.cliente_cliente_id' => $ids_jogadores
+                ]
+            ]);
+
+            if ( count($dados_salvar) > 0 ) {
+                $this->AgendamentoClienteCliente->saveAll($dados_salvar);
+            }
+        }
+
+        return true;
+	}
 
 }

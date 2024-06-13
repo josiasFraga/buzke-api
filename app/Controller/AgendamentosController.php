@@ -137,6 +137,7 @@ class AgendamentosController extends AppController {
         }
 
         $this->loadModel('ClienteCliente');
+        $this->loadModel('AgendamentoClienteCliente');
 
         $cancelable = null;
      
@@ -246,6 +247,22 @@ class AgendamentosController extends AppController {
 
                 $agendamentos[$key]['Agendamento']['cancelable'] = $cancelable_return;
                 unset($agendamentos[$key]['AgendamentoConvite']);
+
+                $dados_agenda = $this->AgendamentoClienteCliente->find('first',[
+                    'fields' => [
+                        'AgendamentoClienteCliente.id_sync_google',
+                        'AgendamentoClienteCliente.id_sync_ios',
+                        'AgendamentoClienteCliente.data_sync_google',
+                        'AgendamentoClienteCliente.data_sync_ios'
+                    ],
+                    'conditions' => [
+                        'AgendamentoClienteCliente.agendamento_id' => $agendamentos[$key]['Agendamento']['id'],
+                        'AgendamentoClienteCliente.cliente_cliente_id' => $meus_ids_de_cliente
+                    ],
+                    'link' => []
+                ]);
+
+                $agendamentos[$key]['Agendamento']['_dados_agenda'] = count($dados_agenda) > 0 ? $dados_agenda['AgendamentoClienteCliente'] : [];
             }
         }
         
@@ -1101,6 +1118,87 @@ class AgendamentosController extends AppController {
         $this->avisaConvidadosCancelamento($dados_agendamento, $dados);
         $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento);
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Agendamento cancelado com sucesso!'))));
+
+    }
+
+    public function setSyncId() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        //$this->log($dados, 'debug');
+        //die();
+
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), false);
+        } elseif ( gettype($dados) == 'array' ) {
+            $dados = json_decode(json_encode($dados), false);
+        }
+
+        if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Agendamento');
+        $this->loadModel('ClienteCliente');
+        $this->loadModel('AgendamentoClienteCliente');
+    
+        //busca os dados do usuário do agendamento como cliente
+        $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_usuario['Usuario']['id'], true);
+
+        $dados_agendamento = $this->Agendamento->find('first',[
+            'fields' => [
+                'Agendamento.id',
+                'AgendamentoClienteCliente.id',
+                'Agendamento.cliente_cliente_id'
+            ],
+            'conditions' => [
+                'Agendamento.id' => $dados->id,
+                'OR' => [
+                    'AgendamentoClienteCliente.cliente_cliente_id' => $meus_ids_de_cliente,
+                    'Agendamento.cliente_cliente_id' => $meus_ids_de_cliente
+                ]
+            ],
+            'link' => [
+                'AgendamentoClienteCliente'
+            ]
+        ]);
+
+        if ( count($dados_agendamento) === 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Agendamento não encontrado!'))));
+        }
+
+        $dados_salvar = [
+            'agendamento_id' => $dados->id,
+            'cliente_cliente_id' => $dados_agendamento['Agendamento']['cliente_cliente_id']
+        ];
+
+        if ( !empty($dados_agendamento['AgendamentoClienteCliente']['id']) ) {
+            $dados_salvar['id'] = $dados_agendamento['AgendamentoClienteCliente']['id'];
+        } else {
+            $this->AgendamentoClienteCliente->create();
+        }
+
+        if ( strtolower($dados->plataforma) === 'ios' ) {
+            $dados_salvar['id_sync_ios'] = $dados->id_sync;
+            $dados_salvar['data_sync_ios'] = date('Y-m-d H:i:d');
+        }  else {
+            $dados_salvar['id_sync_google'] = $dados->id_sync;
+            $dados_salvar['data_sync_google'] = date('Y-m-d H:i:d');
+        }
+
+        if ( !$this->AgendamentoClienteCliente->save($dados_salvar) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao sincronizar o agendamento!'))));
+        }
+    
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Item sincronizado com sucesso!'))));
 
     }
 }

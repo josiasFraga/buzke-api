@@ -1,0 +1,120 @@
+CREATE TABLE `agendamento_clientes_clientes` (
+	`id` INT(10) NOT NULL AUTO_INCREMENT,
+	`created` TIMESTAMP NULL DEFAULT NULL,
+	`updated` DATETIME NULL DEFAULT NULL,
+	`agendamento_id` INT(10) NOT NULL,
+	`cliente_cliente_id` INT(10) NOT NULL,
+	`id_sync_google` VARCHAR(120) NULL DEFAULT NULL COLLATE 'latin1_swedish_ci',
+	`id_sync_ios` VARCHAR(120) NULL DEFAULT NULL COLLATE 'latin1_swedish_ci',
+	`data_sync_google` TIMESTAMP NULL DEFAULT NULL,
+	`data_sync_ios` TIMESTAMP NULL DEFAULT NULL,
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `FK_agendamento_clientes_clientes_clientes` (`cliente_cliente_id`) USING BTREE,
+	INDEX `FK__agendamentos` (`agendamento_id`) USING BTREE,
+	CONSTRAINT `FK_agendamento_clientes_clientes_clientes` FOREIGN KEY (`cliente_cliente_id`) REFERENCES `clientes_clientes` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT `FK__agendamentos` FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`) ON UPDATE CASCADE ON DELETE RESTRICT
+)
+COLLATE='latin1_swedish_ci'
+ENGINE=InnoDB
+;
+
+
+
+CREATE TABLE `sincronizacoes_agenda` (
+	`id` INT(10) NOT NULL AUTO_INCREMENT,
+	`created` TIMESTAMP NULL DEFAULT NULL,
+	`usuario_id` INT(10) NOT NULL,
+	`plataforma` VARCHAR(5) NULL DEFAULT NULL COLLATE 'latin1_swedish_ci',
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `FK_sincronizacoes_agenda_usuarios` (`usuario_id`) USING BTREE,
+	CONSTRAINT `FK_sincronizacoes_agenda_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+)
+COLLATE='latin1_swedish_ci'
+ENGINE=InnoDB
+;
+
+
+ALTER TABLE `sincronizacoes_agenda`
+	ADD COLUMN `novos` TINYINT NOT NULL DEFAULT (0) AFTER `usuario_id`,
+	ADD COLUMN `removidos` TINYINT NOT NULL DEFAULT (0) AFTER `novos`;
+
+
+
+INSERT INTO agendamento_clientes_clientes (
+  created, 
+  updated, 
+  agendamento_id, 
+  cliente_cliente_id
+)
+SELECT 
+  NOW() as created, 
+  NOW() as updated, 
+  agendamento_id, 
+  cliente_cliente_id 
+FROM 
+  agendamento_convites 
+WHERE 
+  confirmado_usuario = 'Y' 
+  AND confirmado_convidado = 'Y';
+
+
+DELIMITER $$
+
+CREATE TRIGGER after_update_torneio_jogos
+AFTER UPDATE ON torneio_jogos
+FOR EACH ROW
+BEGIN
+    -- Se o time_1 for alterado
+    IF OLD.time_1 IS NULL AND NEW.time_1 IS NOT NULL THEN
+        INSERT INTO agendamento_clientes_clientes (created, updated, agendamento_id, cliente_cliente_id)
+        SELECT NOW(), NOW(), NEW.agendamento_id, tij.cliente_cliente_id
+        FROM torneio_inscricao_jogadores tij
+        JOIN torneio_inscricoes ti ON ti.id = tij.torneio_inscricao_id
+        WHERE ti.id = NEW.time_1;
+    ELSEIF OLD.time_1 IS NOT NULL AND NEW.time_1 IS NOT NULL AND OLD.time_1 != NEW.time_1 THEN
+        -- Remover registros antigos
+        DELETE FROM agendamento_clientes_clientes
+        WHERE agendamento_id = OLD.agendamento_id
+          AND cliente_cliente_id IN (
+              SELECT tij.cliente_cliente_id
+              FROM torneio_inscricao_jogadores tij
+              JOIN torneio_inscricoes ti ON ti.id = tij.torneio_inscricao_id
+              WHERE ti.id = OLD.time_1
+          );
+
+        -- Adicionar novos registros
+        INSERT INTO agendamento_clientes_clientes (created, updated, agendamento_id, cliente_cliente_id)
+        SELECT NOW(), NOW(), NEW.agendamento_id, tij.cliente_cliente_id
+        FROM torneio_inscricao_jogadores tij
+        JOIN torneio_inscricoes ti ON ti.id = tij.torneio_inscricao_id
+        WHERE ti.id = NEW.time_1;
+    END IF;
+
+    -- Se o time_2 for alterado
+    IF OLD.time_2 IS NULL AND NEW.time_2 IS NOT NULL THEN
+        INSERT INTO agendamento_clientes_clientes (created, updated, agendamento_id, cliente_cliente_id)
+        SELECT NOW(), NOW(), NEW.agendamento_id, tij.cliente_cliente_id
+        FROM torneio_inscricao_jogadores tij
+        JOIN torneio_inscricoes ti ON ti.id = tij.torneio_inscricao_id
+        WHERE ti.id = NEW.time_2;
+    ELSEIF OLD.time_2 IS NOT NULL AND NEW.time_2 IS NOT NULL AND OLD.time_2 != NEW.time_2 THEN
+        -- Remover registros antigos
+        DELETE FROM agendamento_clientes_clientes
+        WHERE agendamento_id = OLD.agendamento_id
+          AND cliente_cliente_id IN (
+              SELECT tij.cliente_cliente_id
+              FROM torneio_inscricao_jogadores tij
+              JOIN torneio_inscricoes ti ON ti.id = tij.torneio_inscricao_id
+              WHERE ti.id = OLD.time_2
+          );
+
+        -- Adicionar novos registros
+        INSERT INTO agendamento_clientes_clientes (created, updated, agendamento_id, cliente_cliente_id)
+        SELECT NOW(), NOW(), NEW.agendamento_id, tij.cliente_cliente_id
+        FROM torneio_inscricao_jogadores tij
+        JOIN torneio_inscricoes ti ON ti.id = tij.torneio_inscricao_id
+        WHERE ti.id = NEW.time_2;
+    END IF;
+END$$
+
+DELIMITER ;

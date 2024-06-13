@@ -37,6 +37,9 @@ class Agendamento extends AppModel {
 		'TorneioJogo' => array(
 			'foreignKey' => 'agendamento_id'
         ),
+		'AgendamentoClienteCliente' => array(
+			'foreignKey' => 'agendamento_id'
+        ),
     );
 
     public function verificaHorarios($horarios = [], $cliente_id = null, $data = null) {
@@ -427,6 +430,7 @@ class Agendamento extends AppModel {
             'conditions' => [
                 'Agendamento.horario >=' => date('Y-m-d 00:00:00'),
                 'Agendamento.cancelado' => "N",
+                'Torneio.jogos_liberados_ao_publico' => "Y",
                 'or' => [
                     'TorneioJogo.time_1' => $cliente_cliente_ids,
                     'TorneioJogo.time_2' => $cliente_cliente_ids,
@@ -446,7 +450,8 @@ class Agendamento extends AppModel {
                     'TorneioQuadra' => [
                         'ClienteServico'
                     ]
-                ]
+                ],
+                'Torneio'
             ]
         ]);
 

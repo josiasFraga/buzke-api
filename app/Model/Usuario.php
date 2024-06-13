@@ -34,6 +34,9 @@ class Usuario extends AppModel {
         ],
         'ClienteServicoAvaliacao' => [
 			'foreignKey' => 'usuario_id'
+        ],
+        'SincronizacaoAgenda' => [
+			'foreignKey' => 'usuario_id'
         ]
     );
 
