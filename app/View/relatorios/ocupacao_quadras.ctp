@@ -47,10 +47,20 @@ ob_start();
   <?php
   }
     foreach( $servico['horarios'] as $key_horario => $horario ){
+      $text = "Ocupado";
+
+      if ( !empty($horario['motivo']) ) {
+        $text = $horario['motivo'];
+      }
+
+      if ( $horario['active'] ) {
+        $text = "-";
+      }
+
   ?>
   <tr>
       <td class="text-center"><?= $horario['label'] ?></td>
-      <td class="text-center"><?= $horario['motivo'] == null ? '-' : $horario['motivo'] ?></td>
+      <td class="text-center"><?= $text ?></td>
   </tr>
   <?php
     }
