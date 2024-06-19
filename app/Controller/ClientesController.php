@@ -266,8 +266,6 @@ class ClientesController extends AppController {
 
     private function procuraHorariosHoje($horarios = null) {
 
-        return "";
-
         if ( $horarios == null || count($horarios) == 0) {
             return "Não atende hoje";
         }

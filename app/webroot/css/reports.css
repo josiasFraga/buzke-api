@@ -31,10 +31,21 @@ table.table thead tr th {
   
 table.table tbody tr td {
     padding: 1rem 2rem;
+    border-bottom: 1px solid #f7f7f7;
+}
+  
+table.table tbody tr.header td {
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 1px solid #CCC;
+    background-color: '#CCC';
 }
   
 table.table tbody tr.subheader td {
     text-transform: uppercase;
+    background-color: '#f7f7f7';
+    border-bottom: 1px solid #CCC;
+    text-align: center;
 }
   
 table.table tbody tr.even td {

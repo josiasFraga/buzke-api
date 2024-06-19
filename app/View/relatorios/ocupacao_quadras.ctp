@@ -16,21 +16,52 @@ $header .= '</div>';
 $mpdf = new \Mpdf\Mpdf();
 ob_start();
 ?>
-
 <div class="container">
 <table class="table">
-  <thead>
-    <tr>
-      <th>Horário</th>
-      <?php foreach($quadras as $key_quadra => $quadra): ?>
-        <th><?= $quadra['ClienteServico']['nome'] ?></th>
-      <?php endforeach; ?>
-      <th>Ocupação</th>
-    </tr>
-  </thead>
   <tbody>
   <?php 
   $n_lines = 0;
+  foreach($arr_datas as $data => $horarios):
+  ?>
+    <tr class="header">
+      <td colspan="2">
+        <?= $dias_semana_str[date('w',strtotime($data))] ?>, <?= date('d',strtotime($data)) ?> de <?= $meses_str_abrev[(int)date('m',strtotime($data))] ?> de <?= date('Y',strtotime($data)) ?>
+      </td>
+    </tr>
+  <?php
+  foreach( $horarios as $servico_id => $servico ):
+  ?>
+    <tr class="subheader">
+      <td colspan="2"><?= $servico['servico']['ClienteServico']['nome'] . ' - ' . $servico['servico']['ClienteServico']['tipo']; ?></td>
+    </tr>
+    <tr class="header">
+      <td width="30%">Horário</td>
+      <td>Ocupado</td>
+    </tr>
+  <?php
+  if ( count($servico['horarios']) === 0 ) {
+  ?>
+  <tr>
+    <td colspan="2" class="text-center">Sem atendimento nesse dia! </td>
+  </tr>
+  <?php
+  }
+    foreach( $servico['horarios'] as $key_horario => $horario ){
+  ?>
+  <tr>
+      <td class="text-center"><?= $horario['label'] ?></td>
+      <td class="text-center"><?= $horario['motivo'] == null ? '-' : $horario['motivo'] ?></td>
+  </tr>
+  <?php
+    }
+  ?>
+  <?php
+  endforeach;
+  endforeach;
+  ?>
+  <?php /*
+    <tr class="subheader">
+$n_lines = 0;
   foreach($arr_datas as $data => $horarios):
   ?>
     <tr class="subheader">
@@ -70,7 +101,7 @@ ob_start();
     ?>
   <?php 
   endforeach;
-  ?>
+  */?>
   </tbody>
 </table>
 </div>

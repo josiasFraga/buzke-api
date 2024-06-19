@@ -19,19 +19,31 @@ class ClienteServicoProfissional extends AppModel {
 
         $dia_semana = date('w',strtotime($horario));
         $dia_mes = (int)date('d',strtotime($horario));
+        $hora = date('H:i:s',strtotime($horario));
 
-        $agendamentos = $this->find('all',[
+        $n_agendamentos = $this->find('count',[
             'fields' => [
-                '*'
+                'Agendamento.*'
             ],
             'conditions' => [
                 'Agendamento.profissional_id' => $usuario_id,
                 'Agendamento.cancelado' => 'N',
                 'AgendamentoFixoCancelado.id' => null,
                 'OR' => [
-                    'Agendamento.horario' => $horario,
-                    'Agendamento.dia_semana' => $dia_semana,
-                    'Agendamento.dia_mes' => $dia_mes,
+                    [
+                        'Agendamento.horario' => $horario,
+                        'Agendamento.dia_semana' => null,
+                        'Agendamento.dia_mes' => null
+                    ],
+                    [
+                        'Agendamento.dia_semana' => $dia_semana,
+                        'TIME(Agendamento.horario)' => $hora
+
+                    ],
+                    [
+                        'Agendamento.dia_mes' => $dia_mes,
+                        'TIME(Agendamento.horario)' => $hora
+                    ]
                 ]
                 
             ],
@@ -44,7 +56,7 @@ class ClienteServicoProfissional extends AppModel {
             ]
         ]);
         
-        return count($agendamentos) == 0;
+        return $n_agendamentos == 0;
     }
 
 

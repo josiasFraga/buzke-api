@@ -56,6 +56,7 @@ class RelatoriosController extends AppController {
         $this->loadModel('Cliente');
         $this->loadModel('ClienteServico');
         $this->loadModel('ClienteSubcategoria');
+        $this->loadModel('ClienteServicoHorarioAtendimento');
 
         $inicio = date('Y-m-d', strtotime($dados['inicio']));
         $fim = date('Y-m-d', strtotime($dados['fim']));
@@ -78,11 +79,8 @@ class RelatoriosController extends AppController {
         }
 
         $is_court = $this->ClienteSubcategoria->checkIsCourt($cliente_id);
-        $quadras = [];
-
-        if ( $is_court ) {
-            $quadras = $this->ClienteServico->getByClientId($cliente_id);
-        }
+    
+        $servicos = $this->ClienteServico->getByClientId($cliente_id);
 
         $arr_datas = [];
         for( $inicio; $inicio <= $fim; $inicio = date('Y-m-d', strtotime($inicio . ' +1 day')) ) {
@@ -96,32 +94,15 @@ class RelatoriosController extends AppController {
 
             if ( count($verificaFechamento) > 0 ) {
                 $arr_datas[$inicio]['msg'] = "Excepcionalmente fechado nesse dia";
-            }
+            } else {
+                
 
-            //busca os horários de atendimento
-            $horarios_atendimento = $this->ClienteHorarioAtendimento->find('all',[
-                'conditions' => [
-                    'ClienteHorarioAtendimento.cliente_id' => $cliente_id,
-                    'ClienteHorarioAtendimento.horario_dia_semana' => $dia_semana
-                ],
-                'link' => []
-            ]);
-
-
-            $lista_horarios_atendimento = $this->ClienteHorarioAtendimento->generateListHorarios($horarios_atendimento, 'ClienteHorarioAtendimento');
-            foreach( @$lista_horarios_atendimento as $key => $horario_atendimento){
-                $lista_horarios_atendimento[$key]['vagas_ocupadas'] = $this->Agendamento->nAgendamentosCliente($cliente_id, $inicio, $horario_atendimento['horario']);
-
-                if ( count($quadras) > 0 ) {
-                    foreach($quadras as $key_quadra => $quadra ){
-                        $v_quadra_disponivel = $this->ClienteServico->checkServiceIsAvaliableOnDateTime($cliente_id, $quadra['ClienteServico']['id'], $inicio, $horario_atendimento['horario']);
-                        $lista_horarios_atendimento[$key]['quadras'][$key_quadra]['ocupado'] = $v_quadra_disponivel ? 'O' : 'X';
-                    }
+                foreach ( $servicos as $key_servico => $servico ) {                    
+                    $horarios = $this->quadra_horarios($servico['ClienteServico']['id'], $inicio, $servico['ClienteServico']['fixos']);
+                    $arr_datas[$inicio][$servico['ClienteServico']['id']]['servico'] = $servico;
+                    $arr_datas[$inicio][$servico['ClienteServico']['id']]['horarios'] = $horarios;             
                 }
             }
-
-            $arr_datas[$inicio]['horarios'] = $lista_horarios_atendimento;
-
             
         }
 
@@ -129,11 +110,9 @@ class RelatoriosController extends AppController {
         $dias_semana_str = $this->dias_semana_str;
         $meses_str_abrev = $this->meses_abrev;
 
-        $this->set(compact('dados', 'dados_cliente', 'titulo', 'nome', 'arr_datas', 'dias_semana_str', 'meses_str_abrev', 'quadras'));
+        $this->set(compact('dados', 'dados_cliente', 'titulo', 'nome', 'arr_datas', 'dias_semana_str', 'meses_str_abrev', 'servicos'));
 
-        if ( $is_court ) {
-            $this -> render('ocupacao_quadras');
-        }
+        $this -> render('ocupacao_quadras');
 
     }
 
