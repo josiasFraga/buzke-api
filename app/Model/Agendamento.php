@@ -815,6 +815,8 @@ class Agendamento extends AppModel {
             'DATE(Agendamento.horario)' => $data,
             'TIME(Agendamento.horario)' => $hora,
             'Agendamento.cancelado' => 'N',
+            'Agendamento.dia_semana' => null,
+            'Agendamento.dia_mes' => null,
         ];
 
 
