@@ -3041,7 +3041,7 @@ class TorneiosController extends AppController {
                 'TorneioQuadraPeriodo.torneio_quadra_id' => $dados['torneio_quadra_id'],
             ],
             'group' => ['DATE(TorneioQuadraPeriodo.inicio)'],
-            'order' => ['DATE(TorneioQuadraPeriodo.inicio) ed'],
+            'order' => ['DATE(TorneioQuadraPeriodo.inicio)'],
             'link' => [],
         ]);
 
