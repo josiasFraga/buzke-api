@@ -589,6 +589,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('Cliente');        
         $this->loadModel('Token');
         $this->loadModel('ClienteServico');
+        $this->loadModel('AgendamentoFixoCancelado');
 
         $dados_servico = $this->ClienteServico->find("first",[
             "conditions" => [
@@ -699,6 +700,9 @@ class AgendamentosController extends AppController {
         $agendamento_dia_semana = null;
         $agendamento_dia_mes = null;
 
+        $complement_msg = "";
+        $fixos_cancelar = [];
+
         //verifica se o usuário/empresa está tentando salvar um agendamento fixo
         if ( isset($dados->fixo) && $dados->fixo == true ) {
 
@@ -709,6 +713,35 @@ class AgendamentosController extends AppController {
             
             if ( $dados_servico['ClienteServico']['fixos'] != 'Y' || $dados_servico['ClienteServico']['fixos_tipo'] == 'Nenhum' ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Infelizmente o serviço selecioando não aceita agendamentos fixos'))));
+            }
+
+            //debug($dados->day);
+            //debug($dados->time);
+            //debug($dados->servico_id);
+            //die();
+
+            // Verifica se tem algum agendamento padrão depois dess fixo
+            $agendamentos_padrao = $this->Agendamento->find('all',[
+                'conditions' => [
+                    'Agendamento.servico_id' => $dados->servico_id,
+                    'Agendamento.dia_semana' => null,
+                    'Agendamento.dia_mes' => null,
+                    'Agendamento.horario >=' => $dados->day . ' ' . $dados->time,
+                    'Agendamento.cancelado' => 'N'
+                ],
+                'link' => []
+            ]);
+
+            if ( count($agendamentos_padrao) > 0 ) {
+                $complement_msg .= " Existem agendamentos não fixos nos próximos dias no seu horario, dia(s): ";
+
+                $arr_dias = [];
+                foreach( $agendamentos_padrao as $key => $ag ) {
+                    $arr_dias[] = date('d/m', strtotime($ag['Agendamento']['horario']));
+                    $fixos_cancelar[] = $ag['Agendamento']['horario'];
+                }
+
+                $complement_msg .= implode(', ', $arr_dias);
             }
 
             if ( $dados_servico['ClienteServico']['fixos_tipo'] == 'Semanal' ) {
@@ -752,9 +785,28 @@ class AgendamentosController extends AppController {
         $this->Agendamento->create();
         $this->Agendamento->set($dados_salvar);
         $dados_agendamento_salvo = $this->Agendamento->save($dados_salvar);
+
         //$dados_agendamento_salvo = true;
         if ( !$dados_agendamento_salvo ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cadastrar seu agendamento!'))));
+        }
+
+        if ( count($fixos_cancelar) > 0 ) {
+
+            $dados_cancelamentos_salvar = [];
+            foreach( $fixos_cancelar as $key => $fx_cancel ){
+                $dados_cancelamentos_salvar[] = [
+                    'agendamento_id' => $dados_agendamento_salvo['Agendamento']['id'],
+                    'cliente_cliente_id' => $dados_agendamento_salvo['Agendamento']['cliente_cliente_id'],
+                    'horario' => $fx_cancel,
+                    'cancelado_por' => $cadastrado_por,
+                    'cancelado_por_id' => $dados_usuario['Usuario']['id']
+                ];
+
+            }
+
+            $this->AgendamentoFixoCancelado->saveMany($dados_cancelamentos_salvar);
+
         }
 
         //busca os ids do onesignal do usuário a ser notificado do cadastro do horário
@@ -796,7 +848,7 @@ class AgendamentosController extends AppController {
             'body' => json_encode(
                 [
                     'status' => 'ok', 
-                    'msg' => 'Tudo certo! Agendamento cadastrado com sucesso!',
+                    'msg' => 'Tudo certo, Seu agendamento foi cadastrado com sucesso!'.$complement_msg,
                     'cliente_cliente_id' => $cliente_cliente_id
                 ]
             )
