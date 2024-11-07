@@ -73,7 +73,7 @@ class QuadrasController extends AppController {
         foreach($quadras as $key => $qua){
 
             $quadras[$key]['ClienteServico']['_valor'] = number_format($qua['ClienteServico']['valor'],2,',','.');
-            $quadras[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->lsitaDiasSemana($qua['ClienteServico']['id']);
+            $quadras[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($qua['ClienteServico']['id']);
 
             if ( count($qua['ClienteServicoFoto']) > 0 ) {
                 foreach( $qua['ClienteServicoFoto'] as $key_imagem => $imagem){

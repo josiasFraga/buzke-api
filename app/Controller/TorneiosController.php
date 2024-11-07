@@ -51,12 +51,12 @@ class TorneiosController extends AppController {
                 $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
                 $conditions = array_merge($conditions, [
                     'TorneioInscricaoJogador.cliente_cliente_id' => $meus_ids_de_cliente,
-                    'Torneio.inicio <=' => date('Y-m-d'),
+                    'Torneio.data_publicacao <=' => date('Y-m-d'),
                 ]);
             }
         } else {
             $conditions = array_merge($conditions, [
-                'Torneio.inicio <=' => date('Y-m-d'),
+                'Torneio.data_publicacao <=' => date('Y-m-d'),
             ]);
 
         }
@@ -403,6 +403,10 @@ class TorneiosController extends AppController {
             throw new BadRequestException('Descrição não informada!', 401);
         }
 
+        if ( !isset($dados->data_publicacao) || $dados->data_publicacao == "" ) {
+            throw new BadRequestException('Data de publicação não informada!', 401);
+        }
+
         if ( !isset($dados->inicio) || $dados->inicio == "" ) {
             throw new BadRequestException('Início não informado!', 401);
         }
@@ -583,6 +587,7 @@ class TorneiosController extends AppController {
                 'descricao' => $dados->descricao,
                 'inicio' => $dados->inicio,
                 'fim' => $dados->fim,
+                'data_publicacao' => $dados->data_publicacao,
                 'inscricoes_de' => $dados->inscricoes_de,
                 'inscricoes_ate' => $dados->inscricoes_ate,
                 'max_inscricoes_por_jogador' => $dados->max_inscricoes_por_jogador,

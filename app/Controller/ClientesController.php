@@ -1022,7 +1022,7 @@ class ClientesController extends AppController {
 
                 $servicos[$key]['ClienteServico']['valor'] = 'R$ '.$this->floatEnBr($servico['ClienteServico']['valor']);
                 $servicos[$key]["ClienteServico"]["cor"] = $this->services_colors[$key];
-                $servicos[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->lsitaDiasSemana($servico['ClienteServico']['id']);
+                $servicos[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($servico['ClienteServico']['id']);
                 
 
                 if ( count($servico['ClienteServicoFoto']) > 0 ) {    

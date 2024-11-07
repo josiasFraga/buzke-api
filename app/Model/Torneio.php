@@ -53,6 +53,9 @@ class Torneio extends AppModel {
         if ( isset($this->data[$this->alias]['fim']) && $this->data[$this->alias]['fim'] != '') {
             $this->data[$this->alias]['fim'] = $this->dateBrEn($this->data[$this->alias]['fim']);
         }
+        if ( isset($this->data[$this->alias]['data_publicacao']) && $this->data[$this->alias]['data_publicacao'] != '') {
+            $this->data[$this->alias]['data_publicacao'] = $this->dateBrEn($this->data[$this->alias]['data_publicacao']);
+        }
         if ( isset($this->data[$this->alias]['inscricoes_de']) && $this->data[$this->alias]['inscricoes_de'] != '') {
             $this->data[$this->alias]['inscricoes_de'] = $this->dateBrEn($this->data[$this->alias]['inscricoes_de']);
         }

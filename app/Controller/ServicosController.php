@@ -361,7 +361,7 @@ class ServicosController extends AppController {
         ]);
 
         $dados_servico['ClienteServico']['_valor'] = number_format($dados_servico['ClienteServico']['valor'],2,',','.');
-        //$dados_servico["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->lsitaDiasSemana($qua['ClienteServico']['id']);
+        //$dados_servico["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($qua['ClienteServico']['id']);
         
         if ( count($dados_servico['ClienteServicoFoto']) > 0 ) {
             foreach( $dados_servico['ClienteServicoFoto'] as $key_imagem => $imagem){
