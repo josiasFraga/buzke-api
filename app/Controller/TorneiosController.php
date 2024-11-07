@@ -427,7 +427,7 @@ class TorneiosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Limite de inscrições por usuário não informada'))));
         }
 
-        if ( !isset($dados->valor_inscricao) || $dados->valor_inscricao == "" ) {
+        if ( !isset($dados->valor_inscricao) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Valor da inscrição não informado'))));
         }
 
@@ -592,7 +592,7 @@ class TorneiosController extends AppController {
                 'inscricoes_ate' => $dados->inscricoes_ate,
                 'max_inscricoes_por_jogador' => $dados->max_inscricoes_por_jogador,
                 'impedimentos' => isset($dados->impedimentos) && $dados->impedimentos > 0 ? $dados->impedimentos : 0,
-                'valor_inscricao' => $dados->valor_inscricao,
+                'valor_inscricao' => empty($dados->valor_inscricao) ? 0 : $dados->valor_inscricao,
             ],
             'TorneioCategoria' => $dados->torneio_categoria,
             'TorneioData' => $periodos_salvar,
