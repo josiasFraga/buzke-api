@@ -675,7 +675,7 @@ class AgendamentosController extends AppController {
         }
 
         // Busca os horários do serviço disponíveis para o dia selecionado
-        $horarios = $this->quadra_horarios($dados->servico_id, $data_selecionada, $dados_servico['ClienteServico']['fixos']);
+        $horarios = $this->quadra_horarios($dados->servico_id, $data_selecionada);
 
         if ( count($horarios) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Lamentamos. A empresa não informou os horários de atendimento deste serviço nesse dia! ;('))));
@@ -708,11 +708,7 @@ class AgendamentosController extends AppController {
 
             // Se o agendamento fixo não está disponível para o horário
             if (!$horario_x_horario_selecionado['enable_fixed_scheduling'] ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Lamentamos. Esse horário fixo já pertence a outro usuário! ;('))));
-            }
-            
-            if ( $dados_servico['ClienteServico']['fixos'] != 'Y' || $dados_servico['ClienteServico']['fixos_tipo'] == 'Nenhum' ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Infelizmente o serviço selecioando não aceita agendamentos fixos'))));
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Lamentamos. Esse horário fixo já pertence a outro usuário ou não aceita agendamentos fixos! ;('))));
             }
 
             //debug($dados->day);
@@ -744,10 +740,10 @@ class AgendamentosController extends AppController {
                 $complement_msg .= implode(', ', $arr_dias);
             }
 
-            if ( $dados_servico['ClienteServico']['fixos_tipo'] == 'Semanal' ) {
+            if ( $horario_x_horario_selecionado['fixed_type'] === 'Semanal' ) {
                 $agendamento_dia_semana = date('w',strtotime($data_selecionada.' '.$horario_selecionado));
             }
-            else if ( $dados_servico['ClienteServico']['fixos_tipo'] == 'Mensal' ) {
+            else if ( $$horario_x_horario_selecionado['fixed_type'] === 'Mensal' ) {
                 $agendamento_dia_mes = (int)date('d',strtotime($data_selecionada.' '.$horario_selecionado));
             }
         }

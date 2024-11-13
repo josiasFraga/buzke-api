@@ -98,7 +98,7 @@ class RelatoriosController extends AppController {
                 
 
                 foreach ( $servicos as $key_servico => $servico ) {                    
-                    $horarios = $this->quadra_horarios($servico['ClienteServico']['id'], $inicio, $servico['ClienteServico']['fixos']);
+                    $horarios = $this->quadra_horarios($servico['ClienteServico']['id'], $inicio);
                     $arr_datas[$inicio][$servico['ClienteServico']['id']]['servico'] = $servico;
                     $arr_datas[$inicio][$servico['ClienteServico']['id']]['horarios'] = $horarios;             
                 }

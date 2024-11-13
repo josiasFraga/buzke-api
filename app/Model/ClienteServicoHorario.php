@@ -94,11 +94,15 @@ class ClienteServicoHorario extends AppModel {
                     $intervalos[] = [
                         'label' => $inicio->format('H:i') . ' - ' . $fim_intervalo->format('H:i'),
                         'active' => true,
+                        'default_value' => floatval($horario['ClienteServicoHorario']['valor_padrao']),
+                        'fixed_value' => floatval($horario['ClienteServicoHorario']['valor_fixos']),
                         'time' => $inicio->format('H:i:s'),
                         'duration' => $duracao->format('H:i:s'),
                         //'vacancies_per_time' => $horario['ClienteServicoHorario']['vagas_por_horario'],
                         'at_home' => $horario['ClienteServicoHorario']['a_domicilio'] === '1' ? true : false,
-                        'only_at_home' => $horario['ClienteServicoHorario']['apenas_a_domocilio'] === '1' ? true : false
+                        'only_at_home' => $horario['ClienteServicoHorario']['apenas_a_domocilio'] === '1' ? true : false,
+                        'enable_fixed_scheduling' => $horario['ClienteServicoHorario']['fixos'] === 'Y' ? true : false,
+                        'fixed_type' => $horario['ClienteServicoHorario']['fixos_tipo'],
                     ];
                 }
     
@@ -155,6 +159,44 @@ class ClienteServicoHorario extends AppModel {
 
         return $agendamentos;
 
+    }
+
+    public function buscaRangeValores($servico_id = null, $dia_semana = null) {
+        $conditions = [
+            'cliente_servico_id' => $servico_id
+        ];
+
+         if ( !empty($dia_semana) ) {
+            $conditions['dia_semana'] = $dia_semana;
+         }
+
+        $result = $this->find('first', array(
+            'fields' => array(
+                'LEAST(MIN(valor_padrao), MIN(valor_fixos)) AS min_valor',
+                'GREATEST(MAX(valor_padrao), MAX(valor_fixos)) AS max_valor',
+            ),
+            'link' => [],
+            'conditions' => $conditions
+        ));
+
+        if ( count($result) === 0 ) {
+            return null;
+        }
+
+        $minValor = $result[0]['min_valor'];
+        $maxValor = $result[0]['max_valor'];
+
+        return [$minValor, $maxValor];
+    }
+
+    public function beforeSave($options = array()) {
+        if ( isset($this->data[$this->alias]['valor_padrao']) && $this->data[$this->alias]['valor_padrao'] != '') {
+            $this->data[$this->alias]['valor_padrao'] = $this->currencyToFloat($this->data[$this->alias]['valor_padrao']);
+        }
+        if ( isset($this->data[$this->alias]['valor_fixos']) && $this->data[$this->alias]['valor_fixos'] != '') {
+            $this->data[$this->alias]['valor_fixos'] = $this->currencyToFloat($this->data[$this->alias]['valor_fixos']);
+        }
+        return true;
     }
 
 }

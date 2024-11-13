@@ -93,12 +93,18 @@ class ServicosController extends AppController {
 
         foreach($quadras as $key => $qua){
 
-            $quadras[$key]['ClienteServico']['_valor'] = number_format($qua['ClienteServico']['valor'],2,',','.');
-
             if ( isset($dados['day']) && !empty($dados['day']) ) {
                 $quadras[$key]["ClienteServico"]["_horarios"] = $this->quadra_horarios($qua['ClienteServico']['id'], $dados['day'], false);
+                $range_valores = $this->ClienteServicoHorario->buscaRangeValores($qua['ClienteServico']['id'], date('w', strtotime($dados['day'])));
             } else {
                 $quadras[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($qua['ClienteServico']['id']);
+                $range_valores = $this->ClienteServicoHorario->buscaRangeValores($qua['ClienteServico']['id']);
+            }
+
+            $quadras[$key]['ClienteServico']['_valor'] = '';
+
+            if ( !empty($range_valores) ) {
+                $quadras[$key]['ClienteServico']['_valor'] = $range_valores[0] === $range_valores[1] ? number_format($range_valores[0], 2, ',', '.') : number_format($range_valores[0], 2, ',', '.') . ' - ' . number_format($range_valores[1], 2, ',', '.');
             }
 
             if ( count($qua['ClienteServicoFoto']) > 0 ) {
@@ -159,10 +165,7 @@ class ServicosController extends AppController {
             'tipo' => $dados->tipo,
             'nome' => $dados->nome,
             'descricao' => $dados->descricao,
-            'valor' => $this->currencyToFloat($dados->_valor),
-            'ativo' => $dados->ativo,
-            'fixos' => $dados->fixos,
-            'fixos_tipo' => $dados->fixos_tipo,
+            'ativo' => $dados->ativo
         ];
         
 
@@ -278,6 +281,10 @@ class ServicosController extends AppController {
                     "fim" => $horario->fim,
                     "dia_semana" => $horario->dia_semana,
                     "duracao" => $horario->duracao,
+                    "fixos" => $horario->fixos,
+                    "valor_padrao" => $horario->_valor_padrao,
+                    "fixos_tipo" => $horario->fixos_tipo,
+                    "valor_fixos" => $horario->_valor_fixos,
                     "a_domicilio" => $dados->tipo === "Quadra" ? 0 : $horario->a_domicilio,
                     "apenas_a_domocilio" => $dados->tipo === "Quadra" ? 0 : $horario->apenas_a_domocilio,
                 ];
@@ -344,7 +351,11 @@ class ServicosController extends AppController {
                         'dia_semana',
                         'duracao',
                         'a_domicilio',
-                        'apenas_a_domocilio'
+                        'apenas_a_domocilio',
+                        'fixos',
+                        'fixos_tipo',
+                        'valor_padrao',
+                        'valor_fixos'
                     ]
                 ],
                 'ClienteServicoProfissional',
@@ -360,8 +371,13 @@ class ServicosController extends AppController {
             ]
         ]);
 
-        $dados_servico['ClienteServico']['_valor'] = number_format($dados_servico['ClienteServico']['valor'],2,',','.');
-        //$dados_servico["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($qua['ClienteServico']['id']);
+        $range_valores = $this->ClienteServicoHorario->buscaRangeValores($dados_servico['ClienteServico']['id']);
+
+        $dados_servico['ClienteServico']['_valor'] = '';
+
+        if ( !empty($range_valores) ) {
+            $dados_servico['ClienteServico']['_valor'] = $range_valores[0] === $range_valores[1] ? number_format($range_valores[0], 2, ',', '.') : number_format($range_valores[0], 2, ',', '.') . ' - ' . number_format($range_valores[1], 2, ',', '.');
+        }
         
         if ( count($dados_servico['ClienteServicoFoto']) > 0 ) {
             foreach( $dados_servico['ClienteServicoFoto'] as $key_imagem => $imagem){
@@ -376,7 +392,15 @@ class ServicosController extends AppController {
                 $dados_servico['ClienteServicoAvaliacao'][$key]['Usuario']['img'] = $this->images_path . "usuarios/" . $avaliacao['Usuario']['img'];
             }
         }
+        
+        if ( isset($dados_servico['ClienteServicoHorario']) && count($dados_servico['ClienteServicoHorario']) > 0 ) {
 
+            foreach( $dados_servico['ClienteServicoHorario'] as $key => $horario ){
+                $dados_servico['ClienteServicoHorario'][$key]['_valor_padrao'] = number_format($horario['valor_padrao'], 2, ',', '.');
+                $dados_servico['ClienteServicoHorario'][$key]['_valor_fixos'] = !empty($horario['valor_fixos']) ? number_format($horario['valor_fixos'], 2, ',', '.') : "";
+            }
+
+        }
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_servico))));
 
@@ -409,10 +433,13 @@ class ServicosController extends AppController {
 
         $dados_servico = $this->ClienteServico->find('first',[
             'fields' => [
-                'ClienteServico.*'
+                'ClienteServico.*',
+                'Cliente.prazo_maximo_para_canelamento'
             ],
             'conditions' => $conditions,
-            'link' => []
+            'link' => [
+                'Cliente'
+            ]
         ]);
 
         if ( count($dados_servico) == 0 ) {
@@ -422,15 +449,14 @@ class ServicosController extends AppController {
         $isCourt = $this->ClienteSubcategoria->checkIsCourt($dados_servico['ClienteServico']['cliente_id']);
         $isPaddleCourt = $this->ClienteSubcategoria->checkIsPaddleCourt($dados_servico['ClienteServico']['cliente_id']);
 
-        $horarios = $this->quadra_horarios($dados['servico_id'], $dados['day'], $dados_servico['ClienteServico']['fixos']);
+        $horarios = $this->quadra_horarios($dados['servico_id'], $dados['day']);
 
         $dados_retornar = [
             'origem' => !empty($dado_usuario['Usuario']['cliente_id']) ? 'empresa' : 'cliente',
             'is_court' => $isCourt,
             'is_paddle_court' => $isPaddleCourt,
-            'enable_fixed_shedulling' => $dados_servico['ClienteServico']['fixos'] === 'Y',
-            'fixed_shedulling' => $dados_servico['ClienteServico']['fixos_tipo'],
             'tipo' => $dados_servico['ClienteServico']['tipo'],
+            'prazo_cancelamento' => $dados_servico['Cliente']['prazo_maximo_para_canelamento'],
             'horarios' => $horarios
         ];
 
