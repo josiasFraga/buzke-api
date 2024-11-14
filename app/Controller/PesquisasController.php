@@ -108,6 +108,7 @@ class PesquisasController extends AppController {
         $this->loadModel('ClienteServico');
         $this->loadModel('ClienteHorarioAtendimento');
         $this->loadModel('ClienteSubcategoria');
+        $this->loadModel('ClienteServicoHorario');
 
         $clientes = $this->Cliente->find('all',[
             'fields' => [
@@ -183,7 +184,14 @@ class PesquisasController extends AppController {
 
         foreach($servicos as $key => $ser){
 
-            $servicos[$key]['ClienteServico']['_valor'] = number_format($ser['ClienteServico']['valor'],2,',','.');
+            $servicos[$key]['ClienteServico']['_valor'] = number_format(0, 2, ',','.');
+
+            $range_valores = $this->ClienteServicoHorario->buscaRangeValores($ser['ClienteServico']['id'], date('w'));
+
+            if ( !empty($range_valores) ) {
+                $servicos[$key]['ClienteServico']['_valor'] = $range_valores[0] === $range_valores[1] ? number_format($range_valores[0], 2, ',', '.') : number_format($range_valores[0], 2, ',', '.') . ' - ' . number_format($range_valores[1], 2, ',', '.');
+            }
+ 
             $servicos[$key]["ClienteServico"]["_horarios"] = $this->quadra_horarios($ser['ClienteServico']['id'], date('Y-m-d'), false);           
 
             if ( !empty($ser['ClienteServicoFoto']['imagem']) ) {
@@ -219,7 +227,14 @@ class PesquisasController extends AppController {
 
         foreach($quadras as $key => $qua){
 
-            $quadras[$key]['ClienteServico']['_valor'] = number_format($qua['ClienteServico']['valor'],2,',','.');
+            $quadras[$key]['ClienteServico']['_valor'] = number_format(0, 2, ',','.');
+
+            $range_valores = $this->ClienteServicoHorario->buscaRangeValores($qua['ClienteServico']['id'], date('w'));
+
+            if ( !empty($range_valores) ) {
+                $quadras[$key]['ClienteServico']['_valor'] = $range_valores[0] === $range_valores[1] ? number_format($range_valores[0], 2, ',', '.') : number_format($range_valores[0], 2, ',', '.') . ' - ' . number_format($range_valores[1], 2, ',', '.');
+            }
+
             $quadras[$key]["ClienteServico"]["_horarios"] = $this->quadra_horarios($qua['ClienteServico']['id'], date('Y-m-d'), false);           
 
             if ( !empty($qua['ClienteServicoFoto']['imagem']) ) {

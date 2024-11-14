@@ -241,8 +241,7 @@ class Agendamento extends AppModel {
                 'Localidade.ufe_sg',
                 'ClienteServico.id',
                 'ClienteServico.nome',
-                'ClienteServico.descricao',
-                'ClienteServico.valor',
+                'ClienteServico.descricao'
             ],
             'conditions' => [
                 'Agendamento.horario >=' => date('Y-m-d 00:00:00'),
@@ -305,8 +304,7 @@ class Agendamento extends AppModel {
                 'Localidade.ufe_sg',
                 'ClienteServico.id',
                 'ClienteServico.nome',
-                'ClienteServico.descricao',
-                'ClienteServico.valor',
+                'ClienteServico.descricao'
             ],
             'conditions' => [
                 'Agendamento.cliente_cliente_id' => $cliente_cliente_ids,
@@ -342,8 +340,7 @@ class Agendamento extends AppModel {
                 'Localidade.ufe_sg',
                 'ClienteServico.id',
                 'ClienteServico.nome',
-                'ClienteServico.descricao',
-                'ClienteServico.valor',
+                'ClienteServico.descricao'
             ],
             'conditions' => [
                 'Agendamento.cliente_cliente_id' => $cliente_cliente_ids,
@@ -382,7 +379,6 @@ class Agendamento extends AppModel {
                 'ClienteServico.id',
                 'ClienteServico.nome',
                 'ClienteServico.descricao',
-                'ClienteServico.valor',
                 'ClienteCliente.nome',
                 'Usuario.img'
             ],

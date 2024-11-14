@@ -166,7 +166,7 @@ class ClienteServicoHorario extends AppModel {
             'cliente_servico_id' => $servico_id
         ];
 
-         if ( !empty($dia_semana) ) {
+         if ( $dia_semana !== null ) {
             $conditions['dia_semana'] = $dia_semana;
          }
 

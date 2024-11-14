@@ -603,7 +603,7 @@ class ToProJogoController extends AppController {
                 'Cliente.logo',
                 'Localidade.loc_no',
                 'ClienteServico.nome',
-                'ClienteServico.valor',
+                'Agendamento.valor',
                 'UsuarioDadosPadel.*'
             ],
             'order' => [
@@ -631,7 +631,7 @@ class ToProJogoController extends AppController {
             $dados[$key]['UsuarioMarcante'] = $this->ClienteCliente->finUserData($dados[$key]['Agendamento']['cliente_cliente_id'], ['Usuario.nome', 'Usuario.img']);
             $dados[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$tpj['Cliente']['logo'];
             $dados[$key]['UsuarioMarcante']['img'] = $this->images_path.'usuarios/'.$dados[$key]['UsuarioMarcante']['img'];
-            $dados[$key]['ClienteServico']['valor_br'] = number_format($tpj['ClienteServico']['valor'], 2, ',', '.');
+            $dados[$key]['Agendamento']['valor_br'] = number_format($tpj['Agendamento']['valor'], 2, ',', '.');
             $dados[$key]['AgendamentoConvite']['_data_desc'] = date('Y-m-d') == date('Y-m-d',strtotime($tpj['AgendamentoConvite']['horario'])) ? 'Hoje' : date('d/m/Y',strtotime($tpj['AgendamentoConvite']['horario']));
             $dados[$key]['AgendamentoConvite']['_hora_desc'] = date('H:i',strtotime($tpj['AgendamentoConvite']['horario']));
             $dados[$key]['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($dados[$key]['AgendamentoConvite']['agendamento_id'], $this->images_path.'/usuarios/', $tpj['AgendamentoConvite']['horario']);

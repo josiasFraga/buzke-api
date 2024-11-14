@@ -59,7 +59,6 @@ class AgendamentosController extends AppController {
                 'ClienteCliente.endreceo_n',
                 'Localidade.loc_no',
                 'ClienteServico.id',
-                'ClienteServico.valor',
                 'ClienteServico.nome',
                 'Usuario.nome'
             ],
@@ -102,7 +101,7 @@ class AgendamentosController extends AppController {
             $agendamento['Agendamento']['horario_str'] = date('d/m',strtotime($agendamento['Agendamento']['horario']))." às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
             $data_agendamento = date('Y-m-d',strtotime($agendamento['Agendamento']['horario']));
             
-            $agendamento['ClienteServico']['valor_br'] = number_format($agendamento['ClienteServico']['valor'], 2, ',', '.');
+            $agendamento['Agendamento']['valor_br'] = number_format($agendamento['Agendamento']['valor'], 2, ',', '.');
             $agendamento['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($agendamento['Cliente']['id']);
 
             if ( $data_agendamento == date('Y-m-d') ) {
@@ -195,10 +194,10 @@ class AgendamentosController extends AppController {
                 if ( isset($agendamento['Agendamento']['torneio_id']) && $agendamento['Agendamento']['torneio_id'] != null ) 
                     $agendamentos[$key]['Agendamento']['tipo'] = 'tournament';
 
-                if ( isset($agendamentos[$key]['ClienteServico']['valor']) )
-                    $agendamentos[$key]['ClienteServico']['valor_br'] = number_format($agendamentos[$key]['ClienteServico']['valor'], 2, ',', '.');
+                if ( isset($agendamentos[$key]['Agendamento']['valor']) )
+                    $agendamentos[$key]['Agendamento']['valor_br'] = number_format($agendamentos[$key]['Agendamento']['valor'], 2, ',', '.');
                 else
-                    $agendamentos[$key]['ClienteServico']['valor_br'] = number_format(0, 2, ',', '.');
+                    $agendamentos[$key]['Agendamento']['valor_br'] = number_format(0, 2, ',', '.');
                 $agendamentos[$key]['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($agendamento['Cliente']['id']);
 
                 if ( isset($agendamento['AgendamentoConvite']) ) {
@@ -703,6 +702,8 @@ class AgendamentosController extends AppController {
         $complement_msg = "";
         $fixos_cancelar = [];
 
+        $valor_agendamento = $horario_x_horario_selecionado['default_value'];
+
         //verifica se o usuário/empresa está tentando salvar um agendamento fixo
         if ( isset($dados->fixo) && $dados->fixo == true ) {
 
@@ -710,11 +711,6 @@ class AgendamentosController extends AppController {
             if (!$horario_x_horario_selecionado['enable_fixed_scheduling'] ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Lamentamos. Esse horário fixo já pertence a outro usuário ou não aceita agendamentos fixos! ;('))));
             }
-
-            //debug($dados->day);
-            //debug($dados->time);
-            //debug($dados->servico_id);
-            //die();
 
             // Verifica se tem algum agendamento padrão depois dess fixo
             $agendamentos_padrao = $this->Agendamento->find('all',[
@@ -746,6 +742,8 @@ class AgendamentosController extends AppController {
             else if ( $$horario_x_horario_selecionado['fixed_type'] === 'Mensal' ) {
                 $agendamento_dia_mes = (int)date('d',strtotime($data_selecionada.' '.$horario_selecionado));
             }
+
+            $valor_agendamento = $horario_x_horario_selecionado['fixed_value'];
         }
 
         $profissional_id = null;
@@ -767,7 +765,8 @@ class AgendamentosController extends AppController {
             'dia_semana' => $agendamento_dia_semana,
             'dia_mes' => $agendamento_dia_mes,
             'duracao' => $horario_x_horario_selecionado['duration'],
-            'profissional_id' => $profissional_id
+            'profissional_id' => $profissional_id,
+            'valor' => $valor_agendamento
         ];
 
         if ( isset($dados->convites_tpj) && is_array($dados->convites_tpj)) {

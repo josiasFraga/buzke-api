@@ -380,6 +380,9 @@ class ClientesController extends AppController {
             $dados = json_decode($dados);
         }
 
+        //$this->log($dados, 'debug');
+        //die();
+
         if (!isset($dados->token) || $dados->token == '') {
             throw new BadRequestException('Token não informado', 400);
         }
@@ -550,6 +553,8 @@ class ClientesController extends AppController {
             'Cliente' => [
                 'plano_id' => $dados->plano,
                 'id' => $dados_token['Usuario']['cliente_id'],
+                'prazo_maximo_para_canelamento' => $dados->prazo_maximo_para_canelamento,
+                'tempo_aviso_usuarios' => $dados->avisar_com,
             ],
             'ClienteSubcategoria' => $subcategorias_salvar,
             'ClienteAssinatura' => [
@@ -945,99 +950,6 @@ class ClientesController extends AppController {
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $horarios_verificados))));
-
-    }
-
-    public function servicos() {
-
-        $this->layout = 'ajax';
-        $dados = $this->request->query;
-        if ( !isset($dados['token']) || $dados['token'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
-        }
-        if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
-        }
-
-        $token = $dados['token'];
-        $email = $dados['email'];
-
-        $dado_usuario = $this->verificaValidadeToken($token, $email);
-
-        if ( !$dado_usuario ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
-        if ( $dado_usuario['Usuario']['nivel_id'] != 2 && !isset($dados['cliente_id']) ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
-        $this->loadModel('ClienteServicoHorario');
-
-        $order_cliente_servico = [
-            'ClienteServico.nome'
-        ];
-
-        if ( isset($dados['cliente_id']) && $dados['cliente_id'] != '' ) {
-            $conditions = [
-                'ClienteServico.cliente_id' => $dados['cliente_id']
-            ];
-
-            if ( $dados['cliente_id'] == 55 ) {
-                $order_cliente_servico = [
-                    'ClienteServico.id'
-                ];
-    
-            }
-        } else {
-            $conditions = [
-                'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id']
-            ];
-
-            if ( $dado_usuario['Usuario']['cliente_id'] == 55 ) {
-                $order_cliente_servico = [
-                    'ClienteServico.id'
-                ];
-    
-            }
-        }
-
-
-        $this->loadModel('ClienteServico');
-        $servicos = $this->ClienteServico->find('all',[
-            'conditions' => $conditions,
-            'order' => $order_cliente_servico,
-            'contain' => [
-                'ClienteServicoFoto' => [
-                    'fields' => [
-                        'imagem',                        
-                        'id'
-                    ]
-                ]
-            ]
-        ]);
-
-        if ( count($servicos) > 0 ) {
-            foreach($servicos as $key => $servico) {
-
-                $servicos[$key]['ClienteServico']['valor'] = 'R$ '.$this->floatEnBr($servico['ClienteServico']['valor']);
-                $servicos[$key]["ClienteServico"]["cor"] = $this->services_colors[$key];
-                $servicos[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($servico['ClienteServico']['id']);
-                
-
-                if ( count($servico['ClienteServicoFoto']) > 0 ) {    
-                    foreach( $servico['ClienteServicoFoto'] as $key_imagem => $imagem){    
-                        $servicos[$key]['ClienteServicoFoto'][$key_imagem]['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
-                    }    
-                } else {
-                    $servicos[$key]['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
-                }
-                
-            }
-        }
-
-
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $servicos))));
 
     }
 
