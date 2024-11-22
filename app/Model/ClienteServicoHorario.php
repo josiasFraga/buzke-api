@@ -70,12 +70,14 @@ class ClienteServicoHorario extends AppModel {
         if (is_null($servico_id) || is_null($dia)) {
             return []; // Retorna vazio se algum dos parâmetros não for fornecido
         }
-    
+
+        $dia_semana = (int)date('w', strtotime($dia));
+
         // Busca os horários para o serviço e o dia da semana correspondente
         $horarios = $this->find('all', [
             'conditions' => [
                 'ClienteServicoHorario.cliente_servico_id' => $servico_id,
-                'ClienteServicoHorario.dia_semana' => (int)date('w', strtotime($dia))
+                'ClienteServicoHorario.dia_semana' => $dia_semana
             ]
         ]);
     
@@ -91,11 +93,45 @@ class ClienteServicoHorario extends AppModel {
                 $fim_intervalo->add(new DateInterval('PT' . $duracao->format('H') . 'H' . $duracao->format('i') . 'M' . $duracao->format('s') . 'S'));
     
                 if ($fim_intervalo <= $fim && $fim_intervalo <= $fim) { // Verifica se não excede o horário de fim
+
+                    $promocao = $this->ClienteServico->PromocaoServico->find('first', [
+                        'fields' => [
+                            'Promocao.promocao_para_fixos',
+                            'Promocao.promocao_para_padrao',
+                            'Promocao.promocao_para_padrao',
+                            'Promocao.valor_padrao',
+                            'Promocao.valor_fixos'
+                        ],
+                        'conditions' => [
+                            'PromocaoServico.servico_id' => $servico_id,
+                            'PromocaoDiaSemana.dia_semana' => $dia_semana,
+                            'Promocao.finalizada' => 'N',
+                            'OR' => [
+                                ['Promocao.validade_ate_cancelar' => 'Y'],
+                                [
+                                    'Promocao.validade_inicio <=' => $dia . ' ' . $inicio->format('H:i:s'),
+                                    'Promocao.validade_fim >=' => $dia . ' ' . $inicio->format('H:i:s'),
+                                ]
+                            ],
+        
+                        ],
+                        'link' => [
+                            'Promocao' => [
+                                'PromocaoDiaSemana'
+                            ]
+                        ],
+                        'order' => [
+                            'Promocao.id DESC'
+                        ]
+                    ]);                    
+      
                     $intervalos[] = [
                         'label' => $inicio->format('H:i') . ' - ' . $fim_intervalo->format('H:i'),
                         'active' => true,
-                        'default_value' => floatval($horario['ClienteServicoHorario']['valor_padrao']),
-                        'fixed_value' => floatval($horario['ClienteServicoHorario']['valor_fixos']),
+                        'default_value_old' => floatval($horario['ClienteServicoHorario']['valor_padrao']),
+                        'fixed_value_old' => floatval($horario['ClienteServicoHorario']['valor_fixos']),
+                        'default_value' => !empty($promocao['Promocao']) && $promocao['Promocao']['promocao_para_padrao'] === 'Y' ? floatval($promocao['Promocao']['valor_padrao']) : floatval($horario['ClienteServicoHorario']['valor_padrao']),
+                        'fixed_value' => !empty($promocao['Promocao']) && $promocao['Promocao']['promocao_para_fixos'] === 'Y' ? floatval($promocao['Promocao']['valor_fixos']) : floatval($horario['ClienteServicoHorario']['valor_fixos']),
                         'time' => $inicio->format('H:i:s'),
                         'duration' => $duracao->format('H:i:s'),
                         //'vacancies_per_time' => $horario['ClienteServicoHorario']['vagas_por_horario'],
@@ -103,6 +139,7 @@ class ClienteServicoHorario extends AppModel {
                         'only_at_home' => $horario['ClienteServicoHorario']['apenas_a_domocilio'] === '1' ? true : false,
                         'enable_fixed_scheduling' => $horario['ClienteServicoHorario']['fixos'] === 'Y' ? true : false,
                         'fixed_type' => $horario['ClienteServicoHorario']['fixos_tipo'],
+                        'have_promotion' => count($promocao) > 0
                     ];
                 }
     

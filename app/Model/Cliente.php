@@ -44,6 +44,9 @@ class Cliente extends AppModel {
 		'Pdv' => array(
 			'foreignKey' => 'cliente_id'
 		),
+		'Promocao' => array(
+			'foreignKey' => 'cliente_id'
+		),
     );
 
     public $hasOne = array(

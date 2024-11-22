@@ -16,6 +16,9 @@ class Token extends AppModel {
 		),
 		'Pesquisa' => array(
 			'foreignKey' => 'token_id'
+		),
+		'PromocaoVisita' => array(
+			'foreignKey' => 'token_id'
 		)
 	);
 

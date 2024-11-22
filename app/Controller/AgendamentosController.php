@@ -480,7 +480,7 @@ class AgendamentosController extends AppController {
                 $arr_dados = [
                     'name' => $hora, 
                     'admin_id' => isset($agend['ClienteServico']['id']) ?  $agend['ClienteServico']['id'] : $agend['Agendamento']['cliente_id'], 
-                    'height' => $agend['Agendamento']['endereco'] == '' || $agend['Agendamento']['endereco'] == '' ? 100 : 130, 
+                    'height' => $agend['Agendamento']['endereco'] == '' || $agend['Agendamento']['endereco'] == '' ? 100 : 120, 
                     "bg_color" => $cor,
                     'usuario' => $agend['ClienteCliente']['nome'], 
                     'id' => $agend['Agendamento']['id'], 
@@ -491,6 +491,7 @@ class AgendamentosController extends AppController {
                     'motive' => $agend['Agendamento']['motive'], 
                     'horario' => $agend['Agendamento']['horario'], 
                     'endereco' => $agend['Agendamento']['endereco'], 
+                    'valor' => floatval($agend['Agendamento']['valor']), 
                     'tipo_str' => $tipo,
                 ];
 

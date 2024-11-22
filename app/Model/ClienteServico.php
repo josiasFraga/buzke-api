@@ -32,6 +32,12 @@ class ClienteServico extends AppModel {
 		],
         'ClienteServicoAvaliacao' => [
 			'foreignKey' => 'cliente_servico_id'
+        ],
+        'PromocaoServico' => [
+			'foreignKey' => 'servico_id'
+        ],
+        'PromocaoVisita' => [
+			'foreignKey' => 'servico_id'
         ]
     ];
     

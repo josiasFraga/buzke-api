@@ -426,6 +426,9 @@ class ServicosController extends AppController {
         $this->loadModel('Agendamento');
         $this->loadModel('AgendamentoFixoCancelado');
         $this->loadModel('TorneioQuadraPeriodo');
+        $this->loadModel('Promocao');
+        $this->loadModel('PromocaoDiaSemana');
+        $this->loadModel('PromocaoServico');
 
         $conditions = [
             'ClienteServico.id' => $dados['servico_id']
@@ -451,13 +454,65 @@ class ServicosController extends AppController {
 
         $horarios = $this->quadra_horarios($dados['servico_id'], $dados['day']);
 
+        $promocoes = $this->Promocao->find('all', [
+            'fields' => [
+                'Promocao.*',
+            ],
+            'conditions' => [
+                'Promocao.finalizada' => 'N',
+                'OR' => [
+                    ['Promocao.validade_ate_cancelar' => 'Y'],
+                    [
+                        'DATE(Promocao.validade_inicio) <=' => $dados['day'],
+                        'DATE(Promocao.validade_fim) >=' => $dados['day'],
+                    ]
+                ],
+                'PromocaoDiaSemana.dia_semana' => (int)date('w', strtotime($dados['day'])),
+                'ClienteServico.ativo' => 'Y',
+                'ClienteServico.id' => $dados_servico['ClienteServico']['id']
+            ],
+            'link' => [
+                'PromocaoDiaSemana',
+                'PromocaoServico' => [
+                    'ClienteServico'
+                ]
+            ]
+        ]);
+
+        foreach( $promocoes as $key => $promocao ){
+
+            $promocoes[$key]['_dias_semana'] = array_values($this->PromocaoDiaSemana->find('list',[
+                'fields' => [
+                    'PromocaoDiaSemana.dia_semana',
+                    'PromocaoDiaSemana.dia_semana'
+                ],
+                'conditions' => [
+                    'PromocaoDiaSemana.promocao_id' => $promocao['Promocao']['id']
+                ]
+            ]));
+
+            $promocoes[$key]['_servicos'] = $this->PromocaoServico->find('list',[
+                'fields' => [
+                    'ClienteServico.id',
+                    'ClienteServico.nome'
+                ],
+                'conditions' => [
+                    'PromocaoServico.promocao_id' => $promocao['Promocao']['id']
+                ],
+                'link' => [
+                    'ClienteServico'
+                ]
+            ]);
+        }
+
         $dados_retornar = [
             'origem' => !empty($dado_usuario['Usuario']['cliente_id']) ? 'empresa' : 'cliente',
             'is_court' => $isCourt,
             'is_paddle_court' => $isPaddleCourt,
             'tipo' => $dados_servico['ClienteServico']['tipo'],
             'prazo_cancelamento' => $dados_servico['Cliente']['prazo_maximo_para_canelamento'],
-            'horarios' => $horarios
+            'horarios' => $horarios,
+            'promocoes' => $promocoes
         ];
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_retornar))));
@@ -486,6 +541,7 @@ class ServicosController extends AppController {
                 'ClienteServico.id',
                 'ClienteServico.nome',
                 'ClienteServico.cliente_id',
+                'ClienteServicoFoto.id',
                 'ClienteServicoFoto.imagem'
             ],
             'conditions' => [
@@ -511,7 +567,7 @@ class ServicosController extends AppController {
                     if ( $horario['active'] ) {
 
                         if ( !empty($servico['ClienteServicoFoto']['id']) ) {
-                            $servico['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
+                            $servico['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $servico['ClienteServicoFoto']['imagem'];
                         } else {
                             $servico['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
                         }
@@ -552,6 +608,177 @@ class ServicosController extends AppController {
 
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $sortedSlots))));
+
+    }
+
+    public function em_promocao() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        
+        $this->loadModel('Promocao');
+
+        $dia_semana_atual = (int)date('w');
+
+        $conditions = [
+            'Cliente.mostrar' => 'Y',
+            'Cliente.ativo' => 'Y',
+            'Promocao.finalizada' => 'N',
+            'OR' => [
+                [
+                    'Promocao.validade_ate_cancelar' => 'Y'
+                ],
+                [
+                    'Promocao.validade_inicio <=' => date('Y-m-d H:i:s'),
+                    'Promocao.validade_fim >=' => date('Y-m-d H:i:s'),
+                ]
+            ],
+            'PromocaoDiaSemana.dia_semana' => $dia_semana_atual,
+            'ClienteServicoHorario.dia_semana' => $dia_semana_atual,
+            'ClienteServico.ativo' => 'Y'
+        ];
+
+        if ( isset($dados['address']) && $dados['address'] != '' ) {
+
+            if ( isset($dados['address'][1]) && (trim($dados['address'][1]) == "Uruguai" || trim($dados['address'][1]) == "Uruguay") ) {
+                $this->loadModel('UruguaiCidade');
+                $dados_localidade = $this->UruguaiCidade->findByGoogleAddress($dados['address'][0]);
+
+                $conditions = array_merge($conditions, [
+                    'Cliente.ui_cidade' => $dados_localidade['UruguaiCidade']['id'],
+                ]);
+
+            } else {
+                $this->loadModel('Localidade');
+                $dados_localidade = $this->Localidade->findByGoogleAddress($dados['address']);
+
+                $conditions = array_merge($conditions, [
+                    'Cliente.cidade_id' => $dados_localidade['Localidade']['loc_nu_sequencial'],
+                    'Cliente.estado' => $dados_localidade['Localidade']['ufe_sg'],
+                ]);
+            }
+        } else {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
+        }
+
+        if ( isset($dados['cliente_id']) && $dados['cliente_id'] != '' ) {
+            $conditions[] = [
+                'Cliente.id' => $dados['cliente_id']
+            ];
+        }
+
+        $this->loadModel('ClienteServico');
+
+        $limit = [];
+
+        if ( !empty($dados['limit']) ) {
+            $limit = ['limit' => $dados['limit']];
+        }
+
+        $servicos = $this->ClienteServico->find('all',[
+            'fields' => [
+                'ClienteServico.id',
+                'ClienteServico.tipo',
+                'ClienteServico.nome',
+                'ClienteServico.descricao',
+                'ClienteServico.avg_avaliacao',
+                'ClienteServicoHorario.inicio',
+                'ClienteServicoHorario.fim',
+                'ClienteServicoHorario.dia_semana',
+                'ClienteServicoHorario.valor_padrao',
+                'ClienteServicoHorario.valor_fixos',
+                'ClienteServicoFoto.imagem',
+                'Cliente.id',
+                'Cliente.nome',
+                'Cliente.logo',
+                'Promocao.*'
+            ],
+            'link' => [
+                'Cliente',
+                'ClienteServicoFoto',
+                'ClienteServicoHorario',
+                'PromocaoServico' => [
+                    'Promocao' => [
+                        'PromocaoDiaSemana'
+                    ]
+                ]
+            ],
+            'conditions' => $conditions,
+            'group' => ['ClienteServico.id'],
+            $limit
+        ]);
+
+        foreach($servicos as $key => $ser){
+
+            if ( !empty($ser['ClienteServicoFoto']['imagem']) ) {
+                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "servicos/" . $ser['ClienteServicoFoto']['imagem'];
+            } else {
+                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "servicos/sem_imagem.jpeg";
+            }
+
+            if ( !empty($ser['Cliente']['logo']) ) {
+                $servicos[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$ser['Cliente']['logo'];
+            }
+        }
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $servicos))));
+
+    }
+
+    public function add_visit() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        //$this->log($dados, 'debug');
+        //die();
+
+        if (is_array($dados)) {
+            $dados = json_decode(json_encode($dados, true));
+        } else {
+            $dados = json_decode($dados);
+        }
+
+        if (!isset($dados->servico_id) || empty($dados->servico_id)) {
+            throw new BadRequestException('Serviço não informado', 400);
+        }
+
+        if (!isset($dados->data) || empty($dados->data)) {
+            throw new BadRequestException('Data não informada', 400);
+        }
+
+        if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
+        }
+
+        if (!isset($dados->token) || $dados->token == '') {
+            throw new BadRequestException('Token não informado', 400);
+        }
+
+        $dados_token = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 3 ) {
+            throw new BadRequestException('Usuário sem permissão de salvamento de visita', 400);
+        }
+
+        $this->loadModel('ServicoVisita');
+
+        $dados_salvar = [
+            'token_id' => $dados_token['Token']['id'],
+            'cliente_servico_id' => $dados->servico_id,
+            'data' => $dados->data,
+        ];
+
+        $this->ServicoVisita->create();
+
+        if ( !$this->ServicoVisita->save($dados_salvar) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Erro ao salvar!'))));
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Visita salva com sucesso!'))));
 
     }
 
