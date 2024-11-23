@@ -45,6 +45,12 @@ class Usuario extends AppModel {
 			'foreignKey' => 'cliente_id'
 		),
     );
+
+    public $hasOne = [
+        'NotificacaoConfiguracaoUsuario' => [
+			'foreignKey' => 'usuario_id'
+        ]
+    ];
     
     public $validate = array();
 

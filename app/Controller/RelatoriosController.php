@@ -454,4 +454,132 @@ class RelatoriosController extends AppController {
 
     }
 
+    public function promocao() {
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        if ( !isset($dados['nome']) || $dados['nome'] == "" ) {
+            throw new BadRequestException('Nome do arquivo não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+        $nome = trim(strip_tags($dados['nome']));
+    
+        $token = $dados['token'];
+        $email = $dados['email'];
+    
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+    
+        if (!$dado_usuario) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+    
+        if ($dado_usuario['Usuario']['nivel_id'] !== "2") {            
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Sem permissão de gerenciamento de promoções!'))));
+        }
+    
+        $promocao_id = $dados['promocao_id'];
+        $cliente_id = $dado_usuario['Usuario']['cliente_id'];
+    
+        $this->loadModel('Promocao');
+        $this->loadModel('PromocaoVisita');
+        $this->loadModel('PromocaoDiaSemana');
+        $this->loadModel('PromocaoServico');
+        $this->loadModel('Agendamento');
+    
+        $promocao = $this->Promocao->find('first', [
+            'conditions' => [
+                'Promocao.id' => $promocao_id,
+                'Promocao.cliente_id' => $cliente_id,
+            ]
+        ]);
+    
+        if (!$promocao) {
+            throw new BadRequestException('Promoção não encontrada!', 401);
+        }
+    
+        $dias_validade = $this->PromocaoDiaSemana->find('list', [
+            'conditions' => ['PromocaoDiaSemana.promocao_id' => $promocao_id],
+            'fields' => ['dia_semana']
+        ]);
+    
+        $servicos = $this->PromocaoServico->find('all', [
+            'conditions' => ['PromocaoServico.promocao_id' => $promocao_id],
+            'fields' => ['ClienteServico.id', 'ClienteServico.nome'],
+            'link' => ['ClienteServico']
+        ]);
+    
+        $data_inicio = new DateTime($promocao['Promocao']['validade_inicio']);
+        $data_fim = new DateTime($promocao['Promocao']['validade_fim']);
+        $interval = DateInterval::createFromDateString('1 day');
+        $period = new DatePeriod($data_inicio, $interval, $data_fim->modify('+1 day'));
+    
+        $dados_relatorio = [];
+        foreach ($servicos as $servico) {
+            $dados_relatorio[$servico['ClienteServico']['nome']] = [];
+    
+            foreach ($period as $data) {
+                $dia_semana = $data->format('w');
+                if (in_array($dia_semana, $dias_validade)) {
+                    $cliques = $this->PromocaoVisita->find('count', [
+                        'conditions' => [
+                            'PromocaoVisita.promocao_id' => $promocao_id,
+                            'PromocaoVisita.servico_id' => $servico['ClienteServico']['id'],
+                            'DATE(PromocaoVisita.created)' => $data->format('Y-m-d')
+                        ]
+                    ]);
+    
+                    $visitantes_unicos = $this->PromocaoVisita->find('count', [
+                        'conditions' => [
+                            'PromocaoVisita.promocao_id' => $promocao_id,
+                            'PromocaoVisita.servico_id' => $servico['ClienteServico']['id'],
+                            'DATE(PromocaoVisita.created)' => $data->format('Y-m-d')
+                        ],
+                        'link' => ['Token'],
+                        'group' => ['Token.usuario_id']
+                    ]);
+    
+                    // Contar agendamentos padrão e fixos
+                    $agendamentos_padrao = $this->Agendamento->find('count', [
+                        'conditions' => [
+                            'Agendamento.cliente_cliente_id' => $cliente_id,
+                            'Agendamento.servico_id' => $servico['ClienteServico']['id'],
+                            'DATE(Agendamento.created)' => $data->format('Y-m-d'),
+                            'Agendamento.valor' => $promocao['Promocao']['valor_padrao'],
+                            'Agendamento.dia_semana IS NULL',
+                            'Agendamento.dia_mes IS NULL'
+                        ]
+                    ]);
+    
+                    $agendamentos_fixos = $this->Agendamento->find('count', [
+                        'conditions' => [
+                            'Agendamento.cliente_cliente_id' => $cliente_id,
+                            'Agendamento.servico_id' => $servico['ClienteServico']['id'],
+                            'DATE(Agendamento.created)' => $data->format('Y-m-d'),
+                            'Agendamento.valor' => $promocao['Promocao']['valor_fixos'],
+                            'OR' => [
+                                'Agendamento.dia_semana IS NOT NULL',
+                                'Agendamento.dia_mes IS NOT NULL'
+                            ]
+                        ]
+                    ]);
+    
+                    $dados_relatorio[$servico['ClienteServico']['nome']][] = [
+                        'data' => $data->format('d/m/Y'),
+                        'dia_semana' => $data->format('l'),
+                        'total_cliques' => $cliques,
+                        'total_visitantes_unicos' => $visitantes_unicos,
+                        'total_agendamentos_padrao' => $agendamentos_padrao,
+                        'total_agendamentos_fixos' => $agendamentos_fixos,
+                        'valor_padrao' => $promocao['Promocao']['valor_padrao'],
+                        'valor_fixos' => $promocao['Promocao']['valor_fixos'],
+                    ];
+                }
+            }
+        }
+    
+        $this->set(compact('promocao', 'dados_relatorio', 'nome'));
+    }      
+
 }

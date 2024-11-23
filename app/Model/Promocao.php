@@ -10,6 +10,9 @@ class Promocao extends AppModel {
         ],
 		'PromocaoVisita' => [
             'foreignKey' => 'promocao_id'
+        ],
+		'PromocaoClique' => [
+            'foreignKey' => 'promocao_id'
         ]
     ];
 	public $belongsTo = array(

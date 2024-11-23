@@ -1,0 +1,106 @@
+UPDATE clientes_servicos_horarios AS csh
+JOIN clientes_servicos AS cs ON csh.cliente_servico_id = cs.id
+SET csh.valor_fixos = cs.valor, csh.valor_padrao = cs.valor;
+
+UPDATE clientes_servicos_horarios SET clientes_servicos_horarios.fixos_tipo = 'Semanal'
+
+UPDATE agendamentos a
+JOIN clientes_servicos_horarios h 
+ON a.servico_id = h.cliente_servico_id
+   AND a.dia_semana = h.dia_semana
+SET a.valor = h.valor_fixos
+WHERE (a.dia_semana IS NOT NULL OR a.dia_mes IS NOT NULL)
+  AND a.servico_id = h.cliente_servico_id;
+
+
+UPDATE agendamentos a
+JOIN clientes_servicos_horarios h 
+ON a.servico_id = h.cliente_servico_id
+SET a.valor = h.valor_padrao
+WHERE a.dia_semana IS NULL 
+  AND a.dia_mes IS NULL
+  AND a.servico_id = h.cliente_servico_id;
+
+CREATE TABLE IF NOT EXISTS `promocao_cliques` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created` timestamp NULL DEFAULT NULL,
+  `token_id` int DEFAULT NULL,
+  `promocao_id` int NOT NULL,
+  `servico_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FK_promocao_cliques_tokens` (`token_id`),
+  KEY `FK_promocao_cliques_promocoes` (`promocao_id`),
+  KEY `FK_promocao_cliques_clientes_servicos` (`servico_id`),
+  CONSTRAINT `FK_promocao_cliques_clientes_servicos` FOREIGN KEY (`servico_id`) REFERENCES `clientes_servicos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `FK_promocao_cliques_promocoes` FOREIGN KEY (`promocao_id`) REFERENCES `promocoes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `FK_promocao_cliques_tokens` FOREIGN KEY (`token_id`) REFERENCES `tokens` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=113 DEFAULT CHARSET=latin1;
+
+CREATE TABLE IF NOT EXISTS `promocao_dias_semana` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created` timestamp NULL DEFAULT NULL,
+  `updated` timestamp NULL DEFAULT NULL,
+  `promocao_id` int NOT NULL,
+  `dia_semana` tinyint NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `FK_promocao_servicos_promocoes` (`promocao_id`) USING BTREE,
+  KEY `dia_semana` (`dia_semana`),
+  CONSTRAINT `promocao_dias_semana_ibfk_2` FOREIGN KEY (`promocao_id`) REFERENCES `promocoes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=96 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `promocao_servicos` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created` timestamp NULL DEFAULT NULL,
+  `updated` timestamp NULL DEFAULT NULL,
+  `promocao_id` int NOT NULL,
+  `servico_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FK_promocao_servicos_promocoes` (`promocao_id`),
+  KEY `FK_promocao_servicos_clientes_servicos` (`servico_id`),
+  CONSTRAINT `FK_promocao_servicos_clientes_servicos` FOREIGN KEY (`servico_id`) REFERENCES `clientes_servicos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `FK_promocao_servicos_promocoes` FOREIGN KEY (`promocao_id`) REFERENCES `promocoes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=latin1;
+
+
+CREATE TABLE IF NOT EXISTS `promocoes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created` timestamp NULL DEFAULT NULL,
+  `updated` timestamp NULL DEFAULT NULL,
+  `cliente_id` int NOT NULL,
+  `titulo` varchar(150) NOT NULL,
+  `descricao` text NOT NULL,
+  `validade_ate_cancelar` enum('Y','N') NOT NULL DEFAULT 'N',
+  `validade_inicio` timestamp NULL DEFAULT NULL,
+  `validade_fim` timestamp NULL DEFAULT NULL,
+  `horario_inicio` time DEFAULT NULL,
+  `horario_fim` time DEFAULT NULL,
+  `promocao_para_fixos` enum('Y','N') CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'N',
+  `promocao_para_padrao` enum('Y','N') NOT NULL DEFAULT 'N',
+  `valor_padrao` float(9,2) DEFAULT NULL,
+  `valor_fixos` float(9,2) DEFAULT NULL,
+  `limite_ate` tinyint DEFAULT NULL,
+  `finalizada` enum('Y','N') NOT NULL DEFAULT 'N',
+  PRIMARY KEY (`id`),
+  KEY `FK_promocoes_clientes` (`cliente_id`),
+  KEY `finalizada` (`finalizada`),
+  KEY `validade_inicio` (`validade_inicio`),
+  KEY `validade_fim` (`validade_fim`),
+  CONSTRAINT `FK_promocoes_clientes` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=latin1;
+
+CREATE TABLE `notificacoes_configuracoes_usuario` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`usuario_id` INT NOT NULL,
+	`receber_promocoes` TINYINT(1) NOT NULL DEFAULT '1',
+	`receber_lembretes` TINYINT(1) NOT NULL DEFAULT '1',
+	`receber_avaliacoes` TINYINT(1) NOT NULL DEFAULT '1',
+	`receber_convites` TINYINT(1) NOT NULL DEFAULT '1',
+	`created` TIMESTAMP NULL DEFAULT NULL,
+	`updated` TIMESTAMP NULL DEFAULT NULL,
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `FK_notificacoes_configuracoes_usuario_usuarios` (`usuario_id`) USING BTREE,
+	CONSTRAINT `FK_notificacoes_configuracoes_usuario_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+)
+COLLATE='latin1_swedish_ci'
+ENGINE=InnoDB
+;
