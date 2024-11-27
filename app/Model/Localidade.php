@@ -5,7 +5,8 @@ class Localidade extends AppModel {
 
 	public $hasMany = array(
 		'Cliente' => array(
-			'foreignKey' => 'cidade_id'
+			'foreignKey' => 'cidade_id',
+			'alias' => 'ClienteLocalidade'
 		),
 		'ClienteCliente' => array(
 			'foreignKey' => 'cidade_id'

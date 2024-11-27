@@ -98,6 +98,41 @@ class TorneioInscricaoJogador extends AppModel {
         
     }
 
+    public function buscaJogadoresComFoto($inscricao_id = null, $images_path){
+
+        if ($inscricao_id == null ) {
+            return '';
+        }
+
+        $jogadores = $this->find('all',[
+            'fields' => [
+                'ClienteCliente.nome',
+                'ClienteCliente.img',
+                'Usuario.img'
+            ],
+            'conditions' => [
+                'TorneioInscricaoJogador.torneio_inscricao_id' => $inscricao_id
+            ],
+            'link' => ['ClienteCliente' => ['Usuario']]
+        ]);
+
+        $dados_retornar = [];
+        foreach( $jogadores as $key => $jogador ){
+
+            $dados_retornar[$key] = [
+                'nome' => $jogador['ClienteCliente']['nome']
+            ];
+
+            $dados_retornar[$key]['img'] = $images_path.'clientes_clientes/'.$jogador['ClienteCliente']['img'];
+    
+            if ( !empty($jogador['Usuario']['img']) ) {
+                $dados_retornar[$key]['img'] = $images_path.'usuarios/'.$jogador['Usuario']['img'];
+            }
+        }
+
+        return $dados_retornar;
+    }
+
     public function buscaImagemJogador($inscricao_id = null, $n_jogador, $images_path){
         if ($inscricao_id == null ) {
             return '';

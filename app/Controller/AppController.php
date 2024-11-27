@@ -975,43 +975,16 @@ class AppController extends Controller {
         return false;
     }
 
-    public function filtra_disponiveis($horarios = array(), $usuario = null) {
-
-        if ( count($horarios) == 0 || $usuario == null ) {
-            return array();
-        }
-
-        $this->loadModel('Agendamento');        
-        $this->loadModel('HorarioExcessao');
-
-        foreach( $horarios as $key => $horario) {
-            
-            $n_agendamentos = $this->Agendamento->contaAgendamentos($horario['Horario']['data'],$horario['Horario']['horario'],$usuario['Usuario']['id']);
-
-            $n_vagas = $this->HorarioExcessao->find('first',array(
-                'conditions' => array(
-                    'HorarioExcessao.horario' => $horario['Horario']['horario'],
-                    'HorarioExcessao.data' => $horario['Horario']['data']
-                )
-            ));
-
-            if ( count($n_vagas) > 0 ) {
-                $horario['Horario']['vagas'] = $n_vagas['HorarioExcessao']['vagas'];
-            }
-            
-            $n_agendamentos = $this->Agendamento->contaAgendamentos($horario['Horario']['data'],$horario['Horario']['horario']);
-            if ( $n_agendamentos >= $horario['Horario']['vagas'] ) {
-                $horarios[$key]['Horario']['disponivel'] = 0;
-            } else {
-                $horarios[$key]['Horario']['disponivel'] = 1;
-            }
-        }
-
-        return $horarios;
-
-    }
-
-	public function sendNotification( $arr_ids = array(), $agendamento_id = null, $titulo = "", $mensagem = "", $motivo = "agendamento", $group = 'geral', $group_message = ''){
+	public function sendNotification( 
+        $arr_ids = array(),
+        $agendamento_id = null, 
+        $titulo = "", 
+        $mensagem = "", 
+        $motivo = "agendamento", 
+        $group = 'geral', 
+        $group_message = '',
+        $promocao_id = null
+    ){
         
         $send_notifications = getenv('SEND_NOTIFICATIONS');
 
@@ -1051,7 +1024,11 @@ class AppController extends Controller {
         $fields = array(
             'app_id' => "b3d28f66-5361-4036-96e7-209aea142529",
             'include_player_ids' => $arr_ids_app,
-            'data' => array("agendamento_id" => $agendamento_id, 'motivo' => $motivo),
+            'data' => [
+                "agendamento_id" => $agendamento_id, 
+                'motivo' => $motivo,
+                'promocao_id' => $promocao_id
+            ],
             //'small_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon.png',
             //'large_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon_large.png',
             'android_group' =>  $group,
@@ -1064,8 +1041,7 @@ class AppController extends Controller {
         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8',
-                                                'Authorization: Basic ZWM2M2YyMjQtOTQ4My00MjI2LTg0N2EtYThiZmRiNzM5N2Nk'));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8', 'Authorization: Basic ZWM2M2YyMjQtOTQ4My00MjI2LTg0N2EtYThiZmRiNzM5N2Nk'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         curl_setopt($ch, CURLOPT_HEADER, FALSE);
         curl_setopt($ch, CURLOPT_POST, TRUE);
@@ -1084,6 +1060,183 @@ class AppController extends Controller {
                     'id_one_signal' => $response['id'],
                     'message' => $mensagem,
                     'title' => $titulo,
+                    'agendamento_id' => $agendamento_id,
+                    'promocao_id' => $promocao_id,
+                    'json' => json_encode($response),
+                ]
+      
+            ];
+
+            if ( count($arr_ids_app) > 0 ) {
+                foreach( $arr_ids_app as $key_player_id => $player_id ){
+                    $dados_salvar[0]['NotificacaoUsuario'][] = ['token' => $player_id];
+                }
+            }
+     
+            $this->Notificacao->create();
+            return $this->Notificacao->saveAll($dados_salvar, ['deep' => true]) !== false;
+
+        } else {
+            $this->log($response, 'debug');
+        }
+
+        return true;
+
+
+    }
+
+	public function sendNotificationNew ( 
+        $usuario_id,
+        $arr_ids = [],
+        $agendamento_id = null, 
+        $agendamento_data = null,
+        $promocao_id = null, 
+        $motivo = null, 
+        $group_message = ''
+    ){
+        
+        $send_notifications = getenv('SEND_NOTIFICATIONS');
+
+        /*if ( $send_notifications === "FALSE" ) {
+            return true;
+        }*/
+
+		if ( count($arr_ids) == 0 )
+			return false;
+
+        if ( empty($motivo) ) {
+            return false;
+        }
+
+        $this->loadModel('NotificacaoMotivo');
+        $motivo_dados = $this->NotificacaoMotivo->find('first',[
+            'conditions' => [
+                'nome' => $motivo
+            ],
+            'link' => []
+        ]);
+
+        if ( count($motivo_dados) === 0 ) {
+            return false;
+        }
+
+        $titulo = $motivo_dados['NotificacaoMotivo']['titulo_notificacao'];
+        $mensagem = $motivo_dados['NotificacaoMotivo']['msg_notificacao'];
+        $group = $motivo_dados['NotificacaoMotivo']['grupo'];
+        $notification_data = [];
+        $agendamento_data_hora = null;
+
+        if ( !empty($agendamento_id) ) {
+    
+            $this->loadModel('Agendamento');
+
+            $dados_agendamento = $this->Agendamento->find('first',[
+                'fields' => [
+                    'DATE(Agendamento.horario) AS data',
+                    'TIME(Agendamento.horario) AS hora',
+                    'Cliente.nome',
+                    'ClienteServico.nome'
+                ],
+                'conditions' => [
+                    'Agendamento.id' => $agendamento_id,
+                    'DATE(Agendamento.horario)' => $agendamento_data
+                ],
+                'link' => [
+                    'Cliente',
+                    'ClienteServico'
+                ]
+            ]);
+
+            if ( count($dados_agendamento) == 0 ) {
+                return false;
+            }
+
+            $placeholders = [
+                "{{empresa_nome}}", 
+                "{{hora_agendamento}}", 
+                "{{dia_agendamento}}", 
+                "{{servico_nome}}"
+            ];
+
+            $values = [
+                $dados_agendamento['Cliente']['nome'], 
+                substr($dados_agendamento[0]['hora'], 0, 5), 
+                date('d/m',strtotime($agendamento_data)), 
+                $dados_agendamento['ClienteServico']['nome']
+            ];
+
+            $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+
+            $notification_data = [
+                "agendamento_id" => $agendamento_id, 
+                "agendamento_horario" => $agendamento_data.' '.$dados_agendamento[0]['hora'], 
+                'promocao_id' => $promocao_id,
+                'motivo' => $motivo,
+            ];
+
+            $agendamento_data_hora = $agendamento_data.' '.$dados_agendamento[0]['hora'];
+        }
+
+		$heading = array(
+			"en" => $titulo
+		);
+
+		$content = array(
+			"en" => $mensagem
+        );
+
+        if ( $group_message == '' ) {
+            $group_message = (object)["en"=> '$[notif_count] Notificações'];
+        }
+
+        $group_message = (object)$group_message;
+
+        $arr_ids_app = array();
+		foreach( $arr_ids as $id ) {
+			$arr_ids_app[] = $id;
+		}
+
+        $fields = array(
+            'app_id' => getenv('ONE_SIGNAL_APP_ID'),
+            'include_player_ids' => $arr_ids_app,
+            'data' => $notification_data,
+            //'small_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon.png',
+            //'large_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon_large.png',
+            'android_group' =>  $group,
+            'android_group_message' => $group_message,
+            'headings' => $heading,
+            'contents' => $content,
+        );
+        
+        $fields = json_encode($fields);
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8', 'Authorization: Basic '.getenv('ONE_SIGNAL_TOKEN')));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($ch, CURLOPT_HEADER, FALSE);
+        curl_setopt($ch, CURLOPT_POST, TRUE);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+    
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        $response = json_decode($response, true);
+
+        debug($response);
+
+        if ( isset($response['id']) && !empty($response['id']) ) {
+            $this->loadModel('Notificacao');
+            $dados_salvar = [
+                0 => [
+                    'id_one_signal' => $response['id'],
+                    'message' => $mensagem,
+                    'title' => $titulo,
+                    'agendamento_id' => $agendamento_id,
+                    'promocao_id' => $promocao_id,
+                    'notificacao_motivo_id' => $motivo_dados['NotificacaoMotivo']['id'],
+                    'agendamento_data_hora' => $agendamento_data_hora,
                     'json' => json_encode($response),
                 ]
       

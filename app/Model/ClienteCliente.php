@@ -26,6 +26,9 @@ class ClienteCliente extends AppModel {
 		'ClienteClienteComanda' => array(
 			'foreignKey' => 'cliente_cliente_id'
 		),
+		'AgendamentoClienteCliente' => array(
+			'foreignKey' => 'cliente_cliente_id'
+		),
     );
 
     public $hasOne = array(

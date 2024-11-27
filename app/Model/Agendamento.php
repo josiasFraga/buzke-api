@@ -278,6 +278,7 @@ class Agendamento extends AppModel {
         }
 
         $agendamentos_de_torneios = $this->buscaAgendamentoDeTorneio($cliente_cliente_ids);
+
         if ( count($agendamentos_de_torneios) > 0 ) {
             $agendamentos_de_torneios = $this->montaArrayHorariosTorneio($agendamentos_de_torneios);
         }
@@ -428,13 +429,14 @@ class Agendamento extends AppModel {
                 'Agendamento.cancelado' => "N",
                 'Torneio.jogos_liberados_ao_publico' => "Y",
                 'or' => [
-                    'TorneioJogo.time_1' => $cliente_cliente_ids,
-                    'TorneioJogo.time_2' => $cliente_cliente_ids,
+                    'TorneioInscricaoJogadorTimeUm.cliente_cliente_id' => $cliente_cliente_ids,
+                    'TorneioInscricaoJogadorTimeDois.cliente_cliente_id' => $cliente_cliente_ids,
                 ],
             ],
             'order' => [
                 'Agendamento.horario'
             ],
+            'group' => 'Agendamento.id',
             'link' => [
                 'ClienteCliente' => [
                     'Usuario'
@@ -445,6 +447,12 @@ class Agendamento extends AppModel {
                 'TorneioJogo' => [
                     'TorneioQuadra' => [
                         'ClienteServico'
+                    ],
+                    'TorneioJogoTimeUm' => [
+                        'TorneioInscricaoJogadorTimeUm'
+                    ],
+                    'TorneioJogoTimeDois' => [
+                        'TorneioInscricaoJogadorTimeDois'
                     ]
                 ],
                 'Torneio'

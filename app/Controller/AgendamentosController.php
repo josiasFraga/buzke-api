@@ -268,6 +268,403 @@ class AgendamentosController extends AppController {
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $agendamentos))));
     }
 
+    public function view($id = null) {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( empty($id) ) {
+            throw new BadRequestException('Agendamento não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+        $agendamento_id = $id;
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Agendamento');
+        $this->loadModel('ClienteSubcategoria');
+        $this->loadModel('ClienteServicoFoto');
+        $this->loadModel('Localidade');
+        $this->loadModel('UruguaiCidade');
+        $this->loadModel('Usuario');
+        $this->loadModel('ClienteCliente');
+        $this->loadModel('ClienteServico');
+
+        $conditions = [
+            'Agendamento.id' => $agendamento_id
+        ];
+
+        // é usuário de empresa
+        if ( $dados_token['Usuario']['nivel_id'] == 2 ) {
+            $conditions['Agendamento.cliente_id'] = $dados_token['Usuario']['cliente_id'];
+        }
+
+        // é usuário final
+        if ( $dados_token['Usuario']['nivel_id'] == 3 ) {
+            $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
+            
+            $conditions['OR'] = [
+                ['Agendamento.cliente_cliente_id' => $meus_ids_de_cliente],
+                ['AgendamentoClienteCliente.cliente_cliente_id' => $meus_ids_de_cliente],
+                ['TorneioInscricaoJogadorTimeUm.cliente_cliente_id' => $meus_ids_de_cliente],
+                ['TorneioInscricaoJogadorTimeDois.cliente_cliente_id' => $meus_ids_de_cliente]
+            ];
+        }
+
+        $agendamento = $this->Agendamento->find('first',[
+            'conditions' => $conditions,
+            'fields' => [
+                'Agendamento.*',
+                'ClienteCliente.id',
+                'ClienteCliente.nome',
+                'ClienteCliente.telefone',
+                'ClienteCliente.telefone_ddi',
+                'ClienteCliente.pais',
+                'Cliente.id',
+                'Cliente.nome',
+                'Cliente.logo',
+                'Cliente.cidade_id',
+                'Cliente.ui_cidade',
+                'Cliente.estado',
+                'Cliente.pais',
+                'Cliente.endereco',
+                'Cliente.endereco_n',
+                'Cliente.bairro',
+                'Cliente.telefone_ddi',
+                'Cliente.telefone',
+                'Cliente.wp_ddi',
+                'Cliente.wp',
+                'Cliente.prazo_maximo_para_canelamento',
+                'ClienteCliente.img',
+                'ClienteCliente.endereco',
+                'ClienteCliente.endreceo_n',
+                'Localidade.loc_no',
+                'ClienteServico.id',
+                'ClienteServico.nome',
+                'ClienteServico.tipo',
+                'ClienteServico.descricao',
+                'Torneio.nome',
+                'Torneio.descricao',
+                'Torneio.inicio',
+                'Torneio.fim',
+                'Torneio.img',
+                'TorneioJogo.time_1',
+                'TorneioJogo.time_2',
+                'TorneioJogo.fase_nome',
+                'TorneioCategoria.nome',
+                'TorneioCategoria.sexo',
+                'PadelCategoria.titulo',
+                'TorneioQuadra.servico_id',
+                'TorneioQuadra.nome',
+                '(SELECT AVG(ClienteServicoAvaliacao.avaliacao) 
+                FROM cliente_servico_avaliacoes ClienteServicoAvaliacao 
+                WHERE ClienteServicoAvaliacao.cliente_servico_id = ClienteServico.id) AS avg_avaliacao',
+                '(SELECT AVG(avaliacao) FROM cliente_servico_avaliacoes WHERE cliente_servico_avaliacoes.cliente_servico_id IN (SELECT id FROM clientes_servicos WHERE clientes_servicos.cliente_id = Cliente.id)) as cliente_avg_avaliacao',
+                'Usuario.nome',
+                'Usuario.created',
+                'Usuario.img',
+                'ClienteCliente.created'
+            ],
+            'link' => [
+                'ClienteCliente' => [
+                    'Localidade',
+                    'Usuario'
+                ], 
+                'AgendamentoClienteCliente',
+                'Cliente', 
+                'ClienteServico',  
+                'Torneio',
+                'TorneioJogo' => [
+                    'TorneioCategoria' => [
+                        'PadelCategoria'
+                    ],
+                    'TorneioQuadra',
+                    'TorneioJogoTimeUm' => [
+                        'TorneioInscricaoJogadorTimeUm'
+                    ],
+                    'TorneioJogoTimeDois' => [
+                        'TorneioInscricaoJogadorTimeDois'
+                    ]
+                ]
+            ]
+        ]);
+
+        if ( count($agendamento) === 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
+        }
+
+        $agendamento['Agendamento']['tipo'] = 'padrao';
+
+        if ( $agendamento['Agendamento']['dia_semana'] != '' ) {
+            if (!isset($dados['horario'])) {
+                $agendamento = [];
+            } else {
+                $dia_semana_horario_informado = date("w", strtotime($dados['horario']));
+                if ( $dia_semana_horario_informado == $agendamento['Agendamento']['dia_semana'] ) {
+                    $agendamento['Agendamento']['horario'] = $dados['horario'];
+                    $agendamento['Agendamento']['tipo'] = 'fixo';
+                } else {
+                    $agendamento = [];
+                }
+            }
+        }
+        else if ( $agendamento['Agendamento']['dia_mes'] != '' ) {
+            if (!isset($dados['horario'])) {
+                $agendamento = [];
+            } else {
+                $dia_mes_horario_informado = date("d", strtotime($dados['horario']));
+                if ( $dia_mes_horario_informado == $agendamento['Agendamento']['dia_mes'] ) {
+                    $agendamento['Agendamento']['horario'] = $dados['horario'];
+                    $agendamento['Agendamento']['tipo'] = 'fixo';
+                } else {
+                    $agendamento = [];
+                }
+            }
+        }
+
+        // Agendamento de torneio
+        if ( !empty($agendamento['Agendamento']['torneio_id']) ) {
+            $agendamento['Agendamento']['tipo'] = 'torneio';
+    
+            $agendamento['Agendamento']['_can_cancell'] = false;
+            $agendamento['Agendamento']['_cannot_cancell_motive'] = 'Agendamento de torneio';
+            $agendamento['Agendamento']['_can_invite_players'] = false;
+            $agendamento['Agendamento']['_cannot_invite_players_motive'] = 'Agendamento de torneio';
+
+            if ( !empty($agendamento['TorneioQuadra']['servico_id']) ) {
+                $dados_servico = $this->ClienteServico->find('first',[
+                    'fields' => [
+                        'ClienteServico.id',
+                        'ClienteServico.nome',
+                        'ClienteServico.tipo',
+                        'ClienteServico.descricao',
+                        'ClienteServico.avg_avaliacao',
+                    ],
+                    'conditions' => [
+                        'ClienteServico.id' => $agendamento['TorneioQuadra']['servico_id']
+                    ],
+                    'link' => []
+                ]);
+                $agendamento['ClienteServico'] = $dados_servico['ClienteServico'];
+                $agendamento[0]['avg_avaliacao'] = $dados_servico['ClienteServico']['avg_avaliacao'];
+            } else {
+                $agendamento['ClienteServico']['nome'] = $agendamento['TorneioQuadra']['nome'];
+                $agendamento['ClienteServico']['tipo'] = 'Quadra';
+            }
+
+            $this->loadModel('TorneioInscricaoJogador');
+        
+            $time_1 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($agendamento['TorneioJogo']['time_1'], $this->images_path);
+            $time_2 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($agendamento['TorneioJogo']['time_2'], $this->images_path);
+
+            $agendamento['TorneioJogo']['time_1'] = $time_1;
+            $agendamento['TorneioJogo']['time_2'] = $time_2;
+
+            if ( !empty($agendamento['Torneio']['img']) ) {
+                $agendamento['Torneio']['img'] = $this->images_path . 'torneios/' . $agendamento['Torneio']['img'];
+            }
+
+        } else {
+
+            // Verificação de permissões
+            $agendamento['Agendamento']['_can_cancell'] = true;
+            $agendamento['Agendamento']['_cannot_cancell_motive'] = null;
+            $agendamento['Agendamento']['_can_invite_players'] = true;
+            $agendamento['Agendamento']['_cannot_invite_players_motive'] = null;
+    
+            if ( $agendamento['ClienteServico']['tipo'] != 'Quadra'){
+                $agendamento['Agendamento']['_can_invite_players'] = false;
+                $agendamento['Agendamento']['_cannot_invite_players_motive'] = 'O serviço não é uma quadra.';
+            } else if ( $dados_token['Usuario']['nivel_id'] != 3 || !in_array($agendamento['Agendamento']['cliente_cliente_id'], $meus_ids_de_cliente) ) {
+                $agendamento['Agendamento']['_can_invite_players'] = false;
+                $agendamento['Agendamento']['_cannot_invite_players_motive'] = 'Somente o titular pode convidar jogadores';
+            }
+
+            $horario_agendamento = strtotime($agendamento['Agendamento']['horario']);
+            $prazo_max_cancelamento = $agendamento['Cliente']['prazo_maximo_para_canelamento'];
+            list($horas, $minutos, $segundos) = explode(':', $prazo_max_cancelamento);
+            $prazo_max_cancelamento_minutos = ($horas * 60) + $minutos;
+    
+            $limite_cancelamento = strtotime("-{$prazo_max_cancelamento_minutos} minutes", $horario_agendamento);
+    
+            $agendamento['Agendamento']['_cancellable_until'] = date('Y-m-d H:i:s', $limite_cancelamento);
+    
+            if ( $agendamento['Agendamento']['cancelado'] === 'Y' ) {
+                $agendamento['Agendamento']['_can_cancell'] = false;
+                $agendamento['Agendamento']['_cannot_cancell_motive'] = 'Agendamento cancelado';
+            } else if ( $agendamento['Agendamento']['horario'] < date('Y-m-d H:i:s') ) {
+                $agendamento['Agendamento']['_can_cancell'] = false;
+                $agendamento['Agendamento']['_cannot_cancell_motive'] = 'O agendamento já passou';
+            } else if ( $dados_token['Usuario']['nivel_id'] == 3 && !in_array($agendamento['Agendamento']['cliente_cliente_id'], $meus_ids_de_cliente) ) {
+                $agendamento['Agendamento']['tipo'] = 'convidado';    
+                $agendamento['Agendamento']['_can_cancell'] = false;
+                $agendamento['Agendamento']['_cannot_cancell_motive'] = 'Somente o titular do horário pode cancelar.';                
+            } 
+            else if (time() > $limite_cancelamento && $dados_token['Usuario']['nivel_id'] != 2 ) {
+                $agendamento['Agendamento']['_can_cancell'] = false;
+                $agendamento['Agendamento']['_cannot_cancell_motive'] = 'O prazo para cancelamento já expirou.';
+            }
+
+            // Dados do titular do horário
+            if ( !empty($agendamento['Usuario']['img']) ) {
+                $agendamento['ClienteCliente']['img'] = $this->images_path . 'usuarios/' . $agendamento['Usuario']['img'];
+                $agendamento['ClienteCliente']['created'] = $agendamento['Usuario']['created'];
+            } else {
+                $agendamento['ClienteCliente']['img'] = $this->images_path . 'clientes_clientes/' . $agendamento['ClienteCliente']['img'];
+                $agendamento['ClienteCliente']['created'] = null;
+            }
+        
+            // Dados do profissional, se tiver
+            $agendamento['_profissional'] = [];
+            if ( !empty($agendamento['Agendamento']['profissional_id']) ) {
+    
+                $profissional = $this->Usuario->find('first', [
+                    'fields' => [
+                        'Usuario.img',
+                        'Usuario.nome',
+                        'Usuario.email'
+                    ],
+                    'conditions' => [
+                        'Usuario.id' => $agendamento['Agendamento']['profissional_id']
+                    ],
+                    'link' => []
+                ]);
+    
+                if ( count($profissional) > 0 ) {
+                    $profissional['Usuario']['img'] = $this->images_path . 'usuarios/' . $profissional['Usuario']['img'];
+                }
+    
+                $agendamento['_profissional'] = $profissional;
+    
+            }
+
+        }
+
+        $agendamento['Cliente']['logo'] = $this->images_path . 'clientes/' . $agendamento['Cliente']['logo'];
+        $agendamento['Agendamento']['horario_str'] = date('d/m',strtotime($agendamento['Agendamento']['horario']))." às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
+        $data_agendamento = date('Y-m-d',strtotime($agendamento['Agendamento']['horario']));
+            
+        $agendamento['Agendamento']['valor_br'] = number_format($agendamento['Agendamento']['valor'], 2, ',', '.');
+        $agendamento['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($agendamento['Cliente']['id']);
+
+        if ( $data_agendamento == date('Y-m-d') ) {
+            $agendamento['Agendamento']['horario_str'] = "Hoje às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
+        }
+
+        // Fotos do serviço
+        $fotos = $this->ClienteServicoFoto->find('list', [
+            'fields' => [
+                'ClienteServicoFoto.id',
+                'ClienteServicoFoto.imagem'
+            ],
+            'conditions' => [
+                'ClienteServicoFoto.cliente_servico_id' => $agendamento['Agendamento']['servico_id']
+            ],
+            'link' => [],
+        ]);
+
+        foreach( $fotos as $key_foto => $foto ) {
+            $fotos[$key_foto] = $this->images_path . 'servicos/' . $foto;
+        }
+        
+        $agendamento['ClienteServico']['_fotos'] = $fotos;
+
+        // Localidade da empresa
+        if ( $agendamento['Cliente']['pais'] === 'Brasil' ) {
+            $dados_localidade = $this->Localidade->find('first',[
+                'fields' => [
+                    'Localidade.loc_no'
+                ],
+                'conditions' => [
+                    'Localidade.loc_nu_sequencial' => $agendamento['Cliente']['cidade_id']
+                ],
+                'link' => []
+            ]);
+
+            $agendamento['Cliente']['_cidade'] = $dados_localidade['Localidade']['loc_no'];
+
+        } else {
+            $dados_localidade = $this->UruguaiCidade->find('first',[
+                'fields' => [
+                    'UruguaiCidade.nome'
+                ],
+                'conditions' => [
+                    'UruguaiCidade.id' => $agendamento['Cliente']['ui_cidade']
+                ],
+                'link' => []
+            ]);
+
+            $agendamento['Cliente']['_cidade'] = $dados_localidade['UruguaiCidade']['nome'];
+
+        }
+
+        if ( $agendamento['ClienteServico']['tipo'] === 'Quadra' ) {
+            $this->loadModel('ClienteCliente');
+            $cliente_cliente = $this->ClienteCliente->find('all',[
+                'fields' => [
+                    'Usuario.nome',
+                    'Usuario.img',
+                    'ClienteCliente.id',
+                    'ClienteCliente.img',
+                    'ClienteCliente.nome',
+                    'AgendamentoConvite.id',
+                    'ClienteCliente.id'
+                ],
+                'conditions' => [
+                    'OR' => [
+                        [
+                            'Agendamento.id' => $agendamento['Agendamento']['id']
+                        ],
+                        [
+                            'AgendamentoClienteCliente.agendamento_id' => $agendamento['Agendamento']['id']
+                        ],
+                    ]
+                ],
+                'link' => [
+                    'Usuario',
+                    'Agendamento' => [
+                        'AgendamentoConvite' => [
+                            'conditions' => [
+                                'AgendamentoConvite.cliente_cliente_id = ClienteCliente.id',
+                                'AgendamentoConvite.agendamento_id' => $agendamento['Agendamento']['id'],
+                                'AgendamentoConvite.horario' => $agendamento['Agendamento']['horario']
+                            ]
+                        ]
+                    ],
+                    'AgendamentoClienteCliente'
+                ],
+                'group' => [
+                    'ClienteCliente.id'
+                ]
+            ]);
+
+            $jogadores_confirmados = [];
+            foreach( $cliente_cliente as $cli ) {
+                $jogadores_confirmados[] = [
+                    'img' => !empty($cli['Usuario']['img']) ? $this->images_path.'usuarios/'.$cli['Usuario']['img'] : $this->images_path.'cliente_cliente/'.$cli['ClienteCliente']['img'],
+                    'nome' => !empty($cli['Usuario']['nome']) ? $cli['Usuario']['nome'] : $cli['ClienteCliente']['nome'],
+                    'convite_id' => !empty($cli['AgendamentoConvite']['id']) ? $cli['AgendamentoConvite']['id'] : null,
+                ]; 
+            }
+
+            $agendamento['_confirmed_players'] = $jogadores_confirmados;
+        }
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $agendamento))));
+    }
+
     public function empresa() {
 
         $this->layout = 'ajax';
@@ -590,6 +987,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('Token');
         $this->loadModel('ClienteServico');
         $this->loadModel('AgendamentoFixoCancelado');
+        $this->loadModel('AgendamentoClienteCliente');
 
         $dados_servico = $this->ClienteServico->find("first",[
             "conditions" => [
@@ -787,6 +1185,9 @@ class AgendamentosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cadastrar seu agendamento!'))));
         }
 
+        // Cria um registro na tabela de sincronização
+        $this->AgendamentoClienteCliente->add($dados_agendamento_salvo['Agendamento']['cliente_cliente_id'], $dados_agendamento_salvo['Agendamento']['id']);
+
         if ( count($fixos_cancelar) > 0 ) {
 
             $dados_cancelamentos_salvar = [];
@@ -833,7 +1234,8 @@ class AgendamentosController extends AppController {
                 $notification_msg, 
                 "agendamento", 
                 'novo_agendamento', 
-                ["en"=> '$[notif_count] Novos Agendamentos']
+                ["en"=> '$[notif_count] Novos Agendamentos'],
+                null
             );
         }
 
@@ -950,7 +1352,11 @@ class AgendamentosController extends AppController {
             throw new BadRequestException('Hora não informada!', 401);
         }
 
-        list($data_selecionada, $horario_selecionado) = explode(' ',$dados->horaSelecionada->horario);
+        if ( gettype($dados->horaSelecionada) === 'string' ) {
+            list($data_selecionada, $horario_selecionado) = explode(' ',$dados->horaSelecionada);
+        } else {
+            list($data_selecionada, $horario_selecionado) = explode(' ',$dados->horaSelecionada->horario);
+        }
 
         $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
         if ( !$dados_usuario ) {
@@ -1021,7 +1427,11 @@ class AgendamentosController extends AppController {
             $dados->convites_grl = (object)$dados->convites_grl;
         }
 
-        $dados_agendamento['Agendamento']['horario'] = $dados->horaSelecionada->horario;
+        if ( gettype($dados->horaSelecionada) === 'string' ) {
+            $dados_agendamento['Agendamento']['horario'] = $dados->horaSelecionada;
+        } else {
+            $dados_agendamento['Agendamento']['horario'] = $dados->horaSelecionada->horario;
+        }
 
         $this->enviaConvites($dados, $dados_agendamento, $dados_cliente['Localidade']);
         

@@ -1,3 +1,5 @@
+COPIAR OS NOVOS VALORES DE .ENV
+
 UPDATE clientes_servicos_horarios AS csh
 JOIN clientes_servicos AS cs ON csh.cliente_servico_id = cs.id
 SET csh.valor_fixos = cs.valor, csh.valor_padrao = cs.valor;
@@ -104,3 +106,50 @@ CREATE TABLE `notificacoes_configuracoes_usuario` (
 COLLATE='latin1_swedish_ci'
 ENGINE=InnoDB
 ;
+
+CREATE TABLE IF NOT EXISTS `notificacoes_motivos` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created` timestamp NULL DEFAULT NULL,
+  `updated` timestamp NULL DEFAULT NULL,
+  `nome` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `titulo` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `cena` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO `notificacoes_motivos` (`id`, `created`, `updated`, `nome`, `titulo`, `cena`) VALUES
+	(1, '2024-11-23 15:50:31', '2024-11-23 15:50:32', 'Novo Agendamento Empresa', 'agendamento_empresa', NULL),
+	(2, '2024-11-23 15:50:33', '2024-11-23 15:50:33', 'Agendamento Usuário', 'agendamento_usuario', NULL),
+	(3, '2024-11-23 15:50:36', '2024-11-23 15:50:37', 'Cancelamento Empresa', 'cancelamento_empresa', NULL),
+	(4, '2024-11-23 15:51:14', '2024-11-23 15:51:15', 'Cancelamento Usuário', 'cancelamento_usuario', NULL),
+	(5, '2024-11-23 15:51:28', '2024-11-23 15:51:29', 'Lembrete de Agendamento', 'lembrete_agendamento', NULL),
+	(6, '2024-11-23 15:52:29', '2024-11-23 15:52:28', 'Lembrete de Agendamento Torneio', 'lembrete_agendamento_torneio', NULL),
+	(7, '2024-11-23 15:54:19', '2024-11-23 15:54:21', 'Nova Promoção', 'nova_promocao', NULL),
+	(8, '2024-11-23 15:56:40', '2024-11-23 15:56:41', 'Novo Torneio de Padel', 'novo_torneio_padel', NULL),
+	(9, '2024-11-23 15:58:29', '2024-11-23 15:58:30', 'Lembrete para Avaliar', 'lembrete_avaliar', NULL);
+
+
+ALTER TABLE `notificacoes`
+	ADD COLUMN `agendamento_id` INT NULL DEFAULT NULL AFTER `id_one_signal`,
+	ADD COLUMN `promocao_id` INT NULL DEFAULT NULL AFTER `agendamento_id`,
+	ADD CONSTRAINT `FK_notificacoes_agendamentos` FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
+	ADD CONSTRAINT `FK_notificacoes_promocoes` FOREIGN KEY (`promocao_id`) REFERENCES `promocoes` (`id`) ON UPDATE CASCADE ON DELETE NO ACTION;
+
+
+
+ALTER TABLE `notificacoes_configuracoes_usuario`
+	ADD COLUMN `receber_avisos_cancelamentos` TINYINT(1) NOT NULL DEFAULT '1' AFTER `receber_lembretes`;
+
+
+ALTER TABLE `notificacoes`
+	ADD COLUMN `notificacao_motivo_id` INT NULL DEFAULT NULL AFTER `promocao_id`,
+	ADD CONSTRAINT `FK_notificacoes_notificacoes_motivos` FOREIGN KEY (`notificacao_motivo_id`) REFERENCES `notificacoes_motivos` (`id`) ON UPDATE CASCADE ON DELETE NO ACTION;
+
+  ALTER TABLE `notificacoes_motivos`
+	ADD INDEX `nome` (`nome`);
+
+agendamento_data_hora datetime null na tabela de notificações
+
+
+ALTER TABLE `clientes_clientes`
+	ADD COLUMN `created` TIMESTAMP NULL DEFAULT NULL AFTER `id`;

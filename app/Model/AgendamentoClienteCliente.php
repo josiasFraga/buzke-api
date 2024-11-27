@@ -6,6 +6,9 @@ class AgendamentoClientecliente extends AppModel {
 		'Agendamento' => array(
 			'foreignKey' => 'agendamento_id'
         ),
+		'ClienteCliente' => array(
+			'foreignKey' => 'cliente_cliente_id'
+        ),
     );
 
     public function add($cliente_cliente_id = null, $agendamento_id = null) {

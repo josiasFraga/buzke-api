@@ -12,6 +12,12 @@ class TorneioJogo extends AppModel {
 		'TorneioQuadra' => array(
 			'foreignKey' => 'torneio_quadra_id'
         ),
+		'TorneioJogoTimeUm' => array(
+			'foreignKey' => 'time_1'
+        ),
+		'TorneioJogoTimeDois' => array(
+			'foreignKey' => 'time_2'
+        ),
 	);
 
 	public $hasMany = array(

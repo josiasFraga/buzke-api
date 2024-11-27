@@ -147,7 +147,10 @@ class NotificacoesController extends AppController {
                 'receber_promocoes' => 1,
                 'receber_lembretes' => 1,
                 'receber_avaliacoes' => 1,
-                'receber_convites' => 1
+                'receber_convites' => 1,
+                'receber_avisos_cancelamentos' => 1,
+                'receber_aviso_novo_torneio_padel' => 1,
+                'receber_aviso_jogos_padel_liberados' => 1
             ];
 
             $this->NotificacaoConfiguracaoUsuario->create();
@@ -208,6 +211,9 @@ class NotificacoesController extends AppController {
         $dados_salvar['receber_lembretes'] = isset($dados->receber_lembretes) ? $dados->receber_lembretes : false;
         $dados_salvar['receber_avaliacoes'] = isset($dados->receber_avaliacoes) ? $dados->receber_avaliacoes : false;
         $dados_salvar['receber_convites'] = isset($dados->receber_convites) ? $dados->receber_convites : false;
+        $dados_salvar['receber_avisos_cancelamentos'] = isset($dados->receber_avisos_cancelamentos) ? $dados->receber_avisos_cancelamentos : false;
+        $dados_salvar['receber_aviso_novo_torneio_padel'] = isset($dados->receber_aviso_novo_torneio_padel) ? $dados->receber_aviso_novo_torneio_padel : false;
+        $dados_salvar['receber_aviso_jogos_padel_liberados'] = isset($dados->receber_aviso_jogos_padel_liberados) ? $dados->receber_aviso_jogos_padel_liberados : false;
 
         if ( !$this->NotificacaoConfiguracaoUsuario->save($dados_salvar) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar as configurações de notificações.'))));
@@ -223,6 +229,32 @@ class NotificacoesController extends AppController {
         foreach( $notificacoes as $key => $not ){
             debug($not);
         }
+
+        die();
+    }
+
+    public function testar() {
+
+        $dados = $this->request->query;
+        $usuario_id = $dados['usuario_id'];
+        $agendamento_id = $dados['agendamento_id'];
+        $notification_msg = 'Teste mensagem';
+        $agendamento_data = $dados['agendamento_data'];
+
+        $this->loadModel('Token');
+        
+        $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuario_id);
+        
+
+        $this->sendNotificationNew( 
+            $usuario_id,
+            $notifications_ids, 
+            $agendamento_id,
+            $agendamento_data,
+            null,
+            'agendamento_empresa',
+            ["en"=> '$[notif_count] Novos Agendamentos']
+        );
 
         die();
     }

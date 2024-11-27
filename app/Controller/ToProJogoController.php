@@ -731,6 +731,9 @@ class ToProJogoController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];
 
+        //$this->log($dados, 'debug');
+        //die();
+
         if ( is_array($dados) ) {
             $dados = json_decode(json_encode($dados, true));
 
@@ -852,12 +855,26 @@ class ToProJogoController extends AppController {
 
             if ( $salvo ) {
 
+                $dados_convite = $this->AgendamentoConvite->find('first',[
+                    'conditions' => [
+                        'AgendamentoConvite.id' => $salvo['AgendamentoConvite']['id']
+                    ],
+                    'link' => []
+                ]);
+
                 // Se todos confirmaram, adiciona o convidado no agendamento
-                if ( $salvo['AgendamentoConvite']['confirmado_usuario'] === 'Y' && $salvo['AgendamentoConvite']['confirmado_convidado'] === 'Y' ) {
-                    $this->AgendamentoClienteCliente->add($salvo['AgendamentoConvite']['cliente_cliente_id'], $salvo['AgendamentoConvite']['agendamento_id']);
+                if ( $dados_convite['AgendamentoConvite']['confirmado_usuario'] === 'Y' && $dados_convite['AgendamentoConvite']['confirmado_convidado'] === 'Y' ) {
+                    $this->AgendamentoClienteCliente->add($dados_convite['AgendamentoConvite']['cliente_cliente_id'], $dados_convite['AgendamentoConvite']['agendamento_id']);
+                }
+
+                if ( $dados_convite['AgendamentoConvite']['confirmado_usuario'] === 'R' ) {
+                    $this->AgendamentoClienteCliente->deleteAll([
+                        'AgendamentoClienteCliente.cliente_cliente_id' => $dados_convite['AgendamentoConvite']['cliente_cliente_id'],
+                        'AgendamentoClienteCliente.agendamento_id' => $dados_convite['AgendamentoConvite']['agendamento_id']
+                    ]);
                 }
     
-                $this->enviaNotificacaoDeAcaoDoConvite($msg, $dados_convite['AgendamentoConvite']['cliente_cliente_id'], $dados_convite['Agendamento']['id']);
+                $this->enviaNotificacaoDeAcaoDoConvite($msg, $dados_convite['AgendamentoConvite']['cliente_cliente_id'], $dados_convite['AgendamentoConvite']['agendamento_id']);
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Resposta ao convite cadastrada com sucesso!'))));
             } else {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao cadastrar a resposta do convite!'))));

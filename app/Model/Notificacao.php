@@ -2,6 +2,12 @@
 class Notificacao extends AppModel {
 	public $useTable = 'notificacoes';
 
+	public $belongsTo = array(
+		'NotificacaoMotivo' => array(
+			'foreignKey' => 'notificacao_motivo_id'
+		),
+	);
+
 	public $hasMany = array(
 		'NotificacaoUsuario' => array(
 			'foreignKey' => 'notificacao_id'
@@ -19,6 +25,10 @@ class Notificacao extends AppModel {
                 'Notificacao.created',
                 'Notificacao.title',
                 'Notificacao.message',
+                'Notificacao.agendamento_id',
+                'Notificacao.promocao_id',
+                'Notificacao.notificacao_motivo_id',
+                'Notificacao.agendamento_data_hora',
                 'Notificacao.read',
             ],
             'conditions' => [
