@@ -90,43 +90,24 @@ CREATE TABLE IF NOT EXISTS `promocoes` (
   CONSTRAINT `FK_promocoes_clientes` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=latin1;
 
-CREATE TABLE `notificacoes_configuracoes_usuario` (
-	`id` INT NOT NULL AUTO_INCREMENT,
-	`usuario_id` INT NOT NULL,
-	`receber_promocoes` TINYINT(1) NOT NULL DEFAULT '1',
-	`receber_lembretes` TINYINT(1) NOT NULL DEFAULT '1',
-	`receber_avaliacoes` TINYINT(1) NOT NULL DEFAULT '1',
-	`receber_convites` TINYINT(1) NOT NULL DEFAULT '1',
-	`created` TIMESTAMP NULL DEFAULT NULL,
-	`updated` TIMESTAMP NULL DEFAULT NULL,
-	PRIMARY KEY (`id`) USING BTREE,
-	INDEX `FK_notificacoes_configuracoes_usuario_usuarios` (`usuario_id`) USING BTREE,
-	CONSTRAINT `FK_notificacoes_configuracoes_usuario_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
-)
-COLLATE='latin1_swedish_ci'
-ENGINE=InnoDB
-;
 
-CREATE TABLE IF NOT EXISTS `notificacoes_motivos` (
+CREATE TABLE IF NOT EXISTS `notificacoes_configuracoes_usuario` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `usuario_id` int NOT NULL,
+  `receber_promocoes` tinyint(1) NOT NULL DEFAULT '1',
+  `receber_avisos_novos_agendamentos` tinyint(1) NOT NULL DEFAULT '1',
+  `receber_lembretes` tinyint(1) NOT NULL DEFAULT '1',
+  `receber_avisos_cancelamentos` tinyint(1) NOT NULL DEFAULT '1',
+  `receber_aviso_novo_torneio_padel` tinyint(1) NOT NULL DEFAULT '1',
+  `receber_avaliacoes` tinyint(1) NOT NULL DEFAULT '1',
+  `receber_convites` tinyint(1) NOT NULL DEFAULT '1',
+  `receber_aviso_jogos_padel_liberados` tinyint(1) NOT NULL DEFAULT '1',
   `created` timestamp NULL DEFAULT NULL,
   `updated` timestamp NULL DEFAULT NULL,
-  `nome` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `titulo` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `cena` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-INSERT INTO `notificacoes_motivos` (`id`, `created`, `updated`, `nome`, `titulo`, `cena`) VALUES
-	(1, '2024-11-23 15:50:31', '2024-11-23 15:50:32', 'Novo Agendamento Empresa', 'agendamento_empresa', NULL),
-	(2, '2024-11-23 15:50:33', '2024-11-23 15:50:33', 'Agendamento Usuário', 'agendamento_usuario', NULL),
-	(3, '2024-11-23 15:50:36', '2024-11-23 15:50:37', 'Cancelamento Empresa', 'cancelamento_empresa', NULL),
-	(4, '2024-11-23 15:51:14', '2024-11-23 15:51:15', 'Cancelamento Usuário', 'cancelamento_usuario', NULL),
-	(5, '2024-11-23 15:51:28', '2024-11-23 15:51:29', 'Lembrete de Agendamento', 'lembrete_agendamento', NULL),
-	(6, '2024-11-23 15:52:29', '2024-11-23 15:52:28', 'Lembrete de Agendamento Torneio', 'lembrete_agendamento_torneio', NULL),
-	(7, '2024-11-23 15:54:19', '2024-11-23 15:54:21', 'Nova Promoção', 'nova_promocao', NULL),
-	(8, '2024-11-23 15:56:40', '2024-11-23 15:56:41', 'Novo Torneio de Padel', 'novo_torneio_padel', NULL),
-	(9, '2024-11-23 15:58:29', '2024-11-23 15:58:30', 'Lembrete para Avaliar', 'lembrete_avaliar', NULL);
+  PRIMARY KEY (`id`),
+  KEY `FK_notificacoes_configuracoes_usuario_usuarios` (`usuario_id`),
+  CONSTRAINT `FK_notificacoes_configuracoes_usuario_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
 
 
 ALTER TABLE `notificacoes`
@@ -140,16 +121,72 @@ ALTER TABLE `notificacoes`
 ALTER TABLE `notificacoes_configuracoes_usuario`
 	ADD COLUMN `receber_avisos_cancelamentos` TINYINT(1) NOT NULL DEFAULT '1' AFTER `receber_lembretes`;
 
+ALTER TABLE `notificacoes_configuracoes_usuario`
+	ADD COLUMN `receber_avisos_cancelamentos` TINYINT(1) NOT NULL DEFAULT '1' AFTER `receber_lembretes`;
 
-ALTER TABLE `notificacoes`
-	ADD COLUMN `notificacao_motivo_id` INT NULL DEFAULT NULL AFTER `promocao_id`,
-	ADD CONSTRAINT `FK_notificacoes_notificacoes_motivos` FOREIGN KEY (`notificacao_motivo_id`) REFERENCES `notificacoes_motivos` (`id`) ON UPDATE CASCADE ON DELETE NO ACTION;
 
-  ALTER TABLE `notificacoes_motivos`
-	ADD INDEX `nome` (`nome`);
 
+
+valor na tebela de agendamentos
 agendamento_data_hora datetime null na tabela de notificações
 
 
 ALTER TABLE `clientes_clientes`
 	ADD COLUMN `created` TIMESTAMP NULL DEFAULT NULL AFTER `id`;
+
+
+
+-- Copiando estrutura para tabela buzke_app.notificacoes_motivos
+CREATE TABLE IF NOT EXISTS `notificacoes_motivos` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created` timestamp NULL DEFAULT NULL,
+  `updated` timestamp NULL DEFAULT NULL,
+  `titulo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `nome` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `permissao` varchar(80) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `grupo` varchar(80) COLLATE utf8mb4_general_ci NOT NULL,
+  `titulo_notificacao` varchar(180) COLLATE utf8mb4_general_ci NOT NULL,
+  `msg_notificacao` text COLLATE utf8mb4_general_ci NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `nome` (`nome`)
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Copiando dados para a tabela buzke_app.notificacoes_motivos: ~12 rows (aproximadamente)
+INSERT INTO `notificacoes_motivos` (`id`, `created`, `updated`, `titulo`, `nome`, `permissao`, `grupo`, `titulo_notificacao`, `msg_notificacao`) VALUES
+	(1, '2024-11-23 15:50:31', '2024-11-23 15:50:32', 'Novo Agendamento criado pela empresa', 'agendamento_empresa', 'receber_avisos_novos_agendamentos', 'agendamentos', 'Novo Agendamento :)', 'Você tem um novo agendamento de {{empresa_nome}} às {{hora_agendamento}} do dia {{dia_agendamento}}. Quadra/Serviço: {{servico_nome}}'),
+	(2, '2024-11-23 15:50:33', '2024-11-23 15:50:33', 'Novo agendamento criado pelo usuário', 'agendamento_usuario', NULL, 'agendamentos', 'Novo Agendamento :)', 'Você tem um novo agendamento de {{usuario_nome}} às {{hora_agendamento}} do dia {{dia_agendamento}}. Quadra/Serviço: {{servico_nome}}'),
+	(3, '2024-11-23 15:50:36', '2024-11-23 15:50:37', 'Agendamento cancelado pela empresa', 'cancelamento_empresa', 'receber_avisos_cancelamentos', 'cancelamentos', 'Agendamento Cancelado :(', 'A {{empresa_nome}} cancelou seu agendamento de {{dia_agendamento}} das {{hora_agendamento}}'),
+	(4, '2024-11-23 15:51:14', '2024-11-23 15:51:15', 'Agendamento cancelado pelo usuário', 'cancelamento_usuario', NULL, 'cancelamento', 'Agendamento Cancelado :(', '{{usuario_nome}} cancelou seu agendamento de {{dia_agendamento}} das {{hora_agendamento}}'),
+	(5, '2024-11-23 15:51:28', '2024-11-23 15:51:29', 'Lembrete de agendamento', 'lembrete_agendamento', 'receber_lembretes', 'agendamentos', 'Lembrete de Agendamento', 'Passamos pra lembrar do seu agendamento na {{empresa_nome}} no dia {{dia_agendamento}} às {{hora_agendamento}}. Quadra/Servico: {{servico_nome}}'),
+	(6, '2024-11-23 15:52:29', '2024-11-23 15:52:28', 'Lembrete de agendamento de torneio', 'lembrete_agendamento_torneio', 'receber_lembretes', 'agendamentos', 'Lembrete de Jogo de Torneio', 'Passamos pra lembrar do seu jogo no torneio {{torneio_nome}} na {{empresa_nome}} no dia {{dia_agendamento}} às {{hora_agendamento}}. Quadra: {{servico_nome}}'),
+	(7, '2024-11-23 15:54:19', '2024-11-23 15:54:21', 'Nova promoção criada', 'nova_promocao', 'receber_promocoes', 'promocoes', 'Nova Promocao', 'A {{empresa_nome}} cadastrou uma nova promoção em seus serviços! Acesse o app e confira agora e aproveite as ofertas especiais.'),
+	(8, '2024-11-23 15:56:40', '2024-11-23 15:56:41', 'Novo torneio de padel criado', 'novo_torneio_padel', 'receber_aviso_novo_torneio_padel', 'torneios', 'Novo Torneio de Padel', 'Novo torneio na {{empresa_nome}} do dia {{torneio_data_inicio}} até o dia {{torneio_data_fim}}. Torneio: {{torneio_nome}}'),
+	(9, '2024-11-23 15:58:29', '2024-11-23 15:58:30', 'Lembrete para Avaliar', 'lembrete_avaliar', 'receber_avaliacoes', 'avaliacoes', 'Não se esqueça de avaliar!', 'Que tal avaliar o serviço do seu último agendamento? Sua opinião é super importante e ajuda outros usuários a escolherem melhor!'),
+	(10, '2024-11-24 16:16:24', '2024-11-24 16:16:25', 'Jogos do torneio librados', 'jogos_torneio_padel_liberados', 'receber_aviso_jogos_padel_liberados', 'torneios', 'Jogos Liberados!', 'Os jogos do torenio {{torneio_nome}} já estão disponíveis.'),
+	(11, '2024-11-27 18:51:18', '2024-11-27 18:51:17', 'Convite de jogo recebido', 'convite_jogo', 'receber_convites', 'convites', 'Você recebeu um convite', 'Você recebeu um convite para jogar.'),
+	(12, '2024-11-27 18:53:51', '2024-11-27 18:53:51', 'Resposta do convite recebida', 'resposta_convite_jogo', NULL, 'convites', 'Você recebeu a resposta do convite', 'Você recebeu a resposta de um dos convites para jogar.');
+
+
+  
+ALTER TABLE `notificacoes`
+	ADD COLUMN `notificacao_motivo_id` INT NULL DEFAULT NULL AFTER `promocao_id`,
+	ADD CONSTRAINT `FK_notificacoes_notificacoes_motivos` FOREIGN KEY (`notificacao_motivo_id`) REFERENCES `notificacoes_motivos` (`id`) ON UPDATE CASCADE ON DELETE NO ACTION;
+
+
+ALTER TABLE `notificacoes_usuarios`
+	ADD COLUMN `usuario_id` INT NULL DEFAULT NULL AFTER `updated`,
+	ADD CONSTRAINT `FK_notificacoes_usuarios_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+ALTER TABLE `notificacoes`
+	CHANGE COLUMN `promocao_id` `registro_id` INT NULL DEFAULT NULL AFTER `agendamento_id`,
+	DROP INDEX `FK_notificacoes_promocoes`,
+	ADD INDEX `FK_notificacoes_promocoes` (`registro_id`) USING BTREE,
+	DROP FOREIGN KEY `FK_notificacoes_promocoes`;
+
+
+ALTER TABLE `notificacoes`
+	DROP INDEX `FK_notificacoes_promocoes`;
+  
+ALTER TABLE `notificacoes`
+	ADD INDEX `registro_id` (`registro_id`);

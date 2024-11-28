@@ -771,12 +771,15 @@ class ToProJogoController extends AppController {
         $this->loadModel('ClienteCliente');
         $this->loadModel('AgendamentoConvite');
         $this->loadModel('AgendamentoClienteCliente');
+        $this->loadModel('Token');
         
         $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
 
         $dados_convite = $this->AgendamentoConvite->find('first',[
             'fields' => [
-                '*', 
+                'AgendamentoConvite.*', 
+                'Agendamento.*',
+                'Usuario.id',
             ],
             'conditions' => [
                 'AgendamentoConvite.id' => $dados->invite_id,
@@ -785,7 +788,7 @@ class ToProJogoController extends AppController {
                     'Agendamento.cliente_cliente_id' => $meus_ids_de_cliente
                 ]
             ],
-            'link' => ['Agendamento']
+            'link' => ['Agendamento' => ['ClienteCliente' => ['Usuario']]]
         ]);
 
         if ( count($dados_convite) == 0 ) {
@@ -813,13 +816,14 @@ class ToProJogoController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O convite foi recusado pelo convidado!'))));
        }
 
+       // se é o convidado que está salvando a ação
        if ($convidado) {
             if ($acao == 1) {
-               $msg = 'O convidado ['.$dados_token['Usuario']['nome'].'] aceitou o convite para o jogo. :)';
-               $resposta = 'Y';
+                $nome_notificacao = "resposta_positiva_convite_jogo";
+                $resposta = 'Y';
 
             } else {
-                $msg = 'O convidado ['.$dados_token['Usuario']['nome'].'] recusou o convite para o jogo. :(';
+                $nome_notificacao = "resposta_negativa_convite_jogo";
                 $resposta = 'R';
             }
 
@@ -829,20 +833,32 @@ class ToProJogoController extends AppController {
             ];
 
             $salvo = $this->AgendamentoConvite->save($dados_salvar);
+            //$salvo = true;
             if ( $salvo ) {
-                $this->enviaNotificacaoDeAcaoDoConvite($msg, $dados_convite['Agendamento']['cliente_cliente_id'], $dados_convite['Agendamento']['id']);
+        
+                $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_convite['Usuario']['id']);
+
+                $this->sendNotificationNew(
+                    $dados_convite['Usuario']['id'],
+                    $notifications_ids, 
+                    $dados_convite['AgendamentoConvite']['id'],
+                    null,
+                    $nome_notificacao,
+                    ["en"=> '$[notif_count] Novos Agendamentos'],
+                );
+
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Resposta ao convite cadastrada com sucesso!'))));
             } else {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao cadastrar a resposta do convite!'))));
             }
 
-       } else {
+       } else {// Se é o dono do horário que está salvando a ação
             if ($acao == 1) {
-                $msg = 'O dono do horário ['.$dados_token['Usuario']['nome'].'] confirmou sua participação no jogo. :)';
+                $nome_notificacao = 'confirmacao_participacao_convite';
                 $resposta = 'Y';
 
             } else {
-                $msg = 'O dono do horário ['.$dados_token['Usuario']['nome'].'] informou que o jogo já estava completo. :(';
+                $nome_notificacao = 'cancelamento_participacao_convite';
                 $resposta = 'R';
             }
 
@@ -856,10 +872,18 @@ class ToProJogoController extends AppController {
             if ( $salvo ) {
 
                 $dados_convite = $this->AgendamentoConvite->find('first',[
+                    'fields' => [
+                        'Usuario.id',
+                        'AgendamentoConvite.*'
+                    ],
                     'conditions' => [
                         'AgendamentoConvite.id' => $salvo['AgendamentoConvite']['id']
                     ],
-                    'link' => []
+                    'link' => [
+                        'ClienteCliente' => [
+                            'Usuario'
+                        ]
+                    ]
                 ]);
 
                 // Se todos confirmaram, adiciona o convidado no agendamento
@@ -873,8 +897,17 @@ class ToProJogoController extends AppController {
                         'AgendamentoClienteCliente.agendamento_id' => $dados_convite['AgendamentoConvite']['agendamento_id']
                     ]);
                 }
-    
-                $this->enviaNotificacaoDeAcaoDoConvite($msg, $dados_convite['AgendamentoConvite']['cliente_cliente_id'], $dados_convite['AgendamentoConvite']['agendamento_id']);
+
+                $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_convite['Usuario']['id']);
+
+                $this->sendNotificationNew(
+                    $dados_convite['Usuario']['id'],
+                    $notifications_ids, 
+                    $dados_convite['AgendamentoConvite']['id'],
+                    null,
+                    $nome_notificacao,
+                    ["en"=> '$[notif_count] Novos Agendamentos'],
+                );
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Resposta ao convite cadastrada com sucesso!'))));
             } else {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao cadastrar a resposta do convite!'))));
@@ -948,6 +981,7 @@ class ToProJogoController extends AppController {
         }
 
         $this->loadModel('AgendamentoConvite');
+        $this->loadModel('Token');
         $convites_nao_confirmados = $this->AgendamentoConvite->getUnconfirmedUsers($dados->agendamento_id, $this->images_path.'/usuarios/', $dados->horario);
 
         if ( count($convites_nao_confirmados) > 0 ) {
@@ -963,7 +997,17 @@ class ToProJogoController extends AppController {
     
                 $salvo = $this->AgendamentoConvite->save($dados_salvar);
                 if ( $salvo ) {
-                    $this->enviaNotificacaoDeAcaoDoConvite($msg, $convite['ClienteCliente']['id'], $convite['AgendamentoConvite']['agendamento_id']);
+
+                    $notifications_ids = $this->Token->getIdsNotificationsUsuario($convite['Usuario']['id']);
+
+                    $this->sendNotificationNew(
+                        $convite['Usuario']['id'],
+                        $notifications_ids, 
+                        $convite['AgendamentoConvite']['id'],
+                        null,
+                        'cancelamento_participacao_convite',
+                        ["en"=> '$[notif_count] Convites Cancelados'],
+                    );
                     //return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Resposta ao convite cadastrada com sucesso!'))));
                 } else {
                     return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao cadastrar a resposta do convite!'))));

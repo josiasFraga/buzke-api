@@ -25,14 +25,44 @@ class Notificacao extends AppModel {
                 'Notificacao.created',
                 'Notificacao.title',
                 'Notificacao.message',
-                'Notificacao.agendamento_id',
-                'Notificacao.promocao_id',
+                'Notificacao.registro_id',
                 'Notificacao.notificacao_motivo_id',
                 'Notificacao.agendamento_data_hora',
                 'Notificacao.read',
             ],
             'conditions' => [
                 'NotificacaoUsuario.token' => $tokens
+            ],
+            'order' => [
+                'Notificacao.id DESC'
+            ],
+            'group' => [
+                'Notificacao.id'
+            ],
+            'link' => ['NotificacaoUsuario']
+        ]);
+
+    }
+
+    public function getByUserId( $user_id = null ){
+        if ( empty($user_id) ){
+            return [];
+        }
+
+        return $this->find('all',[
+            'fields' => [
+                'Notificacao.id',
+                'Notificacao.created',
+                'Notificacao.title',
+                'Notificacao.message',
+                'Notificacao.registro_id',
+                'Notificacao.registro_id',
+                'Notificacao.notificacao_motivo_id',
+                'Notificacao.agendamento_data_hora',
+                'Notificacao.read',
+            ],
+            'conditions' => [
+                'NotificacaoUsuario.usuario_id' => $user_id
             ],
             'order' => [
                 'Notificacao.id DESC'
@@ -63,7 +93,25 @@ class Notificacao extends AppModel {
 
     }
 
-    public function setRead( $type = 'one', $notification_id = null, $ids_one_singal = []) {
+    public function countByUserId( $user_id = null ){
+        if ( empty($user_id) ){
+            return 0;
+        }
+
+        return $this->find('count',[
+            'conditions' => [
+                'NotificacaoUsuario.usuario_id' => $user_id,
+                'Notificacao.read' => 'N'
+            ],
+            'group' => [
+                'Notificacao.id'
+            ],
+            'link' => ['NotificacaoUsuario']
+        ]);
+
+    }
+
+    public function setRead( $type = 'one', $notification_id = null, $user_id = null) {
         if ( $type == 'one' ){
 
             if ( $notification_id == null ){
@@ -81,13 +129,13 @@ class Notificacao extends AppModel {
         }
         else if ( $type == 'all' ){
 
-            if ( count($ids_one_singal) == 0 ){
+            if ( empty($user_id) ){
                 return false;
             }
 
             $notifications_ids = $this->find('list',[
                 'fields' => ['Notificacao.id', 'Notificacao.id'],
-                'conditions' => ['NotificacaoUsuario.token' => $ids_one_singal],
+                'conditions' => ['NotificacaoUsuario.usuario_id' => $user_id],
                 'link' => ['NotificacaoUsuario']
             ]);
 
@@ -109,5 +157,24 @@ class Notificacao extends AppModel {
             return false;
         }
 
+    }
+
+    public function getIdFromOneSginalId($one_signal_id = null) {
+        if ( empty($one_signal_id) ) {
+            return null;
+        }
+
+        $dados_notificacao = $this->find('first',[
+            'conditions' => [
+                'id_one_signal' => $one_signal_id
+            ],
+            'link' => []
+        ]);
+
+        if ( count($one_signal_id) === 0 ) {
+            return null;
+        }
+
+        return $dados_notificacao['Notificacao']['id'];
     }
 }

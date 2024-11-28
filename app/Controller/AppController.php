@@ -1086,11 +1086,10 @@ class AppController extends Controller {
     }
 
 	public function sendNotificationNew ( 
-        $usuario_id,
+        $usuario_id = null,
         $arr_ids = [],
-        $agendamento_id = null, 
+        $registro_id = null, 
         $agendamento_data = null,
-        $promocao_id = null, 
         $motivo = null, 
         $group_message = ''
     ){
@@ -1108,6 +1107,11 @@ class AppController extends Controller {
             return false;
         }
 
+        // Se foi um agendamento feito pela empresa mas não tem id do usuário
+        if ( empty($usuario_id) && $motivo === 'agendamento_empresa' ) {
+            return false;
+        }
+
         $this->loadModel('NotificacaoMotivo');
         $motivo_dados = $this->NotificacaoMotivo->find('first',[
             'conditions' => [
@@ -1120,13 +1124,23 @@ class AppController extends Controller {
             return false;
         }
 
+        if ( !empty($motivo_dados['NotificacaoMotivo']['permissao']) ) {  
+     
+            $this->loadModel('NotificacaoConfiguracaoUsuario');
+            $checkPermission = $this->NotificacaoConfiguracaoUsuario->checkPermission($usuario_id, $motivo_dados['NotificacaoMotivo']['permissao']);
+
+            if ( !$checkPermission ) {
+                return true;
+            }
+        }
+
         $titulo = $motivo_dados['NotificacaoMotivo']['titulo_notificacao'];
         $mensagem = $motivo_dados['NotificacaoMotivo']['msg_notificacao'];
         $group = $motivo_dados['NotificacaoMotivo']['grupo'];
         $notification_data = [];
         $agendamento_data_hora = null;
 
-        if ( !empty($agendamento_id) ) {
+        if ( !empty($registro_id) && in_array($motivo, ['agendamento_empresa', 'agendamento_usuario', 'cancelamento_empresa', 'cancelamento_usuario']) ) {
     
             $this->loadModel('Agendamento');
 
@@ -1135,15 +1149,18 @@ class AppController extends Controller {
                     'DATE(Agendamento.horario) AS data',
                     'TIME(Agendamento.horario) AS hora',
                     'Cliente.nome',
-                    'ClienteServico.nome'
+                    'ClienteServico.nome',
+                    'Usuario.nome'
                 ],
                 'conditions' => [
-                    'Agendamento.id' => $agendamento_id,
-                    'DATE(Agendamento.horario)' => $agendamento_data
+                    'Agendamento.id' => $registro_id
                 ],
                 'link' => [
                     'Cliente',
-                    'ClienteServico'
+                    'ClienteServico',
+                    'ClienteCliente' => [
+                        'Usuario'
+                    ]
                 ]
             ]);
 
@@ -1155,26 +1172,76 @@ class AppController extends Controller {
                 "{{empresa_nome}}", 
                 "{{hora_agendamento}}", 
                 "{{dia_agendamento}}", 
-                "{{servico_nome}}"
+                "{{servico_nome}}", 
+                "{{usuario_nome}}"
             ];
 
             $values = [
                 $dados_agendamento['Cliente']['nome'], 
                 substr($dados_agendamento[0]['hora'], 0, 5), 
                 date('d/m',strtotime($agendamento_data)), 
-                $dados_agendamento['ClienteServico']['nome']
+                $dados_agendamento['ClienteServico']['nome'], 
+                $dados_agendamento['Usuario']['nome']
             ];
 
             $mensagem = trim(str_replace($placeholders, $values, $mensagem));
 
             $notification_data = [
-                "agendamento_id" => $agendamento_id, 
+                "registro_id" => $registro_id, 
                 "agendamento_horario" => $agendamento_data.' '.$dados_agendamento[0]['hora'], 
-                'promocao_id' => $promocao_id,
                 'motivo' => $motivo,
             ];
 
             $agendamento_data_hora = $agendamento_data.' '.$dados_agendamento[0]['hora'];
+        }
+        else if (in_array($motivo, ['resposta_positiva_convite_jogo', 'resposta_negativa_convite_jogo', 'confirmacao_participacao_convite', 'cancelamento_participacao_convite', 'cancelamento_angedamento_convite'])) {
+            $this->loadModel('AgendamentoConvite');
+            $this->loadModel('ClienteCliente');
+            $dados_convite = $this->AgendamentoConvite->find('first', [
+                'fields' => [
+                    'Agendamento.id',
+                    'AgendamentoConvite.horario',
+                    'AgendamentoConvite.cliente_cliente_id',
+                    'Usuario.nome'
+                ],
+                'conditions' => [
+                    'AgendamentoConvite.id' => $registro_id
+                ],
+                'link' => [
+                    'Agendamento' => ['ClienteCliente' => ['Usuario']]
+                ]
+            ]);
+
+            if ( count($dados_convite) == 0 ) {
+                return false;
+            }
+
+            $dados_usuario_convidado = $this->ClienteCliente->finUserData($dados_convite['AgendamentoConvite']['cliente_cliente_id'], ['Usuario.id', 'Usuario.nome']);
+
+            $placeholders = [
+                "{{convidado_mome}}", 
+                "{{dono_agendamento_nome}}"
+            ];
+
+            $values = [
+                $dados_usuario_convidado['nome'], 
+                $dados_convite['Usuario']['nome']
+            ];
+
+            $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+
+            $notification_data = [
+                "registro_id" => $registro_id, 
+                "agendamento_horario" => $dados_convite['AgendamentoConvite']['horario'], 
+                "agendamento_id" => $dados_convite['Agendamento']['id'], 
+                'motivo' => $motivo,
+            ];
+        }
+        else if ( $motivo === 'convite_jogo' ) {
+            $notification_data = [
+                "registro_id" => $registro_id, 
+                'motivo' => $motivo,
+            ];
         }
 
 		$heading = array(
@@ -1224,8 +1291,6 @@ class AppController extends Controller {
 
         $response = json_decode($response, true);
 
-        debug($response);
-
         if ( isset($response['id']) && !empty($response['id']) ) {
             $this->loadModel('Notificacao');
             $dados_salvar = [
@@ -1233,8 +1298,7 @@ class AppController extends Controller {
                     'id_one_signal' => $response['id'],
                     'message' => $mensagem,
                     'title' => $titulo,
-                    'agendamento_id' => $agendamento_id,
-                    'promocao_id' => $promocao_id,
+                    'registro_id' => $registro_id,
                     'notificacao_motivo_id' => $motivo_dados['NotificacaoMotivo']['id'],
                     'agendamento_data_hora' => $agendamento_data_hora,
                     'json' => json_encode($response),
@@ -1244,7 +1308,7 @@ class AppController extends Controller {
 
             if ( count($arr_ids_app) > 0 ) {
                 foreach( $arr_ids_app as $key_player_id => $player_id ){
-                    $dados_salvar[0]['NotificacaoUsuario'][] = ['token' => $player_id];
+                    $dados_salvar[0]['NotificacaoUsuario'][] = ['token' => $player_id, 'usuario_id' => $usuario_id];
                 }
             }
      
@@ -1260,13 +1324,11 @@ class AppController extends Controller {
 
     }
 
-    public function saveInviteAndSendNotification($clientes_clientes_ids, $dados_agendamento) {
+    public function saveInvitesAndSendNotification($clientes_clientes_ids, $dados_agendamento) {
+
+        $this->loadModel('AgendamentoConvite');
         $this->loadModel('Token');
         $this->loadModel('ClienteCliente');
-        $this->loadModel('AgendamentoConvite');
-        $usuarios_ids = $this->ClienteCliente->getUsersIdsFromClienteCliente($clientes_clientes_ids);
-        $usuarios_ids = array_values($usuarios_ids);
-        $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuarios_ids);
 
         $dados_salvar = [];
         foreach($clientes_clientes_ids as $key => $cli_cli_id) {
@@ -1284,21 +1346,47 @@ class AppController extends Controller {
                 continue;
             }
 
-            $dados_salvar[] = [
+            $dados_salvar = [
                 'agendamento_id' => $dados_agendamento['id'],
                 'cliente_cliente_id' => $cli_cli_id,
                 'horario' => $dados_agendamento['horario'],
             ];
+            
+            $this->AgendamentoConvite->create();
+            $convite_salvo = $this->AgendamentoConvite->save($dados_salvar);
+
+ 
+            if ( $convite_salvo ) {
+
+                $dados_usuario = $this->ClienteCliente->finUserData($cli_cli_id, ['Usuario.id']);
+
+                if ( count($dados_usuario) == 0 || empty($dados_usuario['id']) ) {
+                    continue;
+                }
+
+                $usuario_id = $dados_usuario['id'];
+                $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuario_id);
+            
+                if( count($notifications_ids) > 0 ) {
+
+                    $this->sendNotificationNew(
+                        $usuario_id,
+                        $notifications_ids, 
+                        $convite_salvo['AgendamentoConvite']['id'],
+                        null,
+                        'convite_jogo',
+                        ["en"=> '$[notif_count] Novos Convites Para Jogos']
+                    );
+                }
+
+            }
         }
 
         if ( count($dados_salvar) == 0 )
             return true; 
-
-        $this->AgendamentoConvite->saveAll($dados_salvar);
-
-        if( count($notifications_ids) > 0 ) {
-            $this->sendNotification($notifications_ids, $dados_agendamento['id'], "Convite de Partida Recebido", 'Você foi convidado para uma partida, clique na notificação para ver os detalhes.', "game_invite", 'novo_convite', ["en"=> '$[notif_count] Novos Convites Para Jogos']  );
-        }
+        
+        return true;
+        
     }
 
     public function sendShedulingAlertNotification($usuarios_ids, $dados_agendamento, $agendamento_horario) {
@@ -1327,55 +1415,59 @@ class AppController extends Controller {
         }
     }
 
-    public function enviaNotificacaoDeAcaoDoConvite($msg = '', $cliente_cliente_id = '', $agendamento_id = ''){
-
-        if ($msg == '' || $cliente_cliente_id == '' || $agendamento_id == '') {
-            return false;
-        }
-
-        $this->loadModel('ClienteCliente');
-        $dados_usuario = $this->ClienteCliente->finUserData($cliente_cliente_id, ['Usuario.id']);
-        if ( count($dados_usuario) == 0 ) {
-            return false;
-        }
-        
-        $this->loadModel('Token');
-        $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_usuario['id']);
-        if ( count($notifications_ids) == 0 ) {
-            return false;
-        }
-        $this->sendNotification( $notifications_ids, $agendamento_id, $msg, 'convite_acao', ["en"=> '$[notif_count] Notificações de Convites']  );
-    }
-
-    public function enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento) {
+    public function enviaNotificacaoDeCancelamento($cancelado_por, $horario, $dados_agendamento) {
 
         //busca os ids do onesignal do usuário a ser notificado do cancelamento do horário
         $this->loadModel('Token');
-        if ( $cancelado_por == 'cliente' ) {    
+        $this->loadModel('Usuario');
+
+        if ( $cancelado_por === 'cliente' ) {    
             $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_agendamento['Usuario']['id']);
-            $nome_usuario_cancelou = $dados_agendamento['Cliente']['nome'];
+            $usuario_id = $dados_agendamento['Usuario']['id'];
+            $motivo = "cancelamento_empresa";
+
+            if ( count($notifications_ids) > 0 ) {
+                $this->sendNotificationNew(
+                    $usuario_id,
+                    $notifications_ids, 
+                    $dados_agendamento['Agendamento']['id'],
+                    strpos($horario, ":") === false ? $horario : date('Y-m-d', strtotime($horario)),
+                    $motivo,
+                    ["en"=> '$[notif_count] Agendamentos Cancelados'],
+                );
+            }
         } else {
-            $notifications_ids = $this->Token->getIdsNotificationsEmpresa($dados_agendamento['Cliente']['id']);
-            $nome_usuario_cancelou = $dados_agendamento['Usuario']['nome'];
+            $motivo = "cancelamento_usuario";
+            $usuarios = $this->Usuario->getUsersByClientId($dados_agendamento['Cliente']['id']);
+
+            foreach ( $usuarios as $key => $usuario ) {
+                $usuario_id = $usuario['Usuario']['id'];
+                $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuario_id);
+    
+                $this->sendNotificationNew(
+                    $usuario_id,
+                    $notifications_ids, 
+                    $dados_agendamento['Agendamento']['id'],
+                    strpos($horario, ":") === false ? $horario : date('Y-m-d', strtotime($horario)),
+                    $motivo,
+                    ["en"=> '$[notif_count] Agendamentos Cancelados'],
+                );
+
+            }
         }
 
-        if ( count($notifications_ids) > 0 ) {
-            $data_str_agendamento = date('d/m',strtotime($dados_agendamento['Agendamento']['horario']));
-            $hora_str_agendamento = date('H:i',strtotime($dados_agendamento['Agendamento']['horario']));
-            $this->sendNotification( $notifications_ids, $dados_agendamento['Agendamento']['id'], "Agendamento Cancelado :(", $nome_usuario_cancelou." cancelou o agendamento das ".$hora_str_agendamento." do dia ".$data_str_agendamento, "agendamento_cancelado", 'agendamento_cancelado', ["en"=> '$[notif_count] Agendamentos Cancelados']  );
-        }
     }
 
-    public function avisaConvidadosCancelamento($dados_agendamento, $dados) {
-        //busca os convites do agendamento
+    public function avisaConvidadosCancelamento($horario, $agendamento_id) {
+
+        //busca os convites do agendamento que não foram recusados
         $this->loadModel('AgendamentoConvite');
-        $convites = $this->AgendamentoConvite->getNotRecusedUsers($dados_agendamento['Agendamento']['id'], $this->images_path.'/usuarios/', $dados->horario);
+        $this->loadModel('Token');
+        $convites = $this->AgendamentoConvite->getNotRecusedUsers($agendamento_id, $this->images_path.'/usuarios/', $horario);
 
         //se há convites, avisa os candidatos que o agendamento foi cancelado
         if ( count($convites) > 0 ) {
             foreach($convites as $key => $convite) {
-
-                $msg = 'Infelizmente, o agendamento que voce era convidado, foi cancelado! :(';
 
                 $dados_salvar = [
                     'id' => $convite['AgendamentoConvite']['id'],
@@ -1384,7 +1476,16 @@ class AppController extends Controller {
     
                 $salvo = $this->AgendamentoConvite->save($dados_salvar);
                 if ( $salvo ) {
-                    $this->enviaNotificacaoDeAcaoDoConvite($msg, $convite['ClienteCliente']['id'], $dados_agendamento['Agendamento']['id']);
+                    $notifications_ids = $this->Token->getIdsNotificationsUsuario($convite['Usuario']['id']);
+
+                    $this->sendNotificationNew(
+                        $convite['Usuario']['id'],
+                        $notifications_ids, 
+                        $convite['AgendamentoConvite']['id'],
+                        null,
+                        'cancelamento_angedamento_convite',
+                        ["en"=> '$[notif_count] Convites cancelados']
+                    );
                 }
             }
         }

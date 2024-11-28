@@ -30,10 +30,8 @@ class NotificacoesController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        $ids_de_notificacao = $this->Token->getIdsNotificationsUsuario($dados_token['Usuario']['id']);
-
         $this->loadModel('Notificacao');
-        $notificacoes = $this->Notificacao->getByTokens($ids_de_notificacao);
+        $notificacoes = $this->Notificacao->getByUserId($dados_token['Usuario']['id']);
 
         foreach( @$notificacoes as $key => $notificacao ) {
             $notificacoes[$key]['Notificacao']['_data'] = date('d/m/Y',strtotime($notificacao['Notificacao']['created']));
@@ -67,12 +65,18 @@ class NotificacoesController extends AppController {
         $this->loadModel('Notificacao');
 
         if ( !isset($dados->id) || $dados->id == "" ) {
-            $ids_de_notificacao = $this->Token->getIdsNotificationsUsuario($dados_token['Usuario']['id']);
-            if ( !$this->Notificacao->setRead('all', null, $ids_de_notificacao) ) {
+            if ( !$this->Notificacao->setRead('all', null, $dados_token['Usuario']['id']) ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Erro ao setar notificações como lidas.'))));
             }
         } else {
-            if ( !$this->Notificacao->setRead('one', $dados->id) ) {
+            $notificacao_id = $dados->id;
+
+            // Posso passar o id do one signal
+            if ( !is_numeric($dados->id) ) {
+                $notificacao_id = $this->Notificacao->getIdFromOneSginalId($dados->id);
+            }
+
+            if ( !$this->Notificacao->setRead('one', $notificacao_id) ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Erro ao setar notificação como lida.'))));
             }
         }
@@ -101,10 +105,8 @@ class NotificacoesController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        $ids_de_notificacao = $this->Token->getIdsNotificationsUsuario($dados_token['Usuario']['id']);
-
         $this->loadModel('Notificacao');
-        $n_notificacoes = $this->Notificacao->countByTokens($ids_de_notificacao);
+        $n_notificacoes = $this->Notificacao->countByUserId($dados_token['Usuario']['id']);
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => ($n_notificacoes == null ? 0 : $n_notificacoes)))));
     }
@@ -143,14 +145,7 @@ class NotificacoesController extends AppController {
 
         if ( count($configs_usuario) == 0 ) {
             $dados_salvar = [
-                'usuario_id' => $usuario_id,
-                'receber_promocoes' => 1,
-                'receber_lembretes' => 1,
-                'receber_avaliacoes' => 1,
-                'receber_convites' => 1,
-                'receber_avisos_cancelamentos' => 1,
-                'receber_aviso_novo_torneio_padel' => 1,
-                'receber_aviso_jogos_padel_liberados' => 1
+                'usuario_id' => $usuario_id
             ];
 
             $this->NotificacaoConfiguracaoUsuario->create();
@@ -214,6 +209,7 @@ class NotificacoesController extends AppController {
         $dados_salvar['receber_avisos_cancelamentos'] = isset($dados->receber_avisos_cancelamentos) ? $dados->receber_avisos_cancelamentos : false;
         $dados_salvar['receber_aviso_novo_torneio_padel'] = isset($dados->receber_aviso_novo_torneio_padel) ? $dados->receber_aviso_novo_torneio_padel : false;
         $dados_salvar['receber_aviso_jogos_padel_liberados'] = isset($dados->receber_aviso_jogos_padel_liberados) ? $dados->receber_aviso_jogos_padel_liberados : false;
+        $dados_salvar['receber_avisos_novos_agendamentos'] = isset($dados->receber_avisos_novos_agendamentos) ? $dados->receber_avisos_novos_agendamentos : false;        
 
         if ( !$this->NotificacaoConfiguracaoUsuario->save($dados_salvar) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar as configurações de notificações.'))));
@@ -240,6 +236,7 @@ class NotificacoesController extends AppController {
         $agendamento_id = $dados['agendamento_id'];
         $notification_msg = 'Teste mensagem';
         $agendamento_data = $dados['agendamento_data'];
+        $motivo = $dados['motivo'];
 
         $this->loadModel('Token');
         
@@ -251,12 +248,10 @@ class NotificacoesController extends AppController {
             $notifications_ids, 
             $agendamento_id,
             $agendamento_data,
-            null,
-            'agendamento_empresa',
+            $motivo,
             ["en"=> '$[notif_count] Novos Agendamentos']
         );
 
-        die();
     }
 
 }

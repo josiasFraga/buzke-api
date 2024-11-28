@@ -301,6 +301,7 @@ class AgendamentosController extends AppController {
         $this->loadModel('Usuario');
         $this->loadModel('ClienteCliente');
         $this->loadModel('ClienteServico');
+        $this->loadModel('AgendamentoFixoCancelado');
 
         $conditions = [
             'Agendamento.id' => $agendamento_id
@@ -409,29 +410,39 @@ class AgendamentosController extends AppController {
 
         if ( $agendamento['Agendamento']['dia_semana'] != '' ) {
             if (!isset($dados['horario'])) {
-                $agendamento = [];
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
             } else {
                 $dia_semana_horario_informado = date("w", strtotime($dados['horario']));
                 if ( $dia_semana_horario_informado == $agendamento['Agendamento']['dia_semana'] ) {
                     $agendamento['Agendamento']['horario'] = $dados['horario'];
                     $agendamento['Agendamento']['tipo'] = 'fixo';
                 } else {
-                    $agendamento = [];
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
                 }
             }
         }
         else if ( $agendamento['Agendamento']['dia_mes'] != '' ) {
             if (!isset($dados['horario'])) {
-                $agendamento = [];
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
             } else {
                 $dia_mes_horario_informado = date("d", strtotime($dados['horario']));
                 if ( $dia_mes_horario_informado == $agendamento['Agendamento']['dia_mes'] ) {
                     $agendamento['Agendamento']['horario'] = $dados['horario'];
                     $agendamento['Agendamento']['tipo'] = 'fixo';
                 } else {
-                    $agendamento = [];
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
                 }
             }
+        }
+
+        if ( !empty($agendamento['Agendamento']['dia_semana']) || !empty($agendamento['Agendamento']['dia_mes'])) {
+            $cancelamento = $this->AgendamentoFixoCancelado->find('first',[
+                'conditions' => [
+                    'AgendamentoFixoCancelado.agendamento_id' => $agendamento['Agendamento']['id'],
+                    'AgendamentoFixoCancelado.horario' => $agendamento['Agendamento']['horario']
+                ],
+                'link' => []
+            ]);
         }
 
         // Agendamento de torneio
@@ -501,9 +512,35 @@ class AgendamentosController extends AppController {
     
             $agendamento['Agendamento']['_cancellable_until'] = date('Y-m-d H:i:s', $limite_cancelamento);
     
-            if ( $agendamento['Agendamento']['cancelado'] === 'Y' ) {
+            if ( !empty($cancelamento) ) {
                 $agendamento['Agendamento']['_can_cancell'] = false;
                 $agendamento['Agendamento']['_cannot_cancell_motive'] = 'Agendamento cancelado';
+                $agendamento['Agendamento']['_cancelled_by_name'] = null;
+                $agendamento['Agendamento']['_cancelled_date'] = date('d/m', strtotime($cancelamento['AgendamentoFixoCancelado']['created']));
+                $agendamento['Agendamento']['_cancelled_time'] = date('H:i', strtotime($cancelamento['AgendamentoFixoCancelado']['created']));
+                $agendamento['Agendamento']['cancelado'] = "Y";
+        
+                if ( !empty($cancelamento['AgendamentoFixoCancelado']['cancelado_por_id']) ) {
+                    $usuario_cancelou = $this->Usuario->getById($cancelamento['AgendamentoFixoCancelado']['cancelado_por_id']);
+                    $agendamento['Agendamento']['_cancelled_by_name'] = $usuario_cancelou['Usuario']['nome'];
+                }
+
+                if ( !empty($cancelamento['AgendamentoFixoCancelado']['motivo']) ) {
+                    $agendamento['Agendamento']['_cancelled_by_name'] = $agendamento['Agendamento']['_cancelled_by_name']." ".$cancelamento['AgendamentoFixoCancelado']['motivo'];
+                }
+
+            }
+            else if ( $agendamento['Agendamento']['cancelado'] === 'Y' ) {
+                $agendamento['Agendamento']['_can_cancell'] = false;
+                $agendamento['Agendamento']['_cannot_cancell_motive'] = 'Agendamento cancelado';
+                $agendamento['Agendamento']['_cancelled_by_name'] = null;
+                $agendamento['Agendamento']['_cancelled_date'] = date('d/m', strtotime($agendamento['Agendamento']['updated']));
+                $agendamento['Agendamento']['_cancelled_time'] = date('H:i', strtotime($agendamento['Agendamento']['updated']));
+        
+                if ( !empty($agendamento['Agendamento']['cancelado_por_id']) ) {
+                    $usuario_cancelou = $this->Usuario->getById($agendamento['Agendamento']['cancelado_por_id']);
+                    $agendamento['Agendamento']['_cancelled_by_name'] = $usuario_cancelou['Usuario']['nome'];
+                }
             } else if ( $agendamento['Agendamento']['horario'] < date('Y-m-d H:i:s') ) {
                 $agendamento['Agendamento']['_can_cancell'] = false;
                 $agendamento['Agendamento']['_cannot_cancell_motive'] = 'O agendamento já passou';
@@ -620,6 +657,7 @@ class AgendamentosController extends AppController {
                     'ClienteCliente.img',
                     'ClienteCliente.nome',
                     'AgendamentoConvite.id',
+                    'Agendamento.cliente_cliente_id',
                     'ClienteCliente.id'
                 ],
                 'conditions' => [
@@ -652,6 +690,11 @@ class AgendamentosController extends AppController {
 
             $jogadores_confirmados = [];
             foreach( $cliente_cliente as $cli ) {
+
+                if ( $cli['ClienteCliente']['id'] != $cli['Agendamento']['cliente_cliente_id'] && empty($cli['AgendamentoConvite']['id']) ) {
+                    continue;
+                }
+        
                 $jogadores_confirmados[] = [
                     'img' => !empty($cli['Usuario']['img']) ? $this->images_path.'usuarios/'.$cli['Usuario']['img'] : $this->images_path.'cliente_cliente/'.$cli['ClienteCliente']['img'],
                     'nome' => !empty($cli['Usuario']['nome']) ? $cli['Usuario']['nome'] : $cli['ClienteCliente']['nome'],
@@ -1207,39 +1250,35 @@ class AgendamentosController extends AppController {
         }
 
         //busca os ids do onesignal do usuário a ser notificado do cadastro do horário
-        if ( $cadastrado_por == 'cliente' ) {
+        $usuario_id = null;
+        if ( $cadastrado_por == 'cliente' ) { // Agendamento feito pela empresa
+            $usuario_id = $dados_cliente_cliente['ClienteCliente']['usuario_id'];
             $notifications_ids = $this->Token->getIdsNotificationsUsuario($dados_cliente_cliente['ClienteCliente']['usuario_id']);
             $cadastrado_por = $this->Cliente->findEmpresaNomeById($cliente_id);
+            $notificacao_motivo = 'agendamento_empresa';
         } else {
             $notifications_ids = $this->Token->getIdsNotificationsEmpresa($cliente_id);
             $cadastrado_por = $dados_usuario['Usuario']['nome'];
+            $notificacao_motivo = 'agendamento_usuario';
         }
 
         if ( count($notifications_ids) > 0 ) {
-  
-            $data_str_agendamento = date('d/m',strtotime($dados_agendamento_salvo['Agendamento']['horario']));
-            $hora_str_agendamento = date('H:i',strtotime($dados_agendamento_salvo['Agendamento']['horario']));
-            $notification_msg = "Você tem um novo agendamento de ".$cadastrado_por." às ".$hora_str_agendamento." do dia ".$data_str_agendamento;
+    
+            $agendamento_data = date('Y-m-d',strtotime($dados_agendamento_salvo['Agendamento']['horario']));
 
-            if ( $dados_servico["ClienteServico"]["tipo"] === "Quadra" ) {
-                $notification_msg .= " na quadra " . $dados_servico["ClienteServico"]["nome"];
-            } else {
-                $notification_msg .= " serviço selecionado: " . $dados_servico["ClienteServico"]["nome"];
-            }
-
-            $this->sendNotification( 
+            $this->sendNotificationNew( 
+                $usuario_id,
                 $notifications_ids, 
                 $dados_agendamento_salvo['Agendamento']['id'],
-                "Novo Agendamento :)", 
-                $notification_msg, 
-                "agendamento", 
-                'novo_agendamento', 
-                ["en"=> '$[notif_count] Novos Agendamentos'],
-                null
+                $agendamento_data,
+                $notificacao_motivo,
+                ["en"=> '$[notif_count] Novos Agendamentos']
             );
         }
 
         $this->enviaConvites($dados, $dados_agendamento_salvo, $dados_cliente['Localidade']);
+
+        //$this->Agendamento->delete($dados_agendamento_salvo['Agendamento']['id']);
         
         return new CakeResponse([
             'type' => 'json', 
@@ -1464,7 +1503,7 @@ class AgendamentosController extends AppController {
         }
 
         if ( count($clientes_clientes_ids_convidados) > 0 ) {
-            $this->saveInviteAndSendNotification($clientes_clientes_ids_convidados, $dados_agendamento_salvo['Agendamento']);
+            $this->saveInvitesAndSendNotification($clientes_clientes_ids_convidados, $dados_agendamento_salvo['Agendamento']);
         }
 
     }
@@ -1473,6 +1512,8 @@ class AgendamentosController extends AppController {
         $this->layout = 'ajax';
         //$dados = json_decode($this->request->data['dados']);
         $dados = $this->request->data['dados'];
+
+        //$this->log($dados, 'debug');
 
         if ( gettype($dados) == 'string' ) {
             $dados = json_decode($dados);
@@ -1535,7 +1576,10 @@ class AgendamentosController extends AppController {
             ],
             'conditions' => $conditions,
             'link' => [
-                'ClienteCliente' => ['Usuario'], 'Cliente'
+                'ClienteCliente' => [
+                    'Usuario'
+                ], 
+                'Cliente'
             ]
         ]);
        
@@ -1558,8 +1602,12 @@ class AgendamentosController extends AppController {
                     return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cancelar o agendamento. Por favor, tente novamente mais tarde!'))));
                 }
 
-                $this->avisaConvidadosCancelamento($dados_agendamento, $dados);
-                $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento);
+                // Seta o convite como agendamento cancelado e envia notificação aos usuários
+                $this->avisaConvidadosCancelamento($dados->horario, $dados_agendamento['Agendamento']['id']);
+
+                // Envia notificação de cancelamento para o usuário titular ou para a empresa
+                $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados->horario, $dados_agendamento);
+
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Agendamento cancelado com sucesso!'))));
 
             } 
@@ -1573,8 +1621,12 @@ class AgendamentosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar cancelar o agendamento. Por favor, tente mais tarde!'))));
         }
         
-        $this->avisaConvidadosCancelamento($dados_agendamento, $dados);
-        $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados_agendamento);
+        // Seta o convite como agendamento cancelado e envia notificação aos usuários
+        $this->avisaConvidadosCancelamento($dados->horario, $dados_agendamento['Agendamento']['id']);
+
+        // Envia notificação de cancelamento para o usuário titular ou para a empresa
+        $this->enviaNotificacaoDeCancelamento($cancelado_por, $dados->horario, $dados_agendamento);
+
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Agendamento cancelado com sucesso!'))));
 
     }

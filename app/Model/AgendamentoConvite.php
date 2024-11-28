@@ -53,7 +53,8 @@ class AgendamentoConvite extends AppModel {
                 'ClienteCliente.nome',
                 'AgendamentoConvite.id',
                 'AgendamentoConvite.agendamento_id',
-                'AgendamentoConvite._usuario_foto'
+                'AgendamentoConvite._usuario_foto',
+                'Usuario.id'
             ],
             'conditions' => [
                 'AgendamentoConvite.agendamento_id' => $agendamento_id,
@@ -83,7 +84,8 @@ class AgendamentoConvite extends AppModel {
                 'ClienteCliente.nome',
                 'AgendamentoConvite.id',
                 'AgendamentoConvite.agendamento_id',
-                'AgendamentoConvite._usuario_foto'
+                'AgendamentoConvite._usuario_foto',
+                'Usuario.id'
             ],
             'conditions' => [
                 'AgendamentoConvite.agendamento_id' => $agendamento_id,

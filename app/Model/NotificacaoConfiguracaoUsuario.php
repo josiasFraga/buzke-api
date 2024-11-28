@@ -7,4 +7,26 @@ class NotificacaoConfiguracaoUsuario extends AppModel {
 			'foreignKey' => 'usuario_id'
 		),
 	);
+
+	public function checkPermission( $usuario_id = null, $tipo = null )  {
+
+		if ( $usuario_id == null || $tipo == null ) {
+			return false;
+		}
+
+		$disabled = $this->find('first', [
+			'conditions' => [
+				'NotificacaoConfiguracaoUsuario.usuario_id' => $usuario_id,
+				'NotificacaoConfiguracaoUsuario.'.$tipo => 0
+			],
+			'link' => []
+		]);
+
+		if ( count($disabled) > 0 ) {
+			return false;
+		}
+
+		return true;
+
+	}
 }

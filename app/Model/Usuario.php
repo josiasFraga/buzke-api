@@ -149,9 +149,7 @@ class Usuario extends AppModel {
         ]);
         
         return $jogadores;
-	}
-
-    
+	}    
 
     public function getShedulingConfirmedUsers($agendamento_id = null,$agendamento_horario='') {
         if ( $agendamento_id == null || $agendamento_horario == '' ) {
@@ -188,11 +186,38 @@ class Usuario extends AppModel {
         ]);
     }
 
+    public function getById($id) {
+        return $this->find('first',[
+            'fields' => [
+                'Usuario.id',
+                'Usuario.nome',
+                'Usuario.telefone'
+            ],
+            'conditions' => [
+                'Usuario.id' => $id
+            ]
+        ]);
+    }
+
     public function atualizaTelefone($usuario_id, $ddi, $telefone){
         return $this->save([
             'id' => $usuario_id,
             'telefone_ddi' => $ddi,
             'telefone' => $telefone
+        ]);
+    }
+
+    public function getUsersByClientId($client_id) {
+        return $this->find('all',[
+            'fields' => [
+                'id',
+                'nome',
+                'img'
+            ],
+            'conditions' => [
+                'Usuario.cliente_id' => $client_id
+            ],
+            'link' => []
         ]);
     }
 
