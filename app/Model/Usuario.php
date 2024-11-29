@@ -155,7 +155,7 @@ class Usuario extends AppModel {
         if ( $agendamento_id == null || $agendamento_horario == '' ) {
             return [];
         }
-        return $this->find('list',[
+        return array_values($this->find('list',[
             'fields' => [
                 'Usuario.id',
                 'Usuario.id',
@@ -169,7 +169,7 @@ class Usuario extends AppModel {
             ],
             'link' => ['ClienteCliente' => ['AgendamentoConvite']],
             'group' => ['Usuario.id']
-        ]);
+        ]));
 
     }
 

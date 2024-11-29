@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `promocao_cliques` (
   CONSTRAINT `FK_promocao_cliques_clientes_servicos` FOREIGN KEY (`servico_id`) REFERENCES `clientes_servicos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_promocao_cliques_promocoes` FOREIGN KEY (`promocao_id`) REFERENCES `promocoes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_promocao_cliques_tokens` FOREIGN KEY (`token_id`) REFERENCES `tokens` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=113 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=119;
 
 CREATE TABLE IF NOT EXISTS `promocao_dias_semana` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS `promocao_dias_semana` (
   KEY `FK_promocao_servicos_promocoes` (`promocao_id`) USING BTREE,
   KEY `dia_semana` (`dia_semana`),
   CONSTRAINT `promocao_dias_semana_ibfk_2` FOREIGN KEY (`promocao_id`) REFERENCES `promocoes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=96 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=96 ROW_FORMAT=DYNAMIC;
+
 
 CREATE TABLE IF NOT EXISTS `promocao_servicos` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS `promocao_servicos` (
   KEY `FK_promocao_servicos_clientes_servicos` (`servico_id`),
   CONSTRAINT `FK_promocao_servicos_clientes_servicos` FOREIGN KEY (`servico_id`) REFERENCES `clientes_servicos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_promocao_servicos_promocoes` FOREIGN KEY (`promocao_id`) REFERENCES `promocoes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=23;
 
 
 CREATE TABLE IF NOT EXISTS `promocoes` (
@@ -82,13 +83,17 @@ CREATE TABLE IF NOT EXISTS `promocoes` (
   `valor_fixos` float(9,2) DEFAULT NULL,
   `limite_ate` tinyint DEFAULT NULL,
   `finalizada` enum('Y','N') NOT NULL DEFAULT 'N',
+  `avisos_enviados` enum('Y','N') CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'N',
   PRIMARY KEY (`id`),
   KEY `FK_promocoes_clientes` (`cliente_id`),
   KEY `finalizada` (`finalizada`),
   KEY `validade_inicio` (`validade_inicio`),
   KEY `validade_fim` (`validade_fim`),
+  KEY `horario_inicio` (`horario_inicio`),
+  KEY `horario_fim` (`horario_fim`),
+  KEY `avisos_enviadaos` (`avisos_enviados`) USING BTREE,
   CONSTRAINT `FK_promocoes_clientes` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=19;
 
 
 CREATE TABLE IF NOT EXISTS `notificacoes_configuracoes_usuario` (
@@ -107,67 +112,29 @@ CREATE TABLE IF NOT EXISTS `notificacoes_configuracoes_usuario` (
   PRIMARY KEY (`id`),
   KEY `FK_notificacoes_configuracoes_usuario_usuarios` (`usuario_id`),
   CONSTRAINT `FK_notificacoes_configuracoes_usuario_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
-
-
-ALTER TABLE `notificacoes`
-	ADD COLUMN `agendamento_id` INT NULL DEFAULT NULL AFTER `id_one_signal`,
-	ADD COLUMN `promocao_id` INT NULL DEFAULT NULL AFTER `agendamento_id`,
-	ADD CONSTRAINT `FK_notificacoes_agendamentos` FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
-	ADD CONSTRAINT `FK_notificacoes_promocoes` FOREIGN KEY (`promocao_id`) REFERENCES `promocoes` (`id`) ON UPDATE CASCADE ON DELETE NO ACTION;
-
-
-
-ALTER TABLE `notificacoes_configuracoes_usuario`
-	ADD COLUMN `receber_avisos_cancelamentos` TINYINT(1) NOT NULL DEFAULT '1' AFTER `receber_lembretes`;
-
-ALTER TABLE `notificacoes_configuracoes_usuario`
-	ADD COLUMN `receber_avisos_cancelamentos` TINYINT(1) NOT NULL DEFAULT '1' AFTER `receber_lembretes`;
-
-
-
-
-valor na tebela de agendamentos
-agendamento_data_hora datetime null na tabela de notificações
-
+) ENGINE=InnoDB AUTO_INCREMENT=4;
 
 ALTER TABLE `clientes_clientes`
 	ADD COLUMN `created` TIMESTAMP NULL DEFAULT NULL AFTER `id`;
 
-  
 ALTER TABLE `notificacoes`
-	ADD COLUMN `notificacao_motivo_id` INT NULL DEFAULT NULL AFTER `promocao_id`,
-	ADD CONSTRAINT `FK_notificacoes_notificacoes_motivos` FOREIGN KEY (`notificacao_motivo_id`) REFERENCES `notificacoes_motivos` (`id`) ON UPDATE CASCADE ON DELETE NO ACTION;
+	ADD COLUMN `registro_id` INT NULL DEFAULT NULL AFTER `id_one_signal`;
 
+ALTER TABLE `notificacoes`
+	ADD COLUMN `notificacao_motivo_id` INT NULL DEFAULT NULL AFTER `registro_id`,
+	ADD CONSTRAINT `FK_notificacoes_notificacoes_motivos` FOREIGN KEY (`notificacao_motivo_id`) REFERENCES `notificacoes_motivos` (`id`) ON UPDATE CASCADE ON DELETE NO ACTION;
 
 ALTER TABLE `notificacoes_usuarios`
 	ADD COLUMN `usuario_id` INT NULL DEFAULT NULL AFTER `updated`,
 	ADD CONSTRAINT `FK_notificacoes_usuarios_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE;
 
-
 ALTER TABLE `notificacoes`
-	CHANGE COLUMN `promocao_id` `registro_id` INT NULL DEFAULT NULL AFTER `agendamento_id`,
-	DROP INDEX `FK_notificacoes_promocoes`,
-	ADD INDEX `FK_notificacoes_promocoes` (`registro_id`) USING BTREE,
-	DROP FOREIGN KEY `FK_notificacoes_promocoes`;
+	ADD COLUMN `agendamento_data_hora` DATETIME NULL DEFAULT NULL AFTER `notificacao_motivo_id`;
 
-
-ALTER TABLE `notificacoes`
-	DROP INDEX `FK_notificacoes_promocoes`;
-
-ALTER TABLE `notificacoes`
-	ADD INDEX `registro_id` (`registro_id`);
-
-ALTER TABLE `promocoes`
-	ADD COLUMN `avisos_enviados` ENUM('Y','N') NOT NULL DEFAULT 'N' AFTER `finalizada`,
-	ADD INDEX `avisos_enviados` (`avisos_enviados`),
-	ADD INDEX `horario_inicio` (`horario_inicio`),
-	ADD INDEX `horario_fim` (`horario_fim`);
-
+valor na tebela de agendamentos
 
 ALTER TABLE `usuarios_localizacoes`
 	ADD INDEX `description` (`description`);
-
 
 ALTER TABLE `torneios`
 	ADD COLUMN `notificacao_cadastro_enviada` ENUM('Y','N') NOT NULL DEFAULT 'N' AFTER `jogos_liberados_ao_publico`,
@@ -175,3 +142,12 @@ ALTER TABLE `torneios`
 
 ALTER TABLE `agendamento_avisos`
 	ADD COLUMN `tipo` ENUM('lembrete','lembrete_avaliar') NOT NULL DEFAULT 'lembrete' AFTER `horario`;
+
+ALTER TABLE `agendamentos`
+	ADD INDEX `dia_mes` (`dia_mes`),
+	ADD INDEX `dia_semana` (`dia_semana`),
+	ADD INDEX `horario` (`horario`);
+
+
+ALTER TABLE `agendamento_avisos`
+	ADD INDEX `horario` (`horario`);

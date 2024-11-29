@@ -1096,9 +1096,9 @@ class AppController extends Controller {
         
         $send_notifications = getenv('SEND_NOTIFICATIONS');
 
-        /*if ( $send_notifications === "FALSE" ) {
+        if ( $send_notifications === "FALSE" ) {
             return true;
-        }*/
+        }
 
 		if ( count($arr_ids) == 0 )
 			return false;
@@ -1140,7 +1140,7 @@ class AppController extends Controller {
         $notification_data = [];
         $agendamento_data_hora = null;
 
-        if ( !empty($registro_id) && in_array($motivo, ['agendamento_empresa', 'agendamento_usuario', 'cancelamento_empresa', 'cancelamento_usuario']) ) {
+        if ( !empty($registro_id) && in_array($motivo, ['agendamento_empresa', 'agendamento_usuario', 'cancelamento_empresa', 'cancelamento_usuario', 'lembrete_agendamento', 'lembrete_agendamento_torneio']) ) {
     
             $this->loadModel('Agendamento');
 
@@ -1150,13 +1150,15 @@ class AppController extends Controller {
                     'TIME(Agendamento.horario) AS hora',
                     'Cliente.nome',
                     'ClienteServico.nome',
-                    'Usuario.nome'
+                    'Usuario.nome',
+                    'Torneio.nome'
                 ],
                 'conditions' => [
                     'Agendamento.id' => $registro_id
                 ],
                 'link' => [
                     'Cliente',
+                    'Torneio',
                     'ClienteServico',
                     'ClienteCliente' => [
                         'Usuario'
@@ -1173,22 +1175,24 @@ class AppController extends Controller {
                 "{{hora_agendamento}}", 
                 "{{dia_agendamento}}", 
                 "{{servico_nome}}", 
-                "{{usuario_nome}}"
+                "{{usuario_nome}}", 
+                "{{torneio_nome}}"
             ];
 
             $values = [
-                $dados_agendamento['Cliente']['nome'], 
-                substr($dados_agendamento[0]['hora'], 0, 5), 
-                date('d/m',strtotime($agendamento_data)), 
-                $dados_agendamento['ClienteServico']['nome'], 
-                $dados_agendamento['Usuario']['nome']
+                $dados_agendamento['Cliente']['nome'],
+                substr($dados_agendamento[0]['hora'], 0, 5),
+                date('d/m',strtotime($agendamento_data)),
+                $dados_agendamento['ClienteServico']['nome'],
+                $dados_agendamento['Usuario']['nome'],
+                $dados_agendamento['Torneio']['nome']
             ];
 
             $mensagem = trim(str_replace($placeholders, $values, $mensagem));
 
             $notification_data = [
                 "registro_id" => $registro_id, 
-                "agendamento_horario" => $agendamento_data.' '.$dados_agendamento[0]['hora'], 
+                "agendamento_horario" => date('Y-m-d', strtotime($agendamento_data)).' '.$dados_agendamento[0]['hora'], 
                 'motivo' => $motivo,
             ];
 
@@ -1374,26 +1378,23 @@ class AppController extends Controller {
 			$arr_ids_app[] = $id;
 		}
 
-        $one_signal_token = getenv('ONE_SIGNAL_TOKEN');
-        $one_signal_app_id = getenv('ONE_SIGNAL_APP_ID');
-
-        $fields = array(
-            'app_id' => $one_signal_app_id,
+        $fields = [
+            'app_id' => 'b3d28f66-5361-4036-96e7-209aea142529',
             'include_player_ids' => $arr_ids_app,
             'data' => $notification_data,
-            //'small_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon.png',
-            //'large_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon_large.png',
+            'small_icon' => 'ic_stat_onesignal_default',
+            'large_icon' => 'ic_onesignal_large_icon_default',
             'android_group' =>  $group,
             'android_group_message' => $group_message,
             'headings' => $heading,
             'contents' => $content,
-        );
+        ];
         
         $fields = json_encode($fields);
         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8', 'Authorization: Basic '.$one_signal_token));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8', 'Authorization: Basic ZWM2M2YyMjQtOTQ4My00MjI2LTg0N2EtYThiZmRiNzM5N2Nk'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         curl_setopt($ch, CURLOPT_HEADER, FALSE);
         curl_setopt($ch, CURLOPT_POST, TRUE);
@@ -1502,32 +1503,6 @@ class AppController extends Controller {
         
         return true;
         
-    }
-
-    public function sendShedulingAlertNotification($usuarios_ids, $dados_agendamento, $agendamento_horario) {
-        
-        $this->loadModel('Token');
-
-        $usuarios_ids = array_values($usuarios_ids);
-        $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuarios_ids);
-
-        if( count($notifications_ids) > 0 ) {
-            $mensagem = 'Só passamos para te avisar do seu agendamento em '.date('d/m/Y',strtotime($agendamento_horario)).' às '.date('H:i',strtotime($agendamento_horario)).'. na empresa '.$dados_agendamento['Cliente']['nome'].'.';
-            $this->sendNotification($notifications_ids, $dados_agendamento['Agendamento']['id'], "Aviso de horário marcado", $mensagem, "sheduling_alert", '', ["en"=> '$[notif_count] Avisos de Horários Marcados']  );
-        }
-    }
-
-    public function sendTorunamentShedulingAlertNotification($usuarios_ids, $dados_agendamento, $agendamento_horario, $dados_jogo) {
-        
-        $this->loadModel('Token');
-
-        $usuarios_ids = array_values($usuarios_ids);
-        $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuarios_ids);
-
-        if( count($notifications_ids) > 0 ) {
-            $mensagem = 'Só passamos para te avisar do seu jogo de torneio em '.date('d/m/Y',strtotime($agendamento_horario)).' às '.date('H:i',strtotime($agendamento_horario)).'. na quadra '.$dados_jogo['TorneioJogo']['_quadra_nome'].'.';
-            $this->sendNotification($notifications_ids, $dados_agendamento['Agendamento']['id'], "Aviso de jogo de torneio", $mensagem, "sheduling_alert", '', ["en"=> '$[notif_count] Avisos de Horários Marcados']  );
-        }
     }
 
     public function enviaNotificacaoDeCancelamento($cancelado_por, $horario, $dados_agendamento) {

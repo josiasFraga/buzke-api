@@ -1,6 +1,7 @@
 <?php
 App::uses('CakeEmail', 'Network/Email');
 class CronsController extends AppController {
+
     public function avisa_usuarios_agendamentos(){
 
         $this->layout = 'ajax';
@@ -24,7 +25,14 @@ class CronsController extends AppController {
 
         //agendamentos padrão
         $agendamentos_proximos = $this->Agendamento->find('all',[
-            'fields' => ['*'],
+            'fields' => [
+                'Agendamento.id', 
+                'Agendamento.horario', 
+                'Agendamento.dia_semana', 
+                'Agendamento.dia_mes', 
+                'Usuario.id', 
+                'Cliente.tempo_aviso_usuarios'
+            ],
             'conditions' => [
                 'or' => [
                     [
@@ -47,7 +55,7 @@ class CronsController extends AppController {
                 'Agendamento.cancelado' => 'N',
                 'not' => [
                     'Usuario.id' => null,
-                    'Cliente.tempo_aviso_usuarios' => null,
+                    //'Cliente.tempo_aviso_usuarios' => null,
                 ]
             ],
             'link' => ['ClienteCliente' => ['Usuario'], 'Cliente']
@@ -80,6 +88,11 @@ class CronsController extends AppController {
                 }
 
                 $diff = strtotime($agendamento_horario) - strtotime(date('Y-m-d H:i:s'));
+
+                if ( empty($agendamento['Cliente']['tempo_aviso_usuarios']) ) {
+                    $agendamento['Cliente']['tempo_aviso_usuarios'] = '23:59:59';
+                }
+    
                 $minutos = $diff / ( 60 );
                 $prazo_minutos_aviso = $this->timeToMinutes($agendamento['Cliente']['tempo_aviso_usuarios']);
 
@@ -88,7 +101,7 @@ class CronsController extends AppController {
                 }
 
                 //verifica se esse agendamento já foi emitido o aviso
-                $v_aviso = $this->AgendamentoAviso->find('first',[
+                $v_aviso = $this->AgendamentoAviso->find('count',[
                     'conditions' => [
                         'AgendamentoAviso.agendamento_id' => $agendamento['Agendamento']['id'],
                         'AgendamentoAviso.horario' => $agendamento_horario,
@@ -97,7 +110,7 @@ class CronsController extends AppController {
                 ]);
 
                 //se ainda nao foi avisado
-                if ( count($v_aviso) == 0 ) {
+                if ( $v_aviso == 0 ) {
 
                     $usuarios_ids[] = $agendamento['Usuario']['id'];
                     $this->loadModel('Usuario');
@@ -129,7 +142,11 @@ class CronsController extends AppController {
         //agendamentos de torneio
         //OBS: só aviso quando as 2 duplas do jogo foram definidas
         $agendamentos_proximos = $this->Agendamento->find('all',[
-            'fields' => ['*'],
+            'fields' => [
+                'Agendamento.id',
+                'Agendamento.horario',
+                'Cliente.tempo_aviso_usuarios'
+            ],
             'conditions' => [
                 'DATE(Agendamento.horario) >=' => $hoje,
                 'DATE(Agendamento.horario) <=' => $amanha,  
@@ -137,7 +154,7 @@ class CronsController extends AppController {
                 'Torneio.jogos_liberados_ao_publico' => 'Y',
                 'not' => [
                     'Agendamento.torneio_id' => null,
-                    'Cliente.tempo_aviso_usuarios' => null,
+                    //'Cliente.tempo_aviso_usuarios' => null,
                 ]
             ],
             'link' => ['Torneio', 'Cliente']
@@ -145,7 +162,11 @@ class CronsController extends AppController {
 
         if ( count($agendamentos_proximos) > 0 ) {
             foreach($agendamentos_proximos as $key => $agendamento) {
-    
+
+                if ( empty($agendamento['Cliente']['tempo_aviso_usuarios']) ) {
+                    $agendamento['Cliente']['tempo_aviso_usuarios'] = "24:00:00";
+                }
+
                 //prazo para aviso definido pelo cliente
                 $prazo_minutos_aviso = $this->timeToMinutes($agendamento['Cliente']['tempo_aviso_usuarios']);
 
@@ -192,7 +213,6 @@ class CronsController extends AppController {
                     if ( $jogador['ClienteCliente']['usuario_id'] != null ) {
 
                         $usuarios_ids[] = $jogador['ClienteCliente']['usuario_id'];
-                        $this->sendTorunamentShedulingAlertNotification($usuarios_ids, $agendamento, $agendamento_horario, $dados_jogo);
                         $avisar_alguem = true;
                         $n_avisos++;
 
@@ -201,7 +221,8 @@ class CronsController extends AppController {
                 }
 
                 if ( $avisar_alguem ) {
-                    
+
+                    $this->sendTorunamentShedulingAlertNotification($usuarios_ids, $agendamento, $agendamento_horario, $dados_jogo);
     
                     $dados_salvar = [
                         'agendamento_id' => $agendamento['Agendamento']['id'],
@@ -229,6 +250,56 @@ class CronsController extends AppController {
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Usuários avisados com sucesso!', 'dados' => $n_avisos))));
 
+    }
+
+    private function sendShedulingAlertNotification($usuarios_ids, $dados_agendamento, $agendamento_horario) {
+        
+        $this->loadModel('Token');
+
+        $usuarios_ids = array_values($usuarios_ids);
+
+        foreach( $usuarios_ids as $key => $usuario_id) {
+            $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuario_id);
+
+            if( count($notifications_ids) > 0 ) {
+
+                $this->sendNotificationNew( 
+                    $usuario_id,
+                    $notifications_ids, 
+                    $dados_agendamento['Agendamento']['id'],
+                    $agendamento_horario,
+                    'lembrete_agendamento',
+                    ["en"=> '$[notif_count] Lembrete de Agendamento']
+                );
+            }
+        }
+
+        return true;
+    }
+
+    private function sendTorunamentShedulingAlertNotification($usuarios_ids, $dados_agendamento, $agendamento_horario, $dados_jogo) {
+        
+        $this->loadModel('Token');
+
+        $usuarios_ids = array_values($usuarios_ids);
+
+        foreach ( $usuarios_ids as $usuario_id ) {
+            $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuario_id);
+
+            if( count($notifications_ids) > 0 ) {
+
+                $this->sendNotificationNew( 
+                    $usuario_id,
+                    $notifications_ids, 
+                    $dados_agendamento['Agendamento']['id'],
+                    $agendamento_horario,
+                    'lembrete_agendamento_torneio',
+                    ["en"=> '$[notif_count] Lembrete de Agendamento']
+                );
+            }
+
+        }
+        return true;
     }
 
     public function avisa_usuarios_promocoes() {
