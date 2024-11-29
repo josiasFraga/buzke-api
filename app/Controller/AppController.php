@@ -1242,6 +1242,117 @@ class AppController extends Controller {
                 "registro_id" => $registro_id, 
                 'motivo' => $motivo,
             ];
+        } 
+        else if ( $motivo === 'nova_promocao' ) {
+
+            $this->loadModel('Promocao');
+            $promocao = $this->Promocao->find('first', [
+                'fields' => [
+                    'Cliente.nome'
+                ],
+                'conditions' => [
+                    'Promocao.id' => $registro_id
+                ],
+                'link' => [
+                    'Cliente'
+                ]
+            ]);
+
+            $placeholders = [
+                "{{empresa_nome}}", 
+            ];
+
+            $values = [
+                $promocao['Cliente']['nome'], 
+            ];
+
+            $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+
+            $notification_data = [
+                "registro_id" => $registro_id, 
+                'motivo' => $motivo,
+            ];
+
+        }
+        else if ( $motivo === 'novo_torneio_padel' || $motivo === 'jogos_torneio_padel_liberados' ) {
+
+            $this->loadModel('Torneio');
+            $torneio = $this->Torneio->find('first', [
+                'fields' => [
+                    'Cliente.nome',
+                    'Torneio.inicio',
+                    'Torneio.fim',
+                    'Torneio.nome',
+                    'Torneio.inscricoes_de',
+                    'Torneio.inscricoes_ate'
+                ],
+                'conditions' => [
+                    'Torneio.id' => $registro_id
+                ],
+                'link' => [
+                    'Cliente'
+                ]
+            ]);
+
+            $placeholders = [
+                "{{empresa_nome}}", 
+                "{{torneio_nome}}",
+                "{{torneio_data_inicio}}",
+                "{{torneio_data_fim}}",
+                "{{torneio_inscricoes_inicio}}",
+                "{{torneio_inscricoes_fim}}",
+            ];
+
+            $values = [
+                $torneio['Cliente']['nome'], 
+                $torneio['Torneio']['nome'], 
+                date('d/m', strtotime($torneio['Torneio']['inicio'])),
+                date('d/m', strtotime($torneio['Torneio']['fim'])),
+                date('d/m', strtotime($torneio['Torneio']['inscricoes_de'])),
+                date('d/m', strtotime($torneio['Torneio']['inscricoes_ate'])),
+            ];
+
+            $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+
+            $notification_data = [
+                "registro_id" => $registro_id, 
+                'motivo' => $motivo,
+            ];
+
+        }
+        else if ( $motivo === 'lembrete_avaliar' ) {
+
+            $this->loadModel('ClienteServico');
+            $servico = $this->ClienteServico->find('first', [
+                'fields' => [
+                    'ClienteServico.nome',
+                    'Cliente.nome'
+                ],
+                'conditions' => [
+                    'ClienteServico.id' => $registro_id
+                ],
+                'link' => [
+                    'Cliente'
+                ]
+            ]);
+
+            $placeholders = [
+                "{{servico_nome}}",
+                "{{empresa_nome}}",
+            ];
+
+            $values = [
+                $servico['ClienteServico']['nome'],
+                $servico['Cliente']['nome']
+            ];
+
+            $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+
+            $notification_data = [
+                "registro_id" => $registro_id, 
+                'motivo' => $motivo,
+            ];
+
         }
 
 		$heading = array(
@@ -1263,8 +1374,11 @@ class AppController extends Controller {
 			$arr_ids_app[] = $id;
 		}
 
+        $one_signal_token = getenv('ONE_SIGNAL_TOKEN');
+        $one_signal_app_id = getenv('ONE_SIGNAL_APP_ID');
+
         $fields = array(
-            'app_id' => getenv('ONE_SIGNAL_APP_ID'),
+            'app_id' => $one_signal_app_id,
             'include_player_ids' => $arr_ids_app,
             'data' => $notification_data,
             //'small_icon' => 'https://www.zapshop.com.br/ctff/restfull/pushservice/icons/logo_icon.png',
@@ -1279,7 +1393,7 @@ class AppController extends Controller {
         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8', 'Authorization: Basic '.getenv('ONE_SIGNAL_TOKEN')));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8', 'Authorization: Basic '.$one_signal_token));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         curl_setopt($ch, CURLOPT_HEADER, FALSE);
         curl_setopt($ch, CURLOPT_POST, TRUE);
@@ -1317,6 +1431,7 @@ class AppController extends Controller {
 
         } else {
             $this->log($response, 'debug');
+            $this->log($one_signal_app_id, 'debug');
         }
 
         return true;
@@ -1491,33 +1606,6 @@ class AppController extends Controller {
         }
 
         return true;
-    }
-
-	public function getNotifications(){
-
-
-        $curl = curl_init();
-
-        curl_setopt_array($curl, array(
-        CURLOPT_URL => 'https://onesignal.com/api/v1/notifications?app_id=b3d28f66-5361-4036-96e7-209aea142529&limit=50&offset=51',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_SSL_VERIFYPEER => 0,
-        CURLOPT_CUSTOMREQUEST => 'GET',
-        CURLOPT_HTTPHEADER => array(
-            'Authorization: Bearer ZWM2M2YyMjQtOTQ4My00MjI2LTg0N2EtYThiZmRiNzM5N2Nk'
-        ),
-        ));
-
-        $response = curl_exec($curl);
-
-        curl_close($curl);
-
-        return json_decode($response, true);
     }
 
     public function quadra_horarios($servico_id, $data) {

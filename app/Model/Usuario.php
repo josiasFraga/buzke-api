@@ -149,7 +149,7 @@ class Usuario extends AppModel {
         ]);
         
         return $jogadores;
-	}    
+	}
 
     public function getShedulingConfirmedUsers($agendamento_id = null,$agendamento_horario='') {
         if ( $agendamento_id == null || $agendamento_horario == '' ) {
@@ -220,5 +220,44 @@ class Usuario extends AppModel {
             'link' => []
         ]);
     }
+
+	public function getByLastLocation($pais = null, $estado = null, $cidade = null) {
+
+        if ( $pais == null || $estado == null || $cidade == null ) {
+            return [];
+        }
+    
+        return $this->find('all',[
+            'fields' => [
+                'Usuario.id',
+                'Usuario.nome',
+                //'UsuarioLocalizacao.id',
+                //'UsuarioLocalizacao.description',
+            ],
+            'conditions' => [
+                'Usuario.cliente_id' => null,
+                'UsuarioLocalizacao.description LIKE' => '%' . $pais . '%',
+                'UsuarioLocalizacao.description LIKE' => '%' . $estado . '%',
+                'OR' => [
+                    'REPLACE(UsuarioLocalizacao.description, "\'", "") LIKE' => '%' . $cidade . '%',// Trata nomes com apóstofos com sant'ana do livramento
+                    'UsuarioLocalizacao.description LIKE' => '%' . $cidade . '%'
+                ]
+            ],
+            'link' => [
+                'UsuarioLocalizacao' => [
+                    'conditions' => [
+                        'UsuarioLocalizacao.id = (
+                            SELECT MAX(ul.id)
+                            FROM usuarios_localizacoes ul
+                            WHERE ul.usuario_id = Usuario.id
+                        )'
+                    ]
+                ]
+            ],
+            'group' => [
+                'Usuario.id'
+            ]
+        ]);
+	}
 
 }

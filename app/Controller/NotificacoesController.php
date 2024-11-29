@@ -219,16 +219,6 @@ class NotificacoesController extends AppController {
 
     }
 
-    public function getFromOneSignal() {
-        $this->layout = 'ajax';
-        $notificacoes = $this->getNotifications();
-        foreach( $notificacoes as $key => $not ){
-            debug($not);
-        }
-
-        die();
-    }
-
     public function testar() {
 
         $dados = $this->request->query;
