@@ -159,7 +159,11 @@ class TorneiosController extends AppController {
 
         $owner = isset($dados_token['Usuario']) && $dados_token['Usuario']['cliente_id'] == $dados['Torneio']['cliente_id'];
 
-        $meus_dados_como_cliente = $this->ClienteCliente->buscaDadosUsuarioComoCliente($dados_token['Usuario']['id'], $dados['Torneio']['cliente_id']);
+        $meus_dados_como_cliente = [];
+
+        if ( !empty($dados_token['Usuario']['id']) ) {
+            $meus_dados_como_cliente = $this->ClienteCliente->buscaDadosUsuarioComoCliente($dados_token['Usuario']['id'], $dados['Torneio']['cliente_id']);
+        }
   
         $dados['Torneio']['_periodo'] = 
             'De '.date('d/m',strtotime($dados['Torneio']['inicio'])).

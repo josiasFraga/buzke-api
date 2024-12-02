@@ -13,12 +13,12 @@ class NotificacoesController extends AppController {
 
         $this->layout = 'ajax';
         $dados = $this->request->query;
-        if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
-        }
 
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( empty($dados['email']) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
 
         $token = $dados['token'];
@@ -89,7 +89,7 @@ class NotificacoesController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->query;
         if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => 0))));
         }
 
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
@@ -116,7 +116,7 @@ class NotificacoesController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->query;
         if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
 
         if ( !isset($dados['token']) || $dados['token'] == "" ) {

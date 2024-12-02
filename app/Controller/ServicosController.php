@@ -747,21 +747,22 @@ class ServicosController extends AppController {
             throw new BadRequestException('Data não informada', 400);
         }
 
-        if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
+        $email = null;
+        if ( filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            $email = $dados->email;
         }
 
         if (!isset($dados->token) || $dados->token == '') {
             throw new BadRequestException('Token não informado', 400);
         }
 
-        $dados_token = $this->verificaValidadeToken($dados->token, $dados->email);
+        $dados_token = $this->verificaValidadeToken($dados->token, $email);
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        if ( $dados_token['Usuario']['nivel_id'] != 3 ) {
-            throw new BadRequestException('Usuário sem permissão de salvamento de visita', 400);
+        if ( !empty($dados_token['Usuario']) && $dados_token['Usuario']['nivel_id'] == 3 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Usuário sem permissão de salvamento de visita'))));
         }
 
         $this->loadModel('ServicoVisita');

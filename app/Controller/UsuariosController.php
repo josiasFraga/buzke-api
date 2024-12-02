@@ -31,7 +31,7 @@ class UsuariosController extends AppController {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
         if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
 
         $token = $dados['token'];
@@ -332,8 +332,14 @@ class UsuariosController extends AppController {
     public function entrarVisitante() {
         $this->layout = 'ajax';
         
-        
-        $dados = json_decode($this->request->data['dados']);
+        $dados = $this->request->data['dados'];
+
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), true);
+        }
+
+        $dados = (object)$dados;
 		
 		if ( !isset($dados->notifications_id) || $dados->notifications_id == '' ) {
 			$dados->notifications_id = null;

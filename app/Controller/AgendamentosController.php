@@ -122,7 +122,7 @@ class AgendamentosController extends AppController {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
         if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
 
 
