@@ -1417,6 +1417,7 @@ class AppController extends Controller {
             ];
 
             $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+            $titulo = trim(str_replace($placeholders, $values, $titulo));
 
             $registro_id = $dados_jogo['Torneio']['id'];
 
