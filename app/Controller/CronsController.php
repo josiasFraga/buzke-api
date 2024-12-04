@@ -58,7 +58,11 @@ class CronsController extends AppController {
                     //'Cliente.tempo_aviso_usuarios' => null,
                 ]
             ],
-            'link' => ['ClienteCliente' => ['Usuario'], 'Cliente']
+            'link' => ['ClienteCliente' => ['Usuario'], 'Cliente'],
+            'group' => [
+                'Usuario.id',
+                'Agendamento.id'
+            ]
         ]);
 
         $n_avisos = 0;
@@ -616,7 +620,8 @@ class CronsController extends AppController {
                 ]
             ],
             'group' => [
-                'Usuario.id'
+                'Usuario.id',
+                'Agendamento.servico_id'
             ]
         ]);
 

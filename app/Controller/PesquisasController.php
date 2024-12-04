@@ -131,7 +131,7 @@ class PesquisasController extends AppController {
         foreach($clientes as $key => $cliente) {
 
             $arr_clientes_ids[] = $cliente['Cliente']['id'];
-            $clientes[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$clientes[$key]['Cliente']['logo'];
+            $clientes[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$clientes[$key]['Cliente']['logo'];
             $clientes[$key]['Horarios'] = $this->ClienteHorarioAtendimento->find('all',[
                 'conditions' => [
                     'ClienteHorarioAtendimento.cliente_id' => $cliente['Cliente']['id']

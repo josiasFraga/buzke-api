@@ -123,10 +123,10 @@ class TorneioInscricaoJogador extends AppModel {
                 'nome' => $jogador['ClienteCliente']['nome']
             ];
 
-            $dados_retornar[$key]['img'] = $images_path.'clientes_clientes/'.$jogador['ClienteCliente']['img'];
+            $dados_retornar[$key]['img'] = $images_path . '/clientes_clientes/'.$jogador['ClienteCliente']['img'];
     
             if ( !empty($jogador['Usuario']['img']) ) {
-                $dados_retornar[$key]['img'] = $images_path.'usuarios/'.$jogador['Usuario']['img'];
+                $dados_retornar[$key]['img'] = $images_path . '/usuarios/'.$jogador['Usuario']['img'];
             }
         }
 
@@ -160,10 +160,10 @@ class TorneioInscricaoJogador extends AppModel {
         }
 
         if ( $jogador_imagem == null )  {
-            $jogador_imagem = $images_path."usuarios/default.png";;
+            $jogador_imagem = $images_path."/usuarios/default.png";;
         }
 
-        return $images_path . "usuarios/" . $jogador_imagem;
+        return $images_path . "/usuarios/" . $jogador_imagem;
 
     }
 

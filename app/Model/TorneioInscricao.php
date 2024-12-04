@@ -21,6 +21,9 @@ class TorneioInscricao extends AppModel {
 		'TorneioGrupo' => array(
 			'foreignKey' => 'torneio_inscricao_id'
         ),
+		'TorneioJogoSeguidor' => array(
+			'foreignKey' => 'torneio_inscricao_id'
+        ),
 	);
 
 	public function checkSubscriptionInCategory($dados_cliente_cliente = [], $dados_torneio = [], $categoria_id = null) {

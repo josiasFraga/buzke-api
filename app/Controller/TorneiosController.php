@@ -3,6 +3,7 @@ App::uses('CombinationsComponent', 'Controller/Component');
 App::uses('Set', 'Utility');
 
 class TorneiosController extends AppController {
+    public $components = array('RequestHandler');
 
     public function index() {
 
@@ -78,8 +79,8 @@ class TorneiosController extends AppController {
             $torneios[$key]['Torneio']['_periodo'] = 
                 'De '.date('d/m',strtotime($trn['Torneio']['inicio'])).
                 ' até '.date('d/m',strtotime($trn['Torneio']['fim']));
-            $torneios[$key]['Torneio']['img'] = $this->images_path."torneios/".$trn['Torneio']['img'];
-            $torneios[$key]['Torneio']['img_thumb'] = $this->images_path."torneios/thumb_".$trn['Torneio']['img'];
+            $torneios[$key]['Torneio']['img'] = $this->images_path."/torneios/".$trn['Torneio']['img'];
+            $torneios[$key]['Torneio']['img_thumb'] = $this->images_path."/torneios/thumb_".$trn['Torneio']['img'];
             $torneios[$key]['Torneio']['_owner'] = $owner;
             $torneios[$key]['Torneio']['_old'] = ($trn['Torneio']['fim'] < date('Y-m-d'));
 
@@ -169,8 +170,8 @@ class TorneiosController extends AppController {
             'De '.date('d/m',strtotime($dados['Torneio']['inicio'])).
             ' até '.date('d/m',strtotime($dados['Torneio']['fim']));
         $img = $dados['Torneio']['img'];
-        $dados['Torneio']['img'] = $this->images_path."torneios/" . $img;
-        $dados['Torneio']['img_thumb'] = $this->images_path."torneios/thumb_" . $img;
+        $dados['Torneio']['img'] = $this->images_path."/torneios/" . $img;
+        $dados['Torneio']['img_thumb'] = $this->images_path."/torneios/thumb_" . $img;
         $dados['Torneio']['_owner'] = $owner;
         $dados['Torneio']['_periodo_inscricao'] = 
             'de '.
@@ -338,6 +339,7 @@ class TorneiosController extends AppController {
         $this->loadModel('TorneioInscricao');
         $this->loadModel('TorneioCateogira');
         $this->loadModel('TorneioInscricaoJogador');
+        $this->loadModel('TorneioJogoSeguidor');
 
         $conditions = [];
         $usuario_visitante = !isset($dados_token['Usuario']);
@@ -371,12 +373,26 @@ class TorneiosController extends AppController {
             $dados_inscricao = $this->TorneioInscricaoJogador->getBySubscriptionId($dado['TorneioInscricao']['id']);
             $dados[$key]['TorneioInscricao']['_jogador_1'] = $dados_inscricao[0]['TorneioInscricaoJogador']['cliente_cliente_id'];
             $dados[$key]['TorneioInscricao']['_jogador_2'] = $dados_inscricao[1]['TorneioInscricaoJogador']['cliente_cliente_id'];
+            $dados[$key]['TorneioInscricao']['_dupla'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($dado['TorneioInscricao']['id'], $this->images_path);
             $dados[$key]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($dado['TorneioInscricao']['id']);
             $dados[$key]['TorneioInscricao']['_owner'] = $owner;
+            
+
+            if ( $usuario_visitante ) {
+                $dados[$key]['TorneioInscricao']['_is_following'] = false;
+                $dados[$key]['TorneioInscricao']['_can_follow_unfollow'] = false;
+            } else {
+
+                $dados[$key]['TorneioInscricao']['_is_following'] = $this->TorneioJogoSeguidor->isFollowing($dados_token['Usuario']['id'], null, $dado['TorneioInscricao']['id']);
+                
+                if ( $dados_token['Usuario']['nivel_id'] == 3) {
+                    $dados[$key]['TorneioInscricao']['_can_follow_unfollow'] = true;
+                }
+            }
         }
 
         usort($dados, function($a, $b) {
-            $retval = $b['TorneioInscricao']['_nome_dupla'] <=> $a['TorneioInscricao']['_nome_dupla'];
+            $retval = $a['TorneioInscricao']['_nome_dupla'] <=> $b['TorneioInscricao']['_nome_dupla'];
             return $retval;
         });
         
@@ -1454,6 +1470,7 @@ class TorneiosController extends AppController {
 
                     foreach( $integrantes as $key_integrante => $integrante) {
                         $integrantes[$key_integrante]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($integrante['TorneioInscricao']['id']);
+                        $integrantes[$key_integrante]['TorneioInscricao']['_dupla'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($integrante['TorneioInscricao']['id'], $this->images_path);
                         $integrantes[$key_integrante]['TorneioInscricao']['_vitorias'] = $this->TorneioJogo->buscaNVitorias($integrante['TorneioInscricao']['id'], 1);
                         $integrantes[$key_integrante]['TorneioInscricao']['_sets'] = $this->TorneioJogo->buscaSaldoSets($integrante['TorneioInscricao']['id'], 1);
                         $integrantes[$key_integrante]['TorneioInscricao']['_games'] = $this->TorneioJogo->buscaNGames($integrante['TorneioInscricao']['id'], 1);
@@ -2472,7 +2489,6 @@ class TorneiosController extends AppController {
         return true; // Não existe sobreposição, permitindo o agendamento
     }
 
-
     private function conta_confrontos($confrontos = []) {
 
         $n_confrontos = 0;
@@ -2536,6 +2552,7 @@ class TorneiosController extends AppController {
         $this->loadModel('TorneioInscricaoJogador');
         $this->loadModel('TorneioJogoPlacar');
         $this->loadModel('TorneioGrupo');
+        $this->loadModel('TorneioJogoSeguidor');
 
         $usuario_visitante = !isset($dados_usuario['Usuario']);
 
@@ -2601,15 +2618,19 @@ class TorneiosController extends AppController {
                     }
                 }
 
-                if ( $jogo['TorneioJogo']['time_1'] != null ) 
+                if ( $jogo['TorneioJogo']['time_1'] != null ) { 
                     $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_1']);
-                else
+                    $jogos[$key]['TorneioJogo']['_dupla_1'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($jogo['TorneioJogo']['time_1'], $this->images_path);
+                } else {
                     $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $jogo['TorneioJogo']['time_1_proximas_fases'];
+                }
 
-                if ( $jogo['TorneioJogo']['time_2'] != null )
+                if ( $jogo['TorneioJogo']['time_2'] != null ) {
                     $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_2']);
-                else
+                    $jogos[$key]['TorneioJogo']['_dupla_2'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($jogo['TorneioJogo']['time_2'], $this->images_path);
+                } else {
                     $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $jogo['TorneioJogo']['time_2_proximas_fases'];
+                }
                 
                 $jogos[$key]['TorneioJogo']['_enable_set_score'] = true;
 
@@ -2621,6 +2642,24 @@ class TorneiosController extends AppController {
                 $jogos[$key]['TorneioJogo']['_data'] = date('d/m/Y',strtotime($jogo['Agendamento']['horario']));
                 $jogos[$key]['TorneioJogo']['_resultados'] = $this->TorneioJogoPlacar->busca_resultados($jogo['TorneioJogo']['id']);
                 $datas[] = date('d/m/Y',strtotime($jogo['Agendamento']['horario']));
+
+                if ( $dados_usuario['Usuario']['nivel_id'] == 3) {
+                    $jogos[$key]['TorneioJogo']['_can_follow_unfollow'] = true;
+                }
+
+                if ( $usuario_visitante ) {
+                    $jogos[$key]['TorneioJogo']['_is_following'] = false;
+                    $jogos[$key]['TorneioJogo']['_can_follow_unfollow'] = false;
+                } else {
+
+                    $jogos[$key]['TorneioJogo']['_is_following'] = $this->TorneioJogoSeguidor->isFollowing($dados_usuario['Usuario']['id'], $jogo['TorneioJogo']['id']);
+                    if ( !$jogos[$key]['TorneioJogo']['_is_following'] ) {
+                        $jogos[$key]['TorneioJogo']['_is_following'] = $this->TorneioJogoSeguidor->isFollowing($dados_usuario['Usuario']['id'], null, [$jogo['TorneioJogo']['time_1'], $jogo['TorneioJogo']['time_2']]);
+                        if ( $jogos[$key]['TorneioJogo']['_is_following'] ) {
+                            $jogos[$key]['TorneioJogo']['_can_follow_unfollow'] = false;
+                        }
+                    }
+                }
             }
         }
 
@@ -2642,6 +2681,9 @@ class TorneiosController extends AppController {
     public function salva_resultado(){
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];
+
+        //$this->log($dados, 'debug');
+        //die();
 
         if ( gettype($dados) == 'string' ) {
             $dados = json_decode($dados);
@@ -2700,6 +2742,7 @@ class TorneiosController extends AppController {
         $this->loadModel('TorneioJogoPlacar');
         $this->loadModel('TorneioInscricao');
         $this->loadModel('TorneioInscricaoJogador');
+        $this->loadModel('TorneioJogoSeguidor');
 
         $dados_jogo = $this->TorneioJogo->find('first',[
             'fields' => ['*'],
@@ -2798,6 +2841,28 @@ class TorneiosController extends AppController {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Ocorreu um erro ao gerar as próximas fases.'))));
             }
 
+        }
+
+        $folowers = $this->TorneioJogoSeguidor->findFollowers($dados_jogo['TorneioJogo']['id'], [$dados_jogo['TorneioJogo']['time_1'], $dados_jogo['TorneioJogo']['time_2']]);
+
+        if ( count($folowers) > 0 ) {
+
+            foreach( $folowers as $key_f => $user_id ){
+
+                $this->loadModel('Token');
+                $notifications_ids = $this->Token->getIdsNotificationsUsuario($user_id);
+
+                $this->sendNotificationNew ( 
+                    $user_id,
+                    $notifications_ids,
+                    $dados_jogo['TorneioJogo']['id'], 
+                    null,
+                    'resultado_informado', 
+                    ["en"=> '$[notif_count] Scores Informados']
+                );
+
+            }
+        
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Resultado cadastrado com sucesso!'))));

@@ -41,7 +41,7 @@ class PlacaresController extends AppController {
             $torneios[$key]['Torneio']['_periodo'] = 
                 'De '.date('d/m',strtotime($trn['Torneio']['inicio'])).
                 ' até '.date('d/m',strtotime($trn['Torneio']['fim']));
-            $torneios[$key]['Torneio']['img'] = $this->images_path."torneios/".$trn['Torneio']['img'];
+            $torneios[$key]['Torneio']['img'] = $this->images_path."/torneios/".$trn['Torneio']['img'];
 
         }
         

@@ -106,7 +106,7 @@ class ClientesController extends AppController {
         foreach($clientes as $key => $cliente) {
 
             $arr_clientes_ids[] = $cliente['Cliente']['id'];
-            $clientes[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$clientes[$key]['Cliente']['logo'];
+            $clientes[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$clientes[$key]['Cliente']['logo'];
             $clientes[$key]['Horarios'] = $this->ClienteHorarioAtendimento->find('all',[
                 'conditions' => [
                     'ClienteHorarioAtendimento.cliente_id' => $cliente['Cliente']['id']
@@ -1053,10 +1053,10 @@ class ClientesController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->query;
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
         if ( !isset($dados['email']) || $dados['email'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
 
         $token = $dados['token'];
@@ -1069,7 +1069,7 @@ class ClientesController extends AppController {
         }
 
         if ( $dados_token['Usuario']['nivel_id'] != 2 ) {
-            throw new BadRequestException('Usuário não logado!', 401);
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
         }
 
         $conditions = [
@@ -1156,7 +1156,7 @@ class ClientesController extends AppController {
         ]);
 
         if ( count($dados) > 0 ) {
-            $dados['Cliente']['logo'] = $this->images_path.'clientes/'.$dados['Cliente']['logo'];
+            $dados['Cliente']['logo'] = $this->images_path . '/clientes/'.$dados['Cliente']['logo'];
             $dados['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($dados['Cliente']['id']);
             $dados['Cliente']['isPaddleCourt'] = $this->ClienteSubcategoria->checkIsPaddleCourt($dados['Cliente']['id']);
             if ( $dados['Cliente']['prazo_maximo_para_canelamento'] != null && $dados['Cliente']['prazo_maximo_para_canelamento'] != '' )

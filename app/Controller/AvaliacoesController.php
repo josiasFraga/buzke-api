@@ -42,7 +42,7 @@ class AvaliacoesController extends AppController {
         ]);
 
         foreach ( $avaliacoes as $key => $avaliacao ) {
-            $avaliacoes[$key]['Usuario']['img'] = $this->images_path.'usuarios/'.$avaliacao['Usuario']['img'];
+            $avaliacoes[$key]['Usuario']['img'] = $this->images_path.'/usuarios/'.$avaliacao['Usuario']['img'];
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $avaliacoes))));
@@ -226,7 +226,7 @@ class AvaliacoesController extends AppController {
                 $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
             }
 
-            $servicos[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$servico['Cliente']['logo'];
+            $servicos[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$servico['Cliente']['logo'];
         }
 
         $servicos = array_values($servicos);
@@ -281,8 +281,8 @@ class AvaliacoesController extends AppController {
                 $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
             }
 
-            $servicos[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$servico['Cliente']['logo'];
-            $servicos[$key]['Usuario']['img'] = $this->images_path.'usuarios/'.$servico['Usuario']['img'];
+            $servicos[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$servico['Cliente']['logo'];
+            $servicos[$key]['Usuario']['img'] = $this->images_path.'/usuarios/'.$servico['Usuario']['img'];
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $servicos))));

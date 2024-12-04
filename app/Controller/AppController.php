@@ -871,8 +871,9 @@ class AppController extends Controller {
 
     public function __construct($request = null, $response = null) {
         parent::__construct($request, $response);
-        $this->images_path = getenv('IMAGES_PATH');
-        $this->files_path = getenv('FILES_PATH');
+    
+        $this->images_path = getenv('IMAGES_PATH') ?: 'https://api.buzke.com.br/app/webroot/img';
+        $this->files_path = getenv('FILES_PATH') ?: 'https://api.buzke.com.br/app/webroot/img/anexos';
     }
 
     
@@ -1357,6 +1358,72 @@ class AppController extends Controller {
                 'motivo' => $motivo,
             ];
 
+        } else if ($motivo === 'resultado_informado') {
+            $this->loadModel('TorneioJogo');
+            $this->loadModel('TorneioInscricaoJogador');
+            $this->loadModel('TorneioJogoPlacar');
+
+            $dados_jogo = $this->TorneioJogo->find('first', [
+                'fields' => [
+                    'TorneioJogo.id',
+                    'TorneioJogo.time_1',
+                    'TorneioJogo.time_2',
+                    'TorneioCategoria.sexo',
+                    'TorneioCategoria.nome',
+                    'PadelCategoria.titulo',
+                    'Torneio.id',
+                    'Torneio.nome'
+                ],
+                'conditions' => [
+                    'TorneioJogo.id' => $registro_id
+                ],
+                'link' => [
+                    'TorneioCategoria' => [
+                        'PadelCategoria',
+                        'Torneio'
+                    ]
+                ]
+            ]);
+
+            $placares = $this->TorneioJogoPlacar->busca_resultados($dados_jogo['TorneioJogo']['id']);
+
+            $time_1 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($dados_jogo['TorneioJogo']['time_1'], $this->images_path);
+            $time_2 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($dados_jogo['TorneioJogo']['time_2'], $this->images_path);
+
+            $confronto_titulo = explode(' ', $time_1[0]['nome'])[0];
+            $confronto_titulo .= " e ".explode(' ', $time_1[1]['nome'])[0];
+            $confronto_titulo .= " <VS> ";
+            $confronto_titulo .= explode(' ', $time_2[0]['nome'])[0];
+            $confronto_titulo .= " e ".explode(' ', $time_2[1]['nome'])[0];
+
+            $placares_str = "";
+
+            foreach( $placares as $key => $placar ) {
+                $placares_str.= $placar['TorneioJogoPlacar']['tipo'] . " " .$placar['TorneioJogoPlacar']['time_1_placar'] . " <-> " . $placar['TorneioJogoPlacar']['time_2_placar']."\n";
+            }
+
+            $placeholders = [
+                "{{torneio_nome}}",
+                "{{categoria_nome}}",
+                "{{confronto_dados}}",
+                "{{resultados}}"
+            ];
+
+            $values = [
+                $dados_jogo['Torneio']['nome'],
+                $dados_jogo['TorneioCategoria']['nome'].$dados_jogo['PadelCategoria']['titulo']." ".$dados_jogo['TorneioCategoria']['sexo'],
+                $confronto_titulo,
+                $placares_str
+            ];
+
+            $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+
+            $registro_id = $dados_jogo['Torneio']['id'];
+
+            $notification_data = [
+                "registro_id" => $registro_id, 
+                'motivo' => $motivo,
+            ];
         }
 
 		$heading = array(
@@ -1432,7 +1499,7 @@ class AppController extends Controller {
 
         } else {
             $this->log($response, 'debug');
-            $this->log($one_signal_app_id, 'debug');
+            $this->log(getenv('ONE_SIGNAL_APP_ID'), 'debug');
         }
 
         return true;

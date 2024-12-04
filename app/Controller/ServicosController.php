@@ -711,13 +711,13 @@ class ServicosController extends AppController {
         foreach($servicos as $key => $ser){
 
             if ( !empty($ser['ClienteServicoFoto']['imagem']) ) {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "servicos/" . $ser['ClienteServicoFoto']['imagem'];
+                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $ser['ClienteServicoFoto']['imagem'];
             } else {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "servicos/sem_imagem.jpeg";
+                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
             }
 
             if ( !empty($ser['Cliente']['logo']) ) {
-                $servicos[$key]['Cliente']['logo'] = $this->images_path.'clientes/'.$ser['Cliente']['logo'];
+                $servicos[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$ser['Cliente']['logo'];
             }
         }
         
@@ -761,7 +761,7 @@ class ServicosController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
-        if ( !empty($dados_token['Usuario']) && $dados_token['Usuario']['nivel_id'] == 3 ) {
+        if ( !empty($dados_token['Usuario']) && $dados_token['Usuario']['nivel_id'] != 3 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Usuário sem permissão de salvamento de visita'))));
         }
 

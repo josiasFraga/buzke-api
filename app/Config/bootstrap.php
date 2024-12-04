@@ -113,24 +113,36 @@ CakeLog::config('error', array(
 ));
 
 function loadDotEnv($filePath) {
+    // Verifica se o arquivo existe
     if (!file_exists($filePath)) {
+        trigger_error("Arquivo .env não encontrado em: $filePath", E_USER_WARNING);
         return false;
     }
 
+    // Lê o conteúdo do arquivo .env
     $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     if ($lines === false) {
+        trigger_error("Erro ao ler o arquivo .env em: $filePath", E_USER_WARNING);
         return false;
     }
 
     foreach ($lines as $line) {
-        if (strpos(trim($line), '#') === 0) {
-            continue;  // Skip comments
+        // Ignora comentários ou linhas inválidas
+        if (strpos(trim($line), '#') === 0 || strpos($line, '=') === false) {
+            continue;
         }
 
+        // Separa nome e valor
         list($name, $value) = explode('=', $line, 2);
         $name = trim($name);
         $value = trim($value);
 
+        // Remove aspas do valor, se existirem
+        if (preg_match('/^["\'].*["\']$/', $value)) {
+            $value = substr($value, 1, -1);
+        }
+
+        // Define o valor se ainda não estiver definido
         if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
             putenv("$name=$value");
             $_ENV[$name] = $value;
@@ -141,5 +153,9 @@ function loadDotEnv($filePath) {
     return true;
 }
 
+$envPath = APP . '../.env';
+
 // Carregar o .env
-loadDotEnv(dirname(dirname(__DIR__)) . '/.env');
+if (!loadDotEnv($envPath)) {
+    trigger_error("Falha ao carregar o arquivo .env", E_USER_WARNING);
+}
