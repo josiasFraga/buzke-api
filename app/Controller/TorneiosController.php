@@ -2643,7 +2643,7 @@ class TorneiosController extends AppController {
                 $jogos[$key]['TorneioJogo']['_resultados'] = $this->TorneioJogoPlacar->busca_resultados($jogo['TorneioJogo']['id']);
                 $datas[] = date('d/m/Y',strtotime($jogo['Agendamento']['horario']));
 
-                if ( $dados_usuario['Usuario']['nivel_id'] == 3) {
+                if ( !empty($dados_usuario['Usuario']['nivel_id']) && $dados_usuario['Usuario']['nivel_id'] == 3) {
                     $jogos[$key]['TorneioJogo']['_can_follow_unfollow'] = true;
                 }
 
