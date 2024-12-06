@@ -313,7 +313,7 @@ class CronsController extends AppController {
 
         // Não enviar notificação entre 22 e 8
         if ( $hora > 22 || $hora < 8 ) {
-            return false;
+            die();
         }
 
         $n_avisos = 0;
@@ -403,7 +403,7 @@ class CronsController extends AppController {
 
         // Não enviar notificação entre 22 e 8
         if ( $hora > 22 || $hora < 8 ) {
-            return false;
+            die();
         }
 
         $n_avisos = 0;
@@ -493,7 +493,7 @@ class CronsController extends AppController {
 
         // Não enviar notificação entre 22 e 8
         if ( $hora > 22 || $hora < 8 ) {
-            return false;
+            die();
         }
 
         $n_avisos = 0;
@@ -568,7 +568,7 @@ class CronsController extends AppController {
 
         // Não enviar notificação entre 22 e 8
         if ( $hora > 22 || $hora < 8 ) {
-            return false;
+            die();
         }
 
         $hoje = date('Y-m-d');
