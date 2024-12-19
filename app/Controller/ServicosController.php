@@ -22,7 +22,6 @@ class ServicosController extends AppController {
 
         $conditions = [];
         $order = ['ClienteServico.nome'];
-
     
         // Se o usuário está passando autenticação
         if ( isset($dados['token']) && $dados['token'] != "" && isset($dados['email']) && $dados['email'] != "" ) {
@@ -87,14 +86,23 @@ class ServicosController extends AppController {
                         'id',
                         'imagem'
                     ]
+                ],
+                'Cliente' => [
+                    'fields' => [
+                        'nome'
+                    ]
                 ]
             ]
         ]);
 
         foreach($quadras as $key => $qua){
 
-            if ( isset($dados['day']) && !empty($dados['day']) ) {
-                $quadras[$key]["ClienteServico"]["_horarios"] = $this->quadra_horarios($qua['ClienteServico']['id'], $dados['day'], false);
+            if ( !empty($dados['day']) ) {
+
+                if ( empty($dados['simple_list']) ) {
+                    $quadras[$key]["ClienteServico"]["_horarios"] = $this->quadra_horarios($qua['ClienteServico']['id'], $dados['day'], false);
+                }
+
                 $range_valores = $this->ClienteServicoHorario->buscaRangeValores($qua['ClienteServico']['id'], date('w', strtotime($dados['day'])));
             } else {
                 $quadras[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($qua['ClienteServico']['id']);
@@ -211,14 +219,29 @@ class ServicosController extends AppController {
                 $profissionais_salvar = [];
 
                 foreach ( $dados->profissionais as $key => $profissional ) {
-                    $profissionais_salvar[] = [
-                        'usuario_id'=> $profissional,
-                        'cliente_servico_id' => $servico_id
-                    ];
+
+                    $verifica_ja_esta_cadastrado = $this->ClienteServicoProfissional->find('count',[
+                        'conditions' => [
+                            'usuario_id' => $profissional,
+                            'cliente_servico_id' => $servico_id
+                        ],
+                        'link' => []
+                    ]) > 0;
+
+
+                    if ( !$verifica_ja_esta_cadastrado ) {
+                        $profissionais_salvar[] = [
+                            'usuario_id'=> $profissional,
+                            'cliente_servico_id' => $servico_id
+                        ];
+
+                    }
                 }
 
-                if ( !$this->ClienteServicoProfissional->saveMany($profissionais_salvar) ) {
-                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar salvar os profissionais do serviço!'))));
+                if ( count($profissionais_salvar) > 0 ) {
+                    if ( !$this->ClienteServicoProfissional->saveMany($profissionais_salvar) ) {
+                        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao tentar salvar os profissionais do serviço!'))));
+                    }                    
                 }
 
             }
@@ -389,7 +412,7 @@ class ServicosController extends AppController {
 
         if ( isset($dados_servico['ClienteServicoAvaliacao']) && count($dados_servico['ClienteServicoAvaliacao']) > 0 ) {
             foreach( $dados_servico['ClienteServicoAvaliacao'] as $key => $avaliacao ){
-                $dados_servico['ClienteServicoAvaliacao'][$key]['Usuario']['img'] = $this->images_path . "usuarios/" . $avaliacao['Usuario']['img'];
+                $dados_servico['ClienteServicoAvaliacao'][$key]['Usuario']['img'] = $this->images_path . "/usuarios/" . $avaliacao['Usuario']['img'];
             }
         }
         
@@ -542,13 +565,14 @@ class ServicosController extends AppController {
                 'ClienteServico.nome',
                 'ClienteServico.cliente_id',
                 'ClienteServicoFoto.id',
-                'ClienteServicoFoto.imagem'
+                'ClienteServicoFoto.imagem',
+                'Cliente.nome'
             ],
             'conditions' => [
                 'ClienteServico.cliente_id' => $dado_usuario['Usuario']['cliente_id'],
                 'ClienteServico.ativo' => "Y"
             ],
-            'link' => ['ClienteServicoFoto'],
+            'link' => ['ClienteServicoFoto', 'Cliente'],
             'group' => [
                 'ClienteServico.id'
             ]
@@ -557,30 +581,30 @@ class ServicosController extends AppController {
         $dados_retornar = [];
 
         $horarios = [];
-        foreach($servicos as $key => $servico){
+        foreach($servicos as $key => $servico) {
+            // Verifica e define a imagem do serviço apenas uma vez fora do loop interno
+            if (!empty($servico['ClienteServicoFoto']['id'])) {
+                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $servico['ClienteServicoFoto']['imagem'];
+            } else {
+                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
+            }
+        
+            // Define a imagem associada ao serviço
+            $servicos[$key]['ClienteServico']['foto'] = $servicos[$key]['ClienteServicoFoto']['imagem'];
+        
+            $servicos[$key]['ClienteServico']['_cliente_nome'] = $servico['Cliente']['nome'];
+        
+            // Pega os horários disponíveis para esse serviço
             $servicos[$key]['_horarios'] = $this->quadra_horarios($servico['ClienteServico']['id'], $data, false);
-
-            if ( count($servicos[$key]['_horarios']) > 0 ){
-
-                foreach( $servicos[$key]['_horarios'] as $key => $horario ){
-
-                    if ( $horario['active'] ) {
-
-                        if ( !empty($servico['ClienteServicoFoto']['id']) ) {
-                            $servico['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $servico['ClienteServicoFoto']['imagem'];
-                        } else {
-                            $servico['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
-                        }
-
-                        $servico['ClienteServico']['foto'] = $servico['ClienteServicoFoto']['imagem'];
-
-                        $horario['_servico'] = $servico['ClienteServico'];
+        
+            if (count($servicos[$key]['_horarios']) > 0) {
+                foreach ($servicos[$key]['_horarios'] as $index => $horario) {
+                    if ($horario['active']) {
+                        // Adiciona o serviço com a imagem já corrigida
+                        $horario['_servico'] = $servicos[$key]['ClienteServico'];
                         $dados_retornar[] = $horario;
-
                     }
-
                 }
-
             }
         }
 

@@ -491,9 +491,6 @@ class ToProJogoController extends AppController {
         if ( !isset($dados['day']) || $dados['day'] == "" ) {
             throw new BadRequestException('Dia não informado!', 401);
         }
-        if ( !isset($dados['cliente_id']) || $dados['cliente_id'] == "" ) {
-            throw new BadRequestException('Id da empresa não informada!', 401);
-        }
 
         $token = $dados['token'];
         $email = $dados['email'];
@@ -502,6 +499,14 @@ class ToProJogoController extends AppController {
 
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] == 3 ) {
+            if ( !isset($dados['cliente_id']) || $dados['cliente_id'] == "" ) {
+                throw new BadRequestException('Id da empresa não informada!', 401);
+            }
+        } else {
+            $dados['cliente_id'] = $dados_token['Usuario']['cliente_id'];
         }
 
         $this->loadModel('Cliente');

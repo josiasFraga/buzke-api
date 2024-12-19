@@ -920,8 +920,14 @@ class TorneiosController extends AppController {
             if ( !isset($dados->telefone) || $dados->telefone == '' || $dados->telefone == null ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O seu telefone deve ser informado.'))));
             }
-            if ( !isset($dados->nome_dupla) || $dados->nome_dupla == '' || $dados->nome_dupla == null ) {
+            if ( empty($dados->nome_dupla) ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O nome do parceiro deve ser informado.'))));
+            }
+            if ( !empty($dados->email_dupla) && !filter_var($dados->email_dupla, FILTER_VALIDATE_EMAIL) ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O e-mail do parceiro é inválido.'))));
+            }
+            if ( !empty($dados->email_dupla) && $dados->email_dupla === $dados_usuario['Usuario']['email'] ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O e-mail do parceiro é não pode ser o mesmo que o seu.'))));
             }
             if ( !isset($dados->telefone_dupla) || $dados->telefone_dupla == '' || $dados->telefone_dupla == null ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'O telefone do parceiro deve ser informado.'))));
@@ -2761,19 +2767,26 @@ class TorneiosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'As equipes desta fase ainda não foram definidos.'))));
         }
 
+        $this->TorneioJogoPlacar->deleteAll(['TorneioJogoPlacar.torneio_jogo_id' => $dados->id]);
+ 
+        if ( !$this->TorneioJogoPlacar->saveMany($placares) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar o resultado do jogo.'))));
+        }
+
+        $vencedor_field = $this->TorneioJogoPlacar->busca_vencedor_por_jogo($dados_jogo['TorneioJogo']['id']);
+
+        if ( !$vencedor_field ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível definir o vencedor.'))));
+        }
+
         $dados_jogo_atualizar = [
             'id' => $dados->id,
             'finalizado' => "Y",
+            'vencedor' => $dados_jogo['TorneioJogo'][$vencedor_field]
         ];
 
         if ( !$this->TorneioJogo->save($dados_jogo_atualizar) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao finalizar o jogo.'))));
-        }
-
-        $this->TorneioJogoPlacar->deleteAll(['TorneioJogoPlacar.torneio_jogo_id' => $dados->id]);
- 
-        if (!$this->TorneioJogoPlacar->saveMany($placares)) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar o resultado do jogo.'))));
         }
 
         $fase_jogo = $dados_jogo['TorneioJogo']['fase'];
@@ -2823,19 +2836,7 @@ class TorneiosController extends AppController {
             }
         } else {
 
-            $resultados = $this->TorneioJogoPlacar->busca_resultados($dados_jogo['TorneioJogo']['id']);
-
-            if ( count($resultados) == 0 ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao buscar os resultados.'))));
-            }
-
-            $vencedor = $this->TorneioJogoPlacar->busca_vencedor_por_resultados($resultados);
-
-            if ( !$vencedor ) {
-                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível definir o vencedor.'))));
-            }
-
-            $seta_times = $this->TorneioJogo->setTeams($dados_jogo['Torneio']['id'], $dados_jogo['TorneioJogo']['torneio_categoria_id'], null, $dados_jogo['TorneioJogo']['_id'], [], $dados_jogo['TorneioJogo'][$vencedor]);
+            $seta_times = $this->TorneioJogo->setTeams($dados_jogo['Torneio']['id'], $dados_jogo['TorneioJogo']['torneio_categoria_id'], null, $dados_jogo['TorneioJogo']['_id'], [], $dados_jogo['TorneioJogo'][$vencedor_field]);
 
             if ( !$seta_times ) {
                 return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Ocorreu um erro ao gerar as próximas fases.'))));

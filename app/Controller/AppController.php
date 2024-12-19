@@ -1736,7 +1736,7 @@ class AppController extends Controller {
 
                     foreach( $dados_servico['ClienteServicoProfissional'] as $key_profissional => $profissional ) {
 
-                        $verifica_disponibilidade = $this->ClienteServicoProfissional->verifica_disponibilidade($profissional['usuario_id'], $data." ".$horarios[$key]['time']);
+                        $verifica_disponibilidade = $this->Agendamento->verifica_disponibilidade_profissional($profissional['usuario_id'], $data." ".$horarios[$key]['time']);
 
                         if ( $verifica_disponibilidade ) {
                             $profissionais_disponiveis[] = $profissional['usuario_id'];

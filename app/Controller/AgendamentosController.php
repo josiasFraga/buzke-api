@@ -348,6 +348,8 @@ class AgendamentosController extends AppController {
                 'Cliente.wp_ddi',
                 'Cliente.wp',
                 'Cliente.prazo_maximo_para_canelamento',
+                'Cliente.chave_pix',
+                'Cliente.tipo_chave_pix',
                 'ClienteCliente.img',
                 'ClienteCliente.endereco',
                 'ClienteCliente.endreceo_n',
@@ -1181,7 +1183,7 @@ class AgendamentosController extends AppController {
             if ( $horario_x_horario_selecionado['fixed_type'] === 'Semanal' ) {
                 $agendamento_dia_semana = date('w',strtotime($data_selecionada.' '.$horario_selecionado));
             }
-            else if ( $$horario_x_horario_selecionado['fixed_type'] === 'Mensal' ) {
+            else if ( $horario_x_horario_selecionado['fixed_type'] === 'Mensal' ) {
                 $agendamento_dia_mes = (int)date('d',strtotime($data_selecionada.' '.$horario_selecionado));
             }
 

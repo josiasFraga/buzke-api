@@ -264,6 +264,47 @@ class ClientesController extends AppController {
 
     }
 
+    public function cadastrou_chave_pix() {
+
+        $this->layout = 'ajax';
+        $dados = $this->request->query;
+        if ( !isset($dados['token']) || $dados['token'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( !isset($dados['email']) || $dados['email'] == "" ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dado_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dado_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dado_usuario['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $this->loadModel('Cliente');
+        $cadastrou_chave_pix = $this->Cliente->find('count',[
+            'fields' => ['Cliente.id'],
+            'conditions' => [
+                'Cliente.id' => $dado_usuario['Usuario']['cliente_id'],
+                'NOT' => [
+                    'Cliente.chave_pix' => null
+                ]
+            ],
+            'link' => []
+        ]);
+
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $cadastrou_chave_pix > 0))));
+
+    }
+
     private function procuraHorariosHoje($horarios = null) {
 
         if ( $horarios == null || count($horarios) == 0) {
@@ -1094,12 +1135,14 @@ class ClientesController extends AppController {
             'fields' => [
                 'ClienteCliente.id',
                 'ClienteCliente.nome',
+                'ClienteCliente.img',
+                'Usuario.img',
                 'ClienteCliente.telefone',
                 'ClienteCliente.endereco',
                 'ClienteCliente.endreceo_n',
                 'ClienteCliente.bairro',
             ],
-            'link' => [],
+            'link' => ['Usuario'],
             'order' => ['ClienteCliente.nome'],
             //'contain' => ['Localidade', 'Uf', 'Agendamento' => ['conditions' => ['Agendamento.cliente_id' => $dados_token['Usuario']['cliente_id']]], 'Usuario', 'ClienteClienteDadosPadel', 'ClienteClientePadelCategoria'],
             'group' => ['ClienteCliente.id']
@@ -1109,7 +1152,21 @@ class ClientesController extends AppController {
         if  ( count($clientes) > 0 ) {
             $count = 0;
             foreach($clientes as $key => $cliente){
-                $clientes_retornar[] = ['label' => $cliente['ClienteCliente']['nome']." - ".$cliente['ClienteCliente']['telefone'], 'value' => $cliente['ClienteCliente']['id'], 'endereco' => $this->bdToStringAddres($cliente)];
+    
+                $foto = $cliente['ClienteCliente']['img'] = $this->images_path.'/clientes_clientes/'.$cliente['ClienteCliente']['img'];
+
+                if ( !empty($cliente['Usuario']['img']) ) {
+                    $foto = $cliente['Usuario']['img'] = $this->images_path.'/usuarios/'.$cliente['Usuario']['img'];                    
+                }
+
+                $clientes_retornar[] = [
+                    'label' => $cliente['ClienteCliente']['nome']." - ".$cliente['ClienteCliente']['telefone'], 
+                    'value' => $cliente['ClienteCliente']['id'], 
+                    'endereco' => $this->bdToStringAddres($cliente),
+                    'foto' => $foto,
+                    'telefone' => $cliente['ClienteCliente']['telefone'],
+                    'nome' => $cliente['ClienteCliente']['nome']
+                ];
             }
         }
 
@@ -1121,28 +1178,29 @@ class ClientesController extends AppController {
 
         $this->layout = 'ajax';
         $dados = $this->request->query;
+
+        //$this->log($dados['token'], 'debug');
+        //die();
+
         if ( !isset($dados['token']) || $dados['token'] == "" ) {
-            throw new BadRequestException('Dados de usuário não informado!', 401);
-        }
-        if ( !isset($dados['email']) || $dados['email'] == "" ) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
 
         $token = $dados['token'];
-        $email = $dados['email'];
+        $email = null;
+
+        if ( isset($dados['email']) ) {
+            $email = $dados['email'];
+        }
 
         $dado_usuario = $this->verificaValidadeToken($token, $email);
 
         if ( !$dado_usuario ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
-
-        if ( $dado_usuario['Usuario']['nivel_id'] != 2 && !isset($dados['cliente_id']) ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
         
         $cliente_id = null;
-        if ($dado_usuario['Usuario']['cliente_id'] != '') {
+        if ( !empty($dado_usuario['Usuario']['cliente_id']) ) {
             $cliente_id = $dado_usuario['Usuario']['cliente_id'];
         } else {
             $cliente_id = $dados['cliente_id'];
@@ -1150,9 +1208,22 @@ class ClientesController extends AppController {
 
         $this->loadModel('Cliente');
         $this->loadModel('ClienteSubcategoria');
+        $this->loadModel('ClienteHorarioAtendimento');
+
         $dados = $this->Cliente->find('first',[
-            'fields' => ['*'],
-            'conditions' => ['Cliente.id' =>  $cliente_id]
+            'fields' => [
+                'Cliente.*',
+                'Localidade.loc_no',
+                'UruguaiCidade.nome',
+                'UruguaiDepartamento.nome'
+            ],
+            'conditions' => ['Cliente.id' =>  $cliente_id],
+            'link' => [
+                'Localidade',
+                'UruguaiCidade' => [
+                    'UruguaiDepartamento'
+                ],
+            ]
         ]);
 
         if ( count($dados) > 0 ) {
@@ -1167,6 +1238,15 @@ class ClientesController extends AppController {
             $dados['Cliente']['telefone_possui_wp'] = false;
             if ($dados['Cliente']['telefone'] == $dados['Cliente']['wp'])
                 $dados['Cliente']['telefone_possui_wp'] = true;
+
+                $dados['Horarios'] = $this->ClienteHorarioAtendimento->find('all',[
+                'conditions' => [
+                    'ClienteHorarioAtendimento.cliente_id' => $dados['Cliente']['id']
+                ],
+                'link' => []
+            ]);
+
+            $dados['Cliente']['atendimento_hoje'] = $this->procuraHorariosHoje($dados['Horarios']);
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados))));
@@ -1363,6 +1443,8 @@ class ClientesController extends AppController {
                 'estado' => $estado,
                 'ui_departamento' => $ui_departamento,
                 'ui_cidade' => $ui_cidade,
+                'chave_pix' => !empty($dados->chave_pix) ? $dados->chave_pix : null,
+                'tipo_chave_pix' => !empty($dados->chave_pix) && !empty($dados->tipo_chave_pix) ? $dados->tipo_chave_pix : null,
                 'prazo_maximo_para_canelamento' => $dados->prazo_maximo_para_canelamento != "00:00" && $dados->prazo_maximo_para_canelamento != "" ? $dados->prazo_maximo_para_canelamento : null,
                 'tempo_aviso_usuarios' => $dados->avisar_com,
             ]

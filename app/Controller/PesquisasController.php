@@ -162,7 +162,9 @@ class PesquisasController extends AppController {
         // Bsuca os serviços de acordo com a busca
         $servicos = $this->ClienteServico->find('all',[
             'fields' => [
-                'ClienteServico.*'
+                'ClienteServico.*',
+                'Cliente.id',
+                'Cliente.nome'
             ],
             'conditions' => $conditions_servicos,
             'order' => [
@@ -205,7 +207,9 @@ class PesquisasController extends AppController {
         // Bsuca as quadras de acordo com a busca
         $quadras = $this->ClienteServico->find('all',[
             'fields' => [
-                'ClienteServico.*'
+                'ClienteServico.*',
+                'Cliente.id',
+                'Cliente.nome'
             ],
             'conditions' => $conditions_quadras,
             'order' => [

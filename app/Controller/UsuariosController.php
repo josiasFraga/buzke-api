@@ -39,7 +39,8 @@ class UsuariosController extends AppController {
 
         $dado_usuario = $this->verificaValidadeToken($token, $email);
 
-        if ( $dado_usuario['Usuario']['cliente_id'] == null && isset($dados['cliente_id']) && !empty($dados['cliente_id']) ) {
+
+        if ( (empty($dado_usuario) || $dado_usuario['Usuario']['cliente_id'] == null) && isset($dados['cliente_id']) && !empty($dados['cliente_id']) ) {
             $cliente_id = $dados['cliente_id'];
         } else if ( !empty($dado_usuario['Usuario']['cliente_id']) ) {
             $cliente_id = $dado_usuario['Usuario']['cliente_id'];
@@ -65,7 +66,7 @@ class UsuariosController extends AppController {
             $usuarios_retornar[] = [
                 'id' => $usuario['Usuario']['id'],
                 'nome' => $usuario['Usuario']['nome'],
-                'img' => $this->images_path . "usuarios/" . $usuario['Usuario']['img']
+                'img' => $this->images_path . "/usuarios/" . $usuario['Usuario']['img']
             ];
         }
 
@@ -188,9 +189,9 @@ class UsuariosController extends AppController {
 
         if ($dados_token) {
             if ( $usuario['Usuario']['img'] == '' || $usuario['Usuario']['img'] == null ) {
-                $usuario['Usuario']['img'] = $this->images_path."usuarios/default.png";
+                $usuario['Usuario']['img'] = $this->images_path."/usuarios/default.png";
             } else if ( !strpos($usuario['Usuario']['img'], 'facebook') ) {
-                $usuario['Usuario']['img'] = $this->images_path."usuarios/".$usuario['Usuario']['img'];
+                $usuario['Usuario']['img'] = $this->images_path."/usuarios/".$usuario['Usuario']['img'];
             }
 
             if ( $cadastro_categorias_ok && $usuario['Usuario']['nivel_id'] == 2 ) {
@@ -304,9 +305,9 @@ class UsuariosController extends AppController {
 
         if ($dados_token) {
             if ( $usuario['Usuario']['img'] == '' || $usuario['Usuario']['img'] == null ) {
-                $usuario['Usuario']['img'] = $this->images_path."usuarios/default.png";
+                $usuario['Usuario']['img'] = $this->images_path."/usuarios/default.png";
             } else if ( !strpos($usuario['Usuario']['img'], 'facebook') ) {
-                $usuario['Usuario']['img'] = $this->images_path."usuarios/".$usuario['Usuario']['img'];
+                $usuario['Usuario']['img'] = $this->images_path."/usuarios/".$usuario['Usuario']['img'];
             }
 
             if ( $cadastro_categorias_ok && $usuario['Usuario']['nivel_id'] == 2 ) {
@@ -1359,9 +1360,9 @@ class UsuariosController extends AppController {
             $usuario = $this->verificaValidadeToken($dados->token, $dados->usuario);
             $this->log($usuario,'debug');
             if ( $usuario['Usuario']['img'] == '' || $usuario['Usuario']['img'] == null ) {
-                $usuario['Usuario']['img'] = $this->images_path."usuarios/default.png";
+                $usuario['Usuario']['img'] = $this->images_path."/usuarios/default.png";
             } else if ( !strpos($usuario['Usuario']['img'], 'facebook') ) {
-                $usuario['Usuario']['img'] = $this->images_path."usuarios/".$usuario['Usuario']['img'];
+                $usuario['Usuario']['img'] = $this->images_path."/usuarios/".$usuario['Usuario']['img'];
             }
             
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cadastro alterado!', 'dados' => $usuario))));

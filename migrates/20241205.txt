@@ -1,0 +1,5 @@
+ALTER TABLE `torneio_inscricoes`
+	ADD COLUMN `time_nome` VARCHAR(50) NULL DEFAULT NULL AFTER `confirmado`;
+
+ALTER TABLE `torneio_inscricoes`
+	ADD COLUMN `time_escudo` VARCHAR(100) NULL DEFAULT NULL AFTER `time_nome`;

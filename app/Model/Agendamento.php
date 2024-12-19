@@ -881,6 +881,53 @@ class Agendamento extends AppModel {
             'link' => []
         ]);
 
-    }   
+    }
+
+    public function verifica_disponibilidade_profissional($usuario_id, $horario) {
+
+        $dia_semana = date('w',strtotime($horario));
+        $dia_mes = (int)date('d',strtotime($horario));
+        $hora = date('H:i:s',strtotime($horario));
+
+        $n_agendamentos = $this->find('count', [
+            'fields' => ['Agendamento.id'],
+            'conditions' => [
+                'Agendamento.profissional_id' => $usuario_id,
+                'Agendamento.cancelado' => 'N',
+                'not' => [
+                    'Agendamento.profissional_id' => null,                    
+                ],
+                'AgendamentoFixoCancelado.id IS NULL',
+                'OR' => [
+                    [
+                        'Agendamento.horario' => $horario,
+                        'Agendamento.dia_semana IS NULL',
+                        'Agendamento.dia_mes IS NULL'
+                    ],
+                    [
+                        'Agendamento.dia_semana' => $dia_semana,
+                        'TIME(Agendamento.horario)' => $hora
+                    ],
+                    [
+                        'Agendamento.dia_mes' => $dia_mes,
+                        'TIME(Agendamento.horario)' => $hora
+                    ]
+                ]
+            ],
+            'joins' => [
+                [
+                    'table' => 'agendamentos_fixos_cancelados',
+                    'alias' => 'AgendamentoFixoCancelado',
+                    'type' => 'LEFT',
+                    'conditions' => [
+                        'AgendamentoFixoCancelado.agendamento_id = Agendamento.id',
+                        'AgendamentoFixoCancelado.horario' => $horario
+                    ]
+                ]
+            ]
+        ]);
+        
+        return $n_agendamentos == 0;
+    }
 
 }

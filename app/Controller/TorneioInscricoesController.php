@@ -87,4 +87,82 @@ class TorneioInscricoesController extends AppController {
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_inscricao))));
 
     }
+
+    public function mudar_jogador() {
+        $this->layout = 'ajax';
+        $dados = $this->request->data['dados'];
+
+        if ( is_array($dados) ) {
+            $dados = json_decode(json_encode($dados, true));
+
+        }else {
+            $dados = json_decode($dados);
+        }
+
+        if (!isset($dados->token) || $dados->token == '') {
+            throw new BadRequestException('Token não informado', 400);
+        }
+
+        if (!isset($dados->email) || $dados->email == '') {
+            throw new BadRequestException('Email não informado', 400);
+        }
+
+
+        if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
+        }
+        
+        $token = $dados->token;
+        $email = $dados->email;
+
+        $dados_token = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_token ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        if ( $dados_token['Usuario']['nivel_id'] != 2 ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $cliente_id = $dados_token['Usuario']['cliente_id'];
+        $inscricao_id = $dados->subscription_id;
+        $jogador_id = $dados->player_id;
+        $novo_jogador = $dados->new_value->value;
+        
+        $this->loadModel('TorneioInscricaoJogador');
+
+        $dados_inscricao = $this->TorneioInscricaoJogador->find('first',[
+            'fields' => [
+                'TorneioInscricaoJogador.id'
+            ],
+            'conditions' => [
+                'TorneioInscricaoJogador.cliente_cliente_id' => $jogador_id,
+                'TorneioInscricao.id' => $inscricao_id,
+                'Torneio.cliente_id' => $cliente_id
+            ],
+            'link' => [
+                'TorneioInscricao' => [
+                    'Torneio'
+                ]
+            ]
+        ]);
+
+        if ( count($dados_inscricao) === 0 ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Os dados da inscrição não foram encontrados'))));
+        }
+
+
+        $dados_salvar = [
+            'id' => $dados_inscricao['TorneioInscricaoJogador']['id'],
+            'cliente_cliente_id' => $novo_jogador
+        ];
+
+        if ( !$this->TorneioInscricaoJogador->save($dados_salvar) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao mudar o jogador'))));
+        }
+    
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'O jogador foi trocado com sucesso!'))));
+
+    }
 }

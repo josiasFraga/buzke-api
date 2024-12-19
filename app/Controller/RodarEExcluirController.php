@@ -41,4 +41,33 @@ class RodarEExcluirController extends AppController {
     
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Impedimentos cadastrados com sucesso!'))));
     }
+
+    function seta_vencedor() {
+        $this->loadModel('TorneioJogo');
+        $this->loadModel('TorneioJogoPlacar');
+        $jogos = $this->TorneioJogo->find('all',[
+            'link' => []
+        ]);
+
+        foreach ($jogos as $key => $jogo) {
+            $jogo_id = $jogo['TorneioJogo']['id'];
+            $vencedor_field = $this->TorneioJogoPlacar->busca_vencedor_por_jogo($jogo_id);
+
+            if ( !empty($vencedor_field) ) {
+                $inscricao_vencedora  = $jogo['TorneioJogo'][$vencedor_field];
+
+                $dados_salvar = [
+                    'id' => $jogo_id,
+                    'vencedor' => $inscricao_vencedora
+                ];
+
+                $this->TorneioJogo->save($dados_salvar);
+
+            }
+
+        }
+
+        die('Fim');
+
+    }
 }

@@ -257,7 +257,8 @@ class AvaliacoesController extends AppController {
                 'ClienteServicoAvaliacao.*',
                 'Cliente.nome',
                 'Cliente.logo',
-                'Usuario.img'
+                'Usuario.img',
+                'Usuario.nome'
             ],
             'conditions' => [
                 'ClienteServicoAvaliacao.usuario_id' => $dado_usuario['Usuario']['id']

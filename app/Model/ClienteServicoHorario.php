@@ -78,7 +78,8 @@ class ClienteServicoHorario extends AppModel {
             'conditions' => [
                 'ClienteServicoHorario.cliente_servico_id' => $servico_id,
                 'ClienteServicoHorario.dia_semana' => $dia_semana
-            ]
+            ],
+            'link' => []
         ]);
     
         $intervalos = [];
@@ -207,10 +208,10 @@ class ClienteServicoHorario extends AppModel {
             $conditions['dia_semana'] = $dia_semana;
          }
 
-        $result = $this->find('first', array(
+         $result = $this->find('first', array(
             'fields' => array(
-                'LEAST(MIN(valor_padrao), MIN(valor_fixos)) AS min_valor',
-                'GREATEST(MAX(valor_padrao), MAX(valor_fixos)) AS max_valor',
+                'LEAST(MIN(COALESCE(valor_padrao, 999999999)), MIN(COALESCE(valor_fixos, 999999999))) AS min_valor',
+                'GREATEST(MAX(COALESCE(valor_padrao, 0)), MAX(COALESCE(valor_fixos, 0))) AS max_valor',
             ),
             'link' => [],
             'conditions' => $conditions

@@ -117,6 +117,24 @@ class TorneioJogoPlacar extends AppModel {
 
 	}
 
+	public function busca_vencedor_por_jogo( $torneio_jogo_id = null ) {
+
+		$resultados = $this->busca_resultados($torneio_jogo_id);
+
+		if ( empty($resultados) ) {
+			return null;
+		}
+	
+		$vencedor_field = $this->busca_vencedor_por_resultados($resultados);
+
+		if ( empty($vencedor_field) ) {
+			return null;
+		}
+
+		return $vencedor_field;
+
+	}
+
 	public function busca_vencedor_por_resultados($resultados = []) {
 
 		if ( count($resultados) == 0 ) {

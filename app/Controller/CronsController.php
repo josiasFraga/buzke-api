@@ -53,6 +53,7 @@ class CronsController extends AppController {
                     ]
                 ],
                 'Agendamento.cancelado' => 'N',
+                'Agendamento.id' => '41955',
                 'not' => [
                     'Usuario.id' => null,
                     //'Cliente.tempo_aviso_usuarios' => null,
@@ -70,6 +71,7 @@ class CronsController extends AppController {
             foreach($agendamentos_proximos as $key => $agendamento){
 
                 $agendamento_horario = $agendamento['Agendamento']['horario'];
+                $usuarios_ids = [];
 
                 //agendamento fixo semanal
                 if ( $agendamento['Agendamento']['dia_semana'] != null ) {
@@ -170,6 +172,8 @@ class CronsController extends AppController {
                 if ( empty($agendamento['Cliente']['tempo_aviso_usuarios']) ) {
                     $agendamento['Cliente']['tempo_aviso_usuarios'] = "24:00:00";
                 }
+
+                $usuarios_ids = [];
 
                 //prazo para aviso definido pelo cliente
                 $prazo_minutos_aviso = $this->timeToMinutes($agendamento['Cliente']['tempo_aviso_usuarios']);
