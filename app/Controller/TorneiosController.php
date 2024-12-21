@@ -2773,20 +2773,30 @@ class TorneiosController extends AppController {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar o resultado do jogo.'))));
         }
 
+        // Finaliza Jogo
+        $dados_jogo_atualizar = [
+            'id' => $dados->id,
+            'finalizado' => "Y"
+        ];
+
+        if ( !$this->TorneioJogo->save($dados_jogo_atualizar) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao finalizar o jogo.'))));
+        }
+
         $vencedor_field = $this->TorneioJogoPlacar->busca_vencedor_por_jogo($dados_jogo['TorneioJogo']['id']);
 
         if ( !$vencedor_field ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Impossível definir o vencedor.'))));
         }
 
+        // Seta Vencedor
         $dados_jogo_atualizar = [
             'id' => $dados->id,
-            'finalizado' => "Y",
             'vencedor' => $dados_jogo['TorneioJogo'][$vencedor_field]
         ];
 
         if ( !$this->TorneioJogo->save($dados_jogo_atualizar) ) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao finalizar o jogo.'))));
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao setar o vencedor do jogo.'))));
         }
 
         $fase_jogo = $dados_jogo['TorneioJogo']['fase'];

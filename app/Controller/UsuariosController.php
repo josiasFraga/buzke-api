@@ -379,6 +379,32 @@ class UsuariosController extends AppController {
         return true;
     }
 
+    public function check_session(){
+        $this->layout = 'ajax';
+        //$dados = json_decode($this->request->data['dados']);
+        $dados = json_decode(json_encode($this->request->data['dados']));
+
+        if ( gettype($dados) == 'string' ) {
+            $dados = json_decode($dados);
+            $dados = json_decode(json_encode($dados), true);
+        }
+
+        $dados = (object)$dados;
+
+        if ( !isset($dados->token) || $dados->token == "" ||  !isset($dados->email) || $dados->email == "" || !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+
+
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Sessão válida'))));
+    }
+
     public function cadastrar() {
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];

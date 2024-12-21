@@ -698,7 +698,7 @@ class AgendamentosController extends AppController {
                 }
         
                 $jogadores_confirmados[] = [
-                    'img' => !empty($cli['Usuario']['img']) ? $this->images_path.'/usuarios/'.$cli['Usuario']['img'] : $this->images_path.'cliente_cliente/'.$cli['ClienteCliente']['img'],
+                    'img' => !empty($cli['Usuario']['img']) ? $this->images_path.'/usuarios/'.$cli['Usuario']['img'] : $this->images_path.'/cliente_cliente/'.$cli['ClienteCliente']['img'],
                     'nome' => !empty($cli['Usuario']['nome']) ? $cli['Usuario']['nome'] : $cli['ClienteCliente']['nome'],
                     'convite_id' => !empty($cli['AgendamentoConvite']['id']) ? $cli['AgendamentoConvite']['id'] : null,
                 ]; 
