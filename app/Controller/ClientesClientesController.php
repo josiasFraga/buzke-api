@@ -342,7 +342,6 @@ class ClientesClientesController extends AppController {
 
         if  ( count($dados) > 0 ) {
     
-            $dados['ClienteCliente']['img'] = $this->images_path.'/clientes_clientes/'.$dados['ClienteCliente']['img'];
             $dados['ClienteCliente']['email_cliente'] = $dados['ClienteCliente']['email'];
             $dados['ClienteCliente']['n'] = $dados['ClienteCliente']['endreceo_n'];
             if ( isset($dados['ClienteClienteDadosPadel']['id']) && $dados['ClienteClienteDadosPadel']['id'] != '') {

@@ -159,3 +159,5 @@ $envPath = APP . '../.env';
 if (!loadDotEnv($envPath)) {
     trigger_error("Falha ao carregar o arquivo .env", E_USER_WARNING);
 }
+
+require_once ROOT . DS . 'vendors' . DS . 'autoload.php';

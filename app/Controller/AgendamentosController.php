@@ -97,7 +97,6 @@ class AgendamentosController extends AppController {
         }
 
         if ( count($agendamento) > 0 ) {
-            $agendamento['ClienteCliente']['img'] = $this->images_path . '/clientes_clientes/' . $agendamento['ClienteCliente']['img'];
             $agendamento['Agendamento']['horario_str'] = date('d/m',strtotime($agendamento['Agendamento']['horario']))." às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
             $data_agendamento = date('Y-m-d',strtotime($agendamento['Agendamento']['horario']));
             
@@ -174,7 +173,6 @@ class AgendamentosController extends AppController {
             foreach($agendamentos as $key => $agendamento){
                 
                 $agendamentos[$key]['Agendamento']['horario_str'] = date('d/m',strtotime($agendamento['Agendamento']['horario']))." às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
-                $agendamentos[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$agendamento['Cliente']['logo'];
                 $agendamentos[$key]['Agendamento']['data'] = date('d/m/Y',strtotime($agendamento['Agendamento']['horario']));
                 $agendamentos[$key]['Agendamento']['hora'] = date('H:i',strtotime($agendamento['Agendamento']['horario']));
                 $agendamentos[$key]['Agendamento']['tipo'] = 'padrao';
@@ -204,14 +202,14 @@ class AgendamentosController extends AppController {
                     $agendamentos[$key]['Agendamento']['tipo'] = 'convidado';
                     $agendamentos[$key]['Agendamento']['convidado_por'] = [
                         'nome' => $agendamento['ClienteCliente']['nome'],
-                        'foto' => $this->images_path.'/usuarios/'.$agendamento['Usuario']['img'],
+                        'foto' => $agendamento['Usuario']['img'],
                     ];
                 }
                 else if ( $agendamento['Agendamento']['dia_semana'] != '' || $agendamento['Agendamento']['dia_mes'] != '' ) {
                     $agendamentos[$key]['Agendamento']['tipo'] = 'fixo';
                 }
 
-                $agendamentos[$key]['Agendamento']['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($agendamento['Agendamento']['id'], $this->images_path.'/usuarios/', $agendamento['Agendamento']['horario']);
+                $agendamentos[$key]['Agendamento']['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($agendamento['Agendamento']['id'], '', $agendamento['Agendamento']['horario']);
 
                 if ($cancelable === null) {
                     if ( $agendamentos[$key]['Agendamento']['tipo'] == 'tournament' ) 
@@ -238,7 +236,7 @@ class AgendamentosController extends AppController {
 
                     $agendamentos[$key]['Agendamento']['_profissional'] = [
                         'nome' => $dados_profissional['Usuario']['nome'],
-                        'foto' => $this->images_path . '/usuarios/' . $dados_profissional['Usuario']['img']
+                        'foto' => $dados_profissional['Usuario']['img']
                     ];
 
                 }
@@ -479,15 +477,11 @@ class AgendamentosController extends AppController {
 
             $this->loadModel('TorneioInscricaoJogador');
         
-            $time_1 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($agendamento['TorneioJogo']['time_1'], $this->images_path);
-            $time_2 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($agendamento['TorneioJogo']['time_2'], $this->images_path);
+            $time_1 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($agendamento['TorneioJogo']['time_1'], '');
+            $time_2 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($agendamento['TorneioJogo']['time_2'], '');
 
             $agendamento['TorneioJogo']['time_1'] = $time_1;
             $agendamento['TorneioJogo']['time_2'] = $time_2;
-
-            if ( !empty($agendamento['Torneio']['img']) ) {
-                $agendamento['Torneio']['img'] = $this->images_path . '/torneios/' . $agendamento['Torneio']['img'];
-            }
 
         } else {
 
@@ -558,10 +552,10 @@ class AgendamentosController extends AppController {
 
             // Dados do titular do horário
             if ( !empty($agendamento['Usuario']['img']) ) {
-                $agendamento['ClienteCliente']['img'] = $this->images_path . '/usuarios/' . $agendamento['Usuario']['img'];
+                $agendamento['ClienteCliente']['img'] = $agendamento['Usuario']['img'];
                 $agendamento['ClienteCliente']['created'] = $agendamento['Usuario']['created'];
             } else {
-                $agendamento['ClienteCliente']['img'] = $this->images_path . '/clientes_clientes/' . $agendamento['ClienteCliente']['img'];
+                $agendamento['ClienteCliente']['img'] = $agendamento['ClienteCliente']['img'];
                 $agendamento['ClienteCliente']['created'] = null;
             }
         
@@ -581,17 +575,12 @@ class AgendamentosController extends AppController {
                     'link' => []
                 ]);
     
-                if ( count($profissional) > 0 ) {
-                    $profissional['Usuario']['img'] = $this->images_path . '/usuarios/' . $profissional['Usuario']['img'];
-                }
-    
                 $agendamento['_profissional'] = $profissional;
     
             }
 
         }
 
-        $agendamento['Cliente']['logo'] = $this->images_path . '/clientes/' . $agendamento['Cliente']['logo'];
         $agendamento['Agendamento']['horario_str'] = date('d/m',strtotime($agendamento['Agendamento']['horario']))." às " . date('H:i',strtotime($agendamento['Agendamento']['horario']));
         $data_agendamento = date('Y-m-d',strtotime($agendamento['Agendamento']['horario']));
             
@@ -613,10 +602,6 @@ class AgendamentosController extends AppController {
             ],
             'link' => [],
         ]);
-
-        foreach( $fotos as $key_foto => $foto ) {
-            $fotos[$key_foto] = $this->images_path . '/servicos/' . $foto;
-        }
         
         $agendamento['ClienteServico']['_fotos'] = $fotos;
 
@@ -698,7 +683,7 @@ class AgendamentosController extends AppController {
                 }
         
                 $jogadores_confirmados[] = [
-                    'img' => !empty($cli['Usuario']['img']) ? $this->images_path.'/usuarios/'.$cli['Usuario']['img'] : $this->images_path.'/cliente_cliente/'.$cli['ClienteCliente']['img'],
+                    'img' => !empty($cli['Usuario']['img']) ? $cli['Usuario']['img'] : $cli['ClienteCliente']['img'],
                     'nome' => !empty($cli['Usuario']['nome']) ? $cli['Usuario']['nome'] : $cli['ClienteCliente']['nome'],
                     'convite_id' => !empty($cli['AgendamentoConvite']['id']) ? $cli['AgendamentoConvite']['id'] : null,
                 ]; 
@@ -896,7 +881,7 @@ class AgendamentosController extends AppController {
                 }
 
                 $tipo = "Padrão";
-                $imagem = $this->images_path;
+                $imagem = '';
     
                 if ( $agend['Agendamento']['dia_semana'] != null ||  $agend['Agendamento']['dia_mes'] != null ) {
                     $tipo = "Fixo";
@@ -905,12 +890,12 @@ class AgendamentosController extends AppController {
                 if ( isset($agend['Agendamento']['torneio_id']) && $agend['Agendamento']['torneio_id'] != null ) {
                     $tipo = "Torneio";
                     $agend['ClienteCliente']['nome'] = "Jogo de Torneio";
-                    $imagem .= "/torneios/".$agend['Torneio']['img'];
+                    $imagem .= $agend['Torneio']['img'];
                 } else {
                     if ( isset($agend['Usuario']['img']) && !empty($agend['Usuario']['img']) ) {
-                        $imagem .= '/usuarios/'.$agend['Usuario']['img'];
+                        $imagem .= $agend['Usuario']['img'];
                     } else {
-                        $imagem .= '/clientes_clientes/'.$agend['ClienteCliente']['img'];
+                        $imagem .= $agend['ClienteCliente']['img'];
                     }
                 }
 
@@ -1363,7 +1348,7 @@ class AgendamentosController extends AppController {
             $usuarios_verificar[$key]['ClienteCliente']['telefone'] = $usuarios_verificar[$key]['Usuario']['telefone'];
             $usuarios_verificar[$key]['ClienteCliente']['nome'] = $usuarios_verificar[$key]['Usuario']['nome'];
             $usuarios_verificar[$key]['ClienteCliente']['email'] = $usuarios_verificar[$key]['Usuario']['email'];
-            $usuarios_verificar[$key]['ClienteCliente']['img'] = $this->images_path.'/usuarios/'.$usuario['Usuario']['img'];
+            $usuarios_verificar[$key]['ClienteCliente']['img'] = $usuario['Usuario']['img'];
         }
         
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $usuarios_verificar))));

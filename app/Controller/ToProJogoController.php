@@ -536,7 +536,6 @@ class ToProJogoController extends AppController {
             $this->loadModel('UsuarioPadelCategoria');
 
             foreach($usuarios as $key => $usr) {
-                $usuarios[$key]['Usuario']['img'] = $this->images_path.'/usuarios/'.$usr['Usuario']['img'];
                 $usuarios[$key]['UsuarioDadosPadel']['_categorias'] = $this->padelCategoriasToStr($this->UsuarioPadelCategoria->findByUserId($usr['Usuario']['id']));
             }
 
@@ -632,14 +631,11 @@ class ToProJogoController extends AppController {
 
         foreach($dados as $key => $tpj){
             $usuario_dono_horario = in_array($tpj['Agendamento']['cliente_cliente_id'], $meus_ids_de_cliente);
-            $dados[$key]['Usuario']['img'] = $this->images_path.'/usuarios/'.$tpj['Usuario']['img'];
             $dados[$key]['UsuarioMarcante'] = $this->ClienteCliente->finUserData($dados[$key]['Agendamento']['cliente_cliente_id'], ['Usuario.nome', 'Usuario.img']);
-            $dados[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$tpj['Cliente']['logo'];
-            $dados[$key]['UsuarioMarcante']['img'] = $this->images_path.'/usuarios/'.$dados[$key]['UsuarioMarcante']['img'];
             $dados[$key]['Agendamento']['valor_br'] = number_format($tpj['Agendamento']['valor'], 2, ',', '.');
             $dados[$key]['AgendamentoConvite']['_data_desc'] = date('Y-m-d') == date('Y-m-d',strtotime($tpj['AgendamentoConvite']['horario'])) ? 'Hoje' : date('d/m/Y',strtotime($tpj['AgendamentoConvite']['horario']));
             $dados[$key]['AgendamentoConvite']['_hora_desc'] = date('H:i',strtotime($tpj['AgendamentoConvite']['horario']));
-            $dados[$key]['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($dados[$key]['AgendamentoConvite']['agendamento_id'], $this->images_path.'/usuarios/', $tpj['AgendamentoConvite']['horario']);
+            $dados[$key]['_usuarios_confirmados'] = $this->AgendamentoConvite->getConfirmedUsers($dados[$key]['AgendamentoConvite']['agendamento_id'], '', $tpj['AgendamentoConvite']['horario']);
             $dados[$key]['_usuarios_confirmados'] = $this->UsuarioPadelCategoria->getFromUsers($dados[$key]['_usuarios_confirmados']);
             $dados[$key]['UsuarioPadelCategoria'] = $this->UsuarioPadelCategoria->findByUserId($tpj['Usuario']['id'], true);
             if ( $usuario_dono_horario ) {
@@ -987,7 +983,7 @@ class ToProJogoController extends AppController {
 
         $this->loadModel('AgendamentoConvite');
         $this->loadModel('Token');
-        $convites_nao_confirmados = $this->AgendamentoConvite->getUnconfirmedUsers($dados->agendamento_id, $this->images_path.'/usuarios/', $dados->horario);
+        $convites_nao_confirmados = $this->AgendamentoConvite->getUnconfirmedUsers($dados->agendamento_id, '', $dados->horario);
 
         if ( count($convites_nao_confirmados) > 0 ) {
             foreach($convites_nao_confirmados as $key => $convite) {

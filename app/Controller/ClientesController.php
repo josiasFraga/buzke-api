@@ -106,7 +106,6 @@ class ClientesController extends AppController {
         foreach($clientes as $key => $cliente) {
 
             $arr_clientes_ids[] = $cliente['Cliente']['id'];
-            $clientes[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$clientes[$key]['Cliente']['logo'];
             $clientes[$key]['Horarios'] = $this->ClienteHorarioAtendimento->find('all',[
                 'conditions' => [
                     'ClienteHorarioAtendimento.cliente_id' => $cliente['Cliente']['id']
@@ -1063,7 +1062,6 @@ class ClientesController extends AppController {
 
         if  ( count($clientes) > 0 ) {
             foreach($clientes as $key => $cliente){
-                $clientes[$key]['ClienteCliente']['img'] = $this->images_path.'/clientes_clientes/'.$clientes[$key]['ClienteCliente']['img'];
                 $clientes[$key]['ClienteCliente']['email_cliente'] = $clientes[$key]['ClienteCliente']['email'];
                 $clientes[$key]['ClienteCliente']['n'] = $clientes[$key]['ClienteCliente']['endreceo_n'];
                 if ( isset($clientes[$key]['ClienteClienteDadosPadel']['id']) && $clientes[$key]['ClienteClienteDadosPadel']['id'] != '') {
@@ -1153,10 +1151,10 @@ class ClientesController extends AppController {
             $count = 0;
             foreach($clientes as $key => $cliente){
     
-                $foto = $cliente['ClienteCliente']['img'] = $this->images_path.'/clientes_clientes/'.$cliente['ClienteCliente']['img'];
+                $foto = $cliente['ClienteCliente']['img'];
 
                 if ( !empty($cliente['Usuario']['img']) ) {
-                    $foto = $cliente['Usuario']['img'] = $this->images_path.'/usuarios/'.$cliente['Usuario']['img'];                    
+                    $foto = $cliente['Usuario']['img'];                    
                 }
 
                 $clientes_retornar[] = [
@@ -1227,7 +1225,6 @@ class ClientesController extends AppController {
         ]);
 
         if ( count($dados) > 0 ) {
-            $dados['Cliente']['logo'] = $this->images_path . '/clientes/'.$dados['Cliente']['logo'];
             $dados['Cliente']['isCourt'] = $this->ClienteSubcategoria->checkIsCourt($dados['Cliente']['id']);
             $dados['Cliente']['isPaddleCourt'] = $this->ClienteSubcategoria->checkIsPaddleCourt($dados['Cliente']['id']);
             if ( $dados['Cliente']['prazo_maximo_para_canelamento'] != null && $dados['Cliente']['prazo_maximo_para_canelamento'] != '' )

@@ -115,12 +115,8 @@ class ServicosController extends AppController {
                 $quadras[$key]['ClienteServico']['_valor'] = $range_valores[0] === $range_valores[1] ? number_format($range_valores[0], 2, ',', '.') : number_format($range_valores[0], 2, ',', '.') . ' - ' . number_format($range_valores[1], 2, ',', '.');
             }
 
-            if ( count($qua['ClienteServicoFoto']) > 0 ) {
-                foreach( $qua['ClienteServicoFoto'] as $key_imagem => $imagem){
-                    $quadras[$key]['ClienteServicoFoto'][$key_imagem]['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
-                }
-            } else {
-                $quadras[$key]['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
+            if ( count($qua['ClienteServicoFoto']) === 0 ) {
+                $quadras[$key]['ClienteServicoFoto'][0]['imagem'] = "https://buzke-images.s3.sa-east-1.amazonaws.com/services/sem_imagem.jpeg";
             }
         }
         
@@ -402,18 +398,8 @@ class ServicosController extends AppController {
             $dados_servico['ClienteServico']['_valor'] = $range_valores[0] === $range_valores[1] ? number_format($range_valores[0], 2, ',', '.') : number_format($range_valores[0], 2, ',', '.') . ' - ' . number_format($range_valores[1], 2, ',', '.');
         }
         
-        if ( count($dados_servico['ClienteServicoFoto']) > 0 ) {
-            foreach( $dados_servico['ClienteServicoFoto'] as $key_imagem => $imagem){
-                $dados_servico['ClienteServicoFoto'][$key_imagem]['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
-            }
-        } else {
-            $dados_servico['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
-        }
-
-        if ( isset($dados_servico['ClienteServicoAvaliacao']) && count($dados_servico['ClienteServicoAvaliacao']) > 0 ) {
-            foreach( $dados_servico['ClienteServicoAvaliacao'] as $key => $avaliacao ){
-                $dados_servico['ClienteServicoAvaliacao'][$key]['Usuario']['img'] = $this->images_path . "/usuarios/" . $avaliacao['Usuario']['img'];
-            }
+        if ( count($dados_servico['ClienteServicoFoto']) === 0 ) {
+            $dados_servico['ClienteServicoFoto'][0]['imagem'] = "https://buzke-images.s3.sa-east-1.amazonaws.com/services/sem_imagem.jpeg";
         }
         
         if ( isset($dados_servico['ClienteServicoHorario']) && count($dados_servico['ClienteServicoHorario']) > 0 ) {
@@ -583,10 +569,8 @@ class ServicosController extends AppController {
         $horarios = [];
         foreach($servicos as $key => $servico) {
             // Verifica e define a imagem do serviço apenas uma vez fora do loop interno
-            if (!empty($servico['ClienteServicoFoto']['id'])) {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $servico['ClienteServicoFoto']['imagem'];
-            } else {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
+            if (empty($servico['ClienteServicoFoto']['id'])) {
+                $servicos[$key]['ClienteServicoFoto']['imagem'] = "https://buzke-images.s3.sa-east-1.amazonaws.com/services/sem_imagem.jpeg";
             }
         
             // Define a imagem associada ao serviço
@@ -734,14 +718,8 @@ class ServicosController extends AppController {
 
         foreach($servicos as $key => $ser){
 
-            if ( !empty($ser['ClienteServicoFoto']['imagem']) ) {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $ser['ClienteServicoFoto']['imagem'];
-            } else {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
-            }
-
-            if ( !empty($ser['Cliente']['logo']) ) {
-                $servicos[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$ser['Cliente']['logo'];
+            if ( empty($ser['ClienteServicoFoto']['imagem']) ) {
+                $servicos[$key]['ClienteServicoFoto']['imagem'] = "https://buzke-images.s3.sa-east-1.amazonaws.com/services//sem_imagem.jpeg";
             }
         }
         

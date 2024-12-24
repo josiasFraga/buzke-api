@@ -41,7 +41,6 @@ class PlacaresController extends AppController {
             $torneios[$key]['Torneio']['_periodo'] = 
                 'De '.date('d/m',strtotime($trn['Torneio']['inicio'])).
                 ' até '.date('d/m',strtotime($trn['Torneio']['fim']));
-            $torneios[$key]['Torneio']['img'] = $this->images_path."/torneios/".$trn['Torneio']['img'];
 
         }
         
@@ -128,12 +127,12 @@ class PlacaresController extends AppController {
                 }
 
                 $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $this->TorneioInscricaoJogador->buscaPrimeiroNomeDupla($jogo['TorneioJogo']['time_1'], '-');
-                $jogos[$key]['TorneioJogo']['_jogador_1_imagem'] = $this->TorneioInscricaoJogador->buscaImagemJogador($jogo['TorneioJogo']['time_1'], 1, $this->images_path);
-                $jogos[$key]['TorneioJogo']['_jogador_2_imagem'] = $this->TorneioInscricaoJogador->buscaImagemJogador($jogo['TorneioJogo']['time_1'], 2, $this->images_path);
+                $jogos[$key]['TorneioJogo']['_jogador_1_imagem'] = $this->TorneioInscricaoJogador->buscaImagemJogador($jogo['TorneioJogo']['time_1'], 1, '');
+                $jogos[$key]['TorneioJogo']['_jogador_2_imagem'] = $this->TorneioInscricaoJogador->buscaImagemJogador($jogo['TorneioJogo']['time_1'], 2, '');
         
                 $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $this->TorneioInscricaoJogador->buscaPrimeiroNomeDupla($jogo['TorneioJogo']['time_2'], '-');
-                $jogos[$key]['TorneioJogo']['_jogador_3_imagem'] = $this->TorneioInscricaoJogador->buscaImagemJogador($jogo['TorneioJogo']['time_2'], 1, $this->images_path);
-                $jogos[$key]['TorneioJogo']['_jogador_4_imagem'] = $this->TorneioInscricaoJogador->buscaImagemJogador($jogo['TorneioJogo']['time_2'], 2, $this->images_path);
+                $jogos[$key]['TorneioJogo']['_jogador_3_imagem'] = $this->TorneioInscricaoJogador->buscaImagemJogador($jogo['TorneioJogo']['time_2'], 1, '');
+                $jogos[$key]['TorneioJogo']['_jogador_4_imagem'] = $this->TorneioInscricaoJogador->buscaImagemJogador($jogo['TorneioJogo']['time_2'], 2, '');
       
                 $jogos[$key]['TorneioJogo']['_hora'] = date('H:i',strtotime($jogo['Agendamento']['horario']));
                 $jogos[$key]['TorneioJogo']['_data'] = date('d/m/Y',strtotime($jogo['Agendamento']['horario']));

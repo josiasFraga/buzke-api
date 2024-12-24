@@ -131,7 +131,6 @@ class PesquisasController extends AppController {
         foreach($clientes as $key => $cliente) {
 
             $arr_clientes_ids[] = $cliente['Cliente']['id'];
-            $clientes[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$clientes[$key]['Cliente']['logo'];
             $clientes[$key]['Horarios'] = $this->ClienteHorarioAtendimento->find('all',[
                 'conditions' => [
                     'ClienteHorarioAtendimento.cliente_id' => $cliente['Cliente']['id']
@@ -194,13 +193,7 @@ class PesquisasController extends AppController {
                 $servicos[$key]['ClienteServico']['_valor'] = $range_valores[0] === $range_valores[1] ? number_format($range_valores[0], 2, ',', '.') : number_format($range_valores[0], 2, ',', '.') . ' - ' . number_format($range_valores[1], 2, ',', '.');
             }
  
-            $servicos[$key]["ClienteServico"]["_horarios"] = $this->quadra_horarios($ser['ClienteServico']['id'], date('Y-m-d'), false);           
-
-            if ( !empty($ser['ClienteServicoFoto']['imagem']) ) {
-                $servicos[$key]['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/" . $ser['ClienteServicoFoto']['imagem'];
-            } else {
-                $servicos[$key]['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
-            }
+            $servicos[$key]["ClienteServico"]["_horarios"] = $this->quadra_horarios($ser['ClienteServico']['id'], date('Y-m-d'), false);
 
         }
 
@@ -240,12 +233,6 @@ class PesquisasController extends AppController {
             }
 
             $quadras[$key]["ClienteServico"]["_horarios"] = $this->quadra_horarios($qua['ClienteServico']['id'], date('Y-m-d'), false);           
-
-            if ( !empty($qua['ClienteServicoFoto']['imagem']) ) {
-                $quadras[$key]['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/" . $qua['ClienteServicoFoto']['imagem'];
-            } else {
-                $quadras[$key]['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
-            }
 
         }
 

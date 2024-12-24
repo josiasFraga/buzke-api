@@ -41,10 +41,6 @@ class AvaliacoesController extends AppController {
             ]
         ]);
 
-        foreach ( $avaliacoes as $key => $avaliacao ) {
-            $avaliacoes[$key]['Usuario']['img'] = $this->images_path.'/usuarios/'.$avaliacao['Usuario']['img'];
-        }
-
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $avaliacoes))));
 
     }
@@ -219,14 +215,6 @@ class AvaliacoesController extends AppController {
                 unset($servicos[$key]);
                 continue;
             }
-
-            if ( !empty($servicos[$key]['ClienteServicoFoto']['imagem']) ) {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $servico['ClienteServicoFoto']['imagem'];
-            } else {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
-            }
-
-            $servicos[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$servico['Cliente']['logo'];
         }
 
         $servicos = array_values($servicos);
@@ -273,18 +261,6 @@ class AvaliacoesController extends AppController {
                 'ClienteServicoAvaliacao.created'
             ]
         ]);
-
-        foreach( $servicos as $key => $servico ) {
-
-            if ( !empty($servicos[$key]['ClienteServicoFoto']['imagem']) ) {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/" . $servico['ClienteServicoFoto']['imagem'];
-            } else {
-                $servicos[$key]['ClienteServicoFoto']['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
-            }
-
-            $servicos[$key]['Cliente']['logo'] = $this->images_path . '/clientes/'.$servico['Cliente']['logo'];
-            $servicos[$key]['Usuario']['img'] = $this->images_path.'/usuarios/'.$servico['Usuario']['img'];
-        }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $servicos))));
 

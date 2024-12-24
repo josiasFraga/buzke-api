@@ -78,16 +78,13 @@ class RankingsController extends AppController
         // Executa a query diretamente
         $results = $this->Usuario->query($sql);
 
-        // Caminho para imagens
-        $images_path = $this->images_path;
-
         // Formata os resultados
         $ranking = array();
         foreach ($results as $row) {
             $ranking[] = array(
                 'id' => $row['u']['usuario_id'],
                 'nome' => $row['u']['nome'],
-                'img' => $images_path . '/usuarios/' . $row['u']['img'],
+                'img' => $row['u']['img'],
                 'torneios_vencidos' => (int)$row[0]['torneios_vencidos'],
                 'finais_perdidas' => (int)$row[0]['finais_perdidas'],
                 'avancos_de_fase' => (int)$row[0]['avancos_de_fase'],

@@ -14,6 +14,7 @@
 /app/webroot/img/torneios/*
 /app/webroot/img/usuarios/*
 /app/webroot/img/servicos/*
+/app/webroot/img/esportistas/*
 
 # Exceções para imagens específicas que NÃO devem ser ignoradas
 # Note que você precisa primeiro não ignorar o diretório de forma geral

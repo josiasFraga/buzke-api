@@ -10,24 +10,32 @@ class ClienteServicoFoto extends AppModel {
     
     public $validate = array();
 
-    public $actsAs = array(
-		'Upload.Upload' => array(
-			'imagem' => array(
-				'path' => "{ROOT}{DS}webroot{DS}img{DS}servicos", // {ONDE ARQ ESTA}{ENTRA}webroot{ENTRA}img{ENTRA}lotes
-				'thumbnailSizes' => array(
-                    'thumb' => '512x512',
-				),
-				'pathMethod' => 'flat',
-				'nameCallback' => 'rename',
-                'keepFilesOnDelete' => true,
-			)
-		)
-	);
+    // Método que será chamado para fazer o upload da imagem
+    public function uploadImage($file) {
+        $imageUploader = new ImageUploader();
 
-  public function rename($field, $currentName, array $data, array $options) {
-      $ext = pathinfo($currentName, PATHINFO_EXTENSION);
-      $name = md5(uniqid(rand())).'.'.mb_strtolower($ext);
-      return $name;
-  }
+        // Faz o upload da imagem para o S3
+        $imageUrl = $imageUploader->uploadToS3($file, 'services');
+
+        if ($imageUrl) {
+            // Armazene a URL da imagem no banco de dados (ou qualquer outra ação)
+            $this->data['ClienteServicoFoto']['imagem'] = $imageUrl;
+            return true;
+        } else {
+            // Retorne um erro caso o upload falhe
+            return false;
+        }
+    }
+
+    public function beforeSave($options = array()) {
+
+        // Verifique se há uma imagem enviada
+        if (!empty($this->data['ClienteServicoFoto']['imagem'])) {
+            $file = $this->data['ClienteServicoFoto']['imagem'];
+            // Faça o upload da imagem
+            $this->uploadImage($file);
+        }
+        return true;
+    }
 
 }

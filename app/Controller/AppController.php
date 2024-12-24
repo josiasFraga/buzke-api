@@ -3,8 +3,6 @@ App::uses('Controller', 'Controller');
 
 class AppController extends Controller {
 
-    public $images_path;
-    public $files_path;
     public $dias_semana_str = array('Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado');
     public $dias_semana_abrev = array('dom','seg','ter','qua','qui','sex','sab');
     public $dias_mes_abrev = array('', 'jan','fev','mar','abr','mai','jun','jul','ago', 'set', 'out', 'nov', 'dez');
@@ -871,9 +869,6 @@ class AppController extends Controller {
 
     public function __construct($request = null, $response = null) {
         parent::__construct($request, $response);
-    
-        $this->images_path = getenv('IMAGES_PATH') ?: 'https://api.buzke.com.br/app/webroot/img';
-        $this->files_path = getenv('FILES_PATH') ?: 'https://api.buzke.com.br/app/webroot/img/anexos';
     }
 
     
@@ -1387,8 +1382,8 @@ class AppController extends Controller {
 
             $placares = $this->TorneioJogoPlacar->busca_resultados($dados_jogo['TorneioJogo']['id']);
 
-            $time_1 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($dados_jogo['TorneioJogo']['time_1'], $this->images_path);
-            $time_2 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($dados_jogo['TorneioJogo']['time_2'], $this->images_path);
+            $time_1 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($dados_jogo['TorneioJogo']['time_1'], '');
+            $time_2 = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($dados_jogo['TorneioJogo']['time_2'], '');
 
             $confronto_titulo = explode(' ', $time_1[0]['nome'])[0];
             $confronto_titulo .= " e ".explode(' ', $time_1[1]['nome'])[0];
@@ -1621,7 +1616,7 @@ class AppController extends Controller {
         //busca os convites do agendamento que não foram recusados
         $this->loadModel('AgendamentoConvite');
         $this->loadModel('Token');
-        $convites = $this->AgendamentoConvite->getNotRecusedUsers($agendamento_id, $this->images_path.'/usuarios/', $horario);
+        $convites = $this->AgendamentoConvite->getNotRecusedUsers($agendamento_id, '', $horario);
 
         //se há convites, avisa os candidatos que o agendamento foi cancelado
         if ( count($convites) > 0 ) {
@@ -1873,6 +1868,18 @@ class AppController extends Controller {
 		return true;
 
 	}
+
+    public function getThumbFromImage($image_url = null) {
+
+        if ( empty($image_url) ) {
+            return null;
+        }
+
+        $pathInfo = pathinfo($image_url);
+        $newUrl = $pathInfo['dirname'] . '/' . 'thumb_' . $pathInfo['basename'];
+
+        return $newUrl;
+    }
 
     public function getPayments( $signature_id = null) {
         if ( $signature_id == null ) {

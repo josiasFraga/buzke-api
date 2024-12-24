@@ -26,24 +26,21 @@ class Torneio extends AppModel {
 		)
 	);
 
-    public $actsAs = array(
-		'Upload.Upload' => array(
-			'img' => array(
-				'path' => "{ROOT}{DS}webroot{DS}img{DS}torneios", // {ONDE ARQ ESTA}{ENTRA}webroot{ENTRA}img{ENTRA}lotes
-				'thumbnailSizes' => array(
-                    'thumb' => '512x512',
-				),
-				'pathMethod' => 'flat',
-				'nameCallback' => 'rename',
-                'keepFilesOnDelete' => true,
-			)
-		)
-	);
+    // Método que será chamado para fazer o upload da imagem
+    public function uploadImage($file) {
+        $imageUploader = new ImageUploader();
 
-    public function rename($field, $currentName, array $data, array $options) {
-        $ext = pathinfo($currentName, PATHINFO_EXTENSION);
-        $name = md5(uniqid(rand())).'.'.mb_strtolower($ext);
-        return $name;
+        // Faz o upload da imagem para o S3
+        $imageUrl = $imageUploader->uploadToS3($file, 'tournaments');
+
+        if ($imageUrl) {
+            // Armazene a URL da imagem no banco de dados (ou qualquer outra ação)
+            $this->data['Torneio']['img'] = $imageUrl;
+            return true;
+        } else {
+            // Retorne um erro caso o upload falhe
+            return false;
+        }
     }
 
     public function beforeSave($options = array()) {
@@ -64,6 +61,13 @@ class Torneio extends AppModel {
         }
         if ( isset($this->data[$this->alias]['valor_inscricao']) && $this->data[$this->alias]['valor_inscricao'] != '') {
             $this->data[$this->alias]['valor_inscricao'] = $this->currencyToFloat($this->data[$this->alias]['valor_inscricao']);
+        }
+
+        // Verifique se há uma imagem enviada
+        if (!empty($this->data['Torneio']['img'])) {
+            $file = $this->data['Torneio']['img'];
+            // Faça o upload da imagem
+            $this->uploadImage($file);
         }
         return true;
     }

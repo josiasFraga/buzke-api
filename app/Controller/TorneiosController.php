@@ -79,8 +79,7 @@ class TorneiosController extends AppController {
             $torneios[$key]['Torneio']['_periodo'] = 
                 'De '.date('d/m',strtotime($trn['Torneio']['inicio'])).
                 ' até '.date('d/m',strtotime($trn['Torneio']['fim']));
-            $torneios[$key]['Torneio']['img'] = $this->images_path."/torneios/".$trn['Torneio']['img'];
-            $torneios[$key]['Torneio']['img_thumb'] = $this->images_path."/torneios/thumb_".$trn['Torneio']['img'];
+            $torneios[$key]['Torneio']['img_thumb'] = $this->getThumbFromImage($trn['Torneio']['img']);
             $torneios[$key]['Torneio']['_owner'] = $owner;
             $torneios[$key]['Torneio']['_old'] = ($trn['Torneio']['fim'] < date('Y-m-d'));
 
@@ -170,8 +169,7 @@ class TorneiosController extends AppController {
             'De '.date('d/m',strtotime($dados['Torneio']['inicio'])).
             ' até '.date('d/m',strtotime($dados['Torneio']['fim']));
         $img = $dados['Torneio']['img'];
-        $dados['Torneio']['img'] = $this->images_path."/torneios/" . $img;
-        $dados['Torneio']['img_thumb'] = $this->images_path."/torneios/thumb_" . $img;
+        $dados['Torneio']['img_thumb'] = $this->getThumbFromImage($img);
         $dados['Torneio']['_owner'] = $owner;
         $dados['Torneio']['_periodo_inscricao'] = 
             'de '.
@@ -373,7 +371,7 @@ class TorneiosController extends AppController {
             $dados_inscricao = $this->TorneioInscricaoJogador->getBySubscriptionId($dado['TorneioInscricao']['id']);
             $dados[$key]['TorneioInscricao']['_jogador_1'] = $dados_inscricao[0]['TorneioInscricaoJogador']['cliente_cliente_id'];
             $dados[$key]['TorneioInscricao']['_jogador_2'] = $dados_inscricao[1]['TorneioInscricaoJogador']['cliente_cliente_id'];
-            $dados[$key]['TorneioInscricao']['_dupla'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($dado['TorneioInscricao']['id'], $this->images_path);
+            $dados[$key]['TorneioInscricao']['_dupla'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($dado['TorneioInscricao']['id'], '');
             $dados[$key]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($dado['TorneioInscricao']['id']);
             $dados[$key]['TorneioInscricao']['_owner'] = $owner;
             
@@ -1476,7 +1474,7 @@ class TorneiosController extends AppController {
 
                     foreach( $integrantes as $key_integrante => $integrante) {
                         $integrantes[$key_integrante]['TorneioInscricao']['_nome_dupla'] = $this->TorneioInscricaoJogador->buscaNomeDupla($integrante['TorneioInscricao']['id']);
-                        $integrantes[$key_integrante]['TorneioInscricao']['_dupla'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($integrante['TorneioInscricao']['id'], $this->images_path);
+                        $integrantes[$key_integrante]['TorneioInscricao']['_dupla'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($integrante['TorneioInscricao']['id'], '');
                         $integrantes[$key_integrante]['TorneioInscricao']['_vitorias'] = $this->TorneioJogo->buscaNVitorias($integrante['TorneioInscricao']['id'], 1);
                         $integrantes[$key_integrante]['TorneioInscricao']['_sets'] = $this->TorneioJogo->buscaSaldoSets($integrante['TorneioInscricao']['id'], 1);
                         $integrantes[$key_integrante]['TorneioInscricao']['_games'] = $this->TorneioJogo->buscaNGames($integrante['TorneioInscricao']['id'], 1);
@@ -2626,14 +2624,14 @@ class TorneiosController extends AppController {
 
                 if ( $jogo['TorneioJogo']['time_1'] != null ) { 
                     $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_1']);
-                    $jogos[$key]['TorneioJogo']['_dupla_1'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($jogo['TorneioJogo']['time_1'], $this->images_path);
+                    $jogos[$key]['TorneioJogo']['_dupla_1'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($jogo['TorneioJogo']['time_1'], '');
                 } else {
                     $jogos[$key]['TorneioJogo']['_nome_dupla1'] = $jogo['TorneioJogo']['time_1_proximas_fases'];
                 }
 
                 if ( $jogo['TorneioJogo']['time_2'] != null ) {
                     $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $this->TorneioInscricaoJogador->buscaNomeDupla($jogo['TorneioJogo']['time_2']);
-                    $jogos[$key]['TorneioJogo']['_dupla_2'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($jogo['TorneioJogo']['time_2'], $this->images_path);
+                    $jogos[$key]['TorneioJogo']['_dupla_2'] = $this->TorneioInscricaoJogador->buscaJogadoresComFoto($jogo['TorneioJogo']['time_2'], '');
                 } else {
                     $jogos[$key]['TorneioJogo']['_nome_dupla2'] = $jogo['TorneioJogo']['time_2_proximas_fases'];
                 }

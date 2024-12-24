@@ -80,12 +80,8 @@ class QuadrasController extends AppController {
 
             $quadras[$key]["ClienteServico"]["_dias_semana"] = $this->ClienteServicoHorario->listaDiasSemana($qua['ClienteServico']['id']);
 
-            if ( count($qua['ClienteServicoFoto']) > 0 ) {
-                foreach( $qua['ClienteServicoFoto'] as $key_imagem => $imagem){
-                    $quadras[$key]['ClienteServicoFoto'][$key_imagem]['imagem'] = $this->images_path . "/servicos/" . $imagem['imagem'];
-                }
-            } else {
-                $quadras[$key]['ClienteServicoFoto'][0]['imagem'] = $this->images_path . "/servicos/sem_imagem.jpeg";
+            if ( count($qua['ClienteServicoFoto']) === 0 ) {
+                $quadras[$key]['ClienteServicoFoto'][0]['imagem'] = "https://buzke-images.s3.sa-east-1.amazonaws.com/services/sem_imagem.jpeg";
             }
         }
         

@@ -66,7 +66,7 @@ class UsuariosController extends AppController {
             $usuarios_retornar[] = [
                 'id' => $usuario['Usuario']['id'],
                 'nome' => $usuario['Usuario']['nome'],
-                'img' => $this->images_path . "/usuarios/" . $usuario['Usuario']['img']
+                'img' => $usuario['Usuario']['img']
             ];
         }
 
@@ -138,7 +138,6 @@ class UsuariosController extends AppController {
 
             $usuario['Cliente']['is_paddle_court'] = $this->ClienteSubcategoria->checkIsPaddleCourt($usuario['Usuario']['cliente_id']);
             $usuario['Cliente']['is_court'] = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
-            $usuario['Cliente']['logo'] = $this->images_path . '/clientes/'.$usuario['Cliente']['logo'];
 
             $cadastro_categorias_ok = $subcategorias > 0;
         }
@@ -188,12 +187,6 @@ class UsuariosController extends AppController {
         $dados_token = $this->Token->save($dados_salvar);
 
         if ($dados_token) {
-            if ( $usuario['Usuario']['img'] == '' || $usuario['Usuario']['img'] == null ) {
-                $usuario['Usuario']['img'] = $this->images_path."/usuarios/default.png";
-            } else if ( !strpos($usuario['Usuario']['img'], 'facebook') ) {
-                $usuario['Usuario']['img'] = $this->images_path."/usuarios/".$usuario['Usuario']['img'];
-            }
-
             if ( $cadastro_categorias_ok && $usuario['Usuario']['nivel_id'] == 2 ) {
                 $this->loadModel('ClienteAssinatura');
                 $dados_assinatura = $this->ClienteAssinatura->getLastByClientId($usuario['Usuario']['cliente_id']);
@@ -280,7 +273,6 @@ class UsuariosController extends AppController {
 
             $usuario['Cliente']['is_paddle_court'] = $this->ClienteSubcategoria->checkIsPaddleCourt($usuario['Usuario']['cliente_id']);
             $usuario['Cliente']['is_court'] = $this->ClienteSubcategoria->checkIsCourt($usuario['Usuario']['cliente_id']);
-            $usuario['Cliente']['logo'] = $this->images_path . '/clientes/'.$usuario['Cliente']['logo'];
 
             $cadastro_categorias_ok = $subcategorias > 0;
         }
@@ -304,11 +296,6 @@ class UsuariosController extends AppController {
         $dados_token = $this->Token->save($dados_salvar);
 
         if ($dados_token) {
-            if ( $usuario['Usuario']['img'] == '' || $usuario['Usuario']['img'] == null ) {
-                $usuario['Usuario']['img'] = $this->images_path."/usuarios/default.png";
-            } else if ( !strpos($usuario['Usuario']['img'], 'facebook') ) {
-                $usuario['Usuario']['img'] = $this->images_path."/usuarios/".$usuario['Usuario']['img'];
-            }
 
             if ( $cadastro_categorias_ok && $usuario['Usuario']['nivel_id'] == 2 ) {
                 $this->loadModel('ClienteAssinatura');
@@ -1168,13 +1155,9 @@ class UsuariosController extends AppController {
 
             $cadastro_categorias_ok = count($subcategorias) > 0;
 
-            
-            $usuario['Cliente']['logo'] = $this->images_path . '/clientes/'.$usuario['Cliente']['logo'];
         }
 
         unset($usuario['Usuario']['senha']);
-
-        $usuario['Usuario']['img'] = $this->images_path.'/usuarios/'.$usuario['Usuario']['img'];
 
         $dados_retornar = array_merge(
             $usuario, 
@@ -1384,12 +1367,6 @@ class UsuariosController extends AppController {
         if ($this->Usuario->save($dados_salvar)) {
             //busca os dados com a foto atualizada
             $usuario = $this->verificaValidadeToken($dados->token, $dados->usuario);
-            $this->log($usuario,'debug');
-            if ( $usuario['Usuario']['img'] == '' || $usuario['Usuario']['img'] == null ) {
-                $usuario['Usuario']['img'] = $this->images_path."/usuarios/default.png";
-            } else if ( !strpos($usuario['Usuario']['img'], 'facebook') ) {
-                $usuario['Usuario']['img'] = $this->images_path."/usuarios/".$usuario['Usuario']['img'];
-            }
             
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Cadastro alterado!', 'dados' => $usuario))));
         } else {

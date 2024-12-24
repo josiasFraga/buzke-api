@@ -1,0 +1,61 @@
+ALTER TABLE `usuarios_dados_padel`
+	ADD COLUMN `img` VARCHAR(150) NULL DEFAULT NULL AFTER `lado`,
+	ADD COLUMN `img_capa` VARCHAR(150) NULL DEFAULT NULL AFTER `img`,
+	DROP INDEX `usuario_id_lado`,
+	ADD UNIQUE INDEX `usuario_id_lado` (`usuario_id`) USING BTREE;
+/* Informação: Records: 0  Duplicates: 0  Warnings: 0 */
+
+
+ALTER TABLE `clientes_clientes`
+	ADD COLUMN `data_nascimento` DATE NULL DEFAULT NULL AFTER `cep`;
+
+
+    ALTER TABLE `usuarios`
+	CHANGE COLUMN `img` `img` VARCHAR(200) NULL DEFAULT 'thumb_user.png' COLLATE 'utf8mb3_general_ci' AFTER `nome`;
+
+
+UPDATE usuarios SET img = CONCAT('https://buzke-images.s3.sa-east-1.amazonaws.com/users/', 'thumb_user.png') WHERE img = 'thumb_user.png';
+
+
+
+ALTER TABLE `clientes`
+	CHANGE COLUMN `logo` `logo` VARCHAR(200) NULL DEFAULT 'sem-imagem.jpg' COLLATE 'utf8mb3_general_ci' AFTER `cnpj`;
+
+
+
+ALTER TABLE `clientes`
+	CHANGE COLUMN `logo` `logo` VARCHAR(200) NULL DEFAULT 'https://buzke-images.s3.sa-east-1.amazonaws.com/business/sem-imagem.jpg' COLLATE 'utf8mb3_general_ci' AFTER `cnpj`;
+
+
+
+ALTER TABLE `usuarios`
+    CHANGE COLUMN `img` `img` VARCHAR(200) NULL DEFAULT 'https://buzke-images.s3.sa-east-1.amazonaws.com/users/thumb_user.png' COLLATE 'utf8mb3_general_ci' AFTER `nome`;
+
+
+
+ALTER TABLE `clientes_clientes`
+	CHANGE COLUMN `img` `img` VARCHAR(200) NULL DEFAULT 'https://buzke-images.s3.sa-east-1.amazonaws.com/client/thumb_user.png' COLLATE 'utf8mb3_general_ci' AFTER `nacionalidade`;
+
+
+
+
+UPDATE clientes_clientes SET img = CONCAT('https://buzke-images.s3.sa-east-1.amazonaws.com/client/', 'thumb_user.png') WHERE img = 'thumb_user.png';
+
+
+
+
+UPDATE clientes SET logo = CONCAT('https://buzke-images.s3.sa-east-1.amazonaws.com/business/', clientes.logo);
+
+
+
+
+UPDATE torneios SET img = CONCAT('https://buzke-images.s3.sa-east-1.amazonaws.com/tournaments/', img);
+
+
+
+ALTER TABLE `cliente_servico_fotos`
+	CHANGE COLUMN `imagem` `imagem` VARCHAR(200) NOT NULL COLLATE 'utf8mb4_general_ci' AFTER `cliente_servico_id`;
+
+
+
+UPDATE cliente_servico_fotos SET imagem = CONCAT('https://buzke-images.s3.sa-east-1.amazonaws.com/services/', imagem);
