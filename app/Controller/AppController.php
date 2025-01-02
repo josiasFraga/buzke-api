@@ -943,6 +943,7 @@ class AppController extends Controller {
                 'fields' => array(
                     'Usuario.id',
                     'Usuario.nome',
+                    'Usuario.usuario',
                     'Usuario.telefone',
                     'Usuario.email',
                     'Usuario.img',
@@ -1135,6 +1136,7 @@ class AppController extends Controller {
         $group = $motivo_dados['NotificacaoMotivo']['grupo'];
         $notification_data = [];
         $agendamento_data_hora = null;
+        $usuario_origem = null;
 
         if ( !empty($registro_id) && in_array($motivo, ['agendamento_empresa', 'agendamento_usuario', 'cancelamento_empresa', 'cancelamento_usuario', 'lembrete_agendamento', 'lembrete_agendamento_torneio']) ) {
     
@@ -1421,6 +1423,103 @@ class AppController extends Controller {
                 'motivo' => $motivo,
             ];
         }
+        else if ( $motivo === 'dupla_fixa_padel' ) {
+
+            $this->loadModel('UsuarioDadosPadel');
+            $dados_registro = $this->UsuarioDadosPadel->find('first', [
+                'fields' => [
+                    'UsuarioDadosPadel.id',
+                    'UsuarioDadosPadel.img',
+                    'Usuario.nome',
+                    'Usuario.img'
+                ],
+                'conditions' => [
+                    'UsuarioDadosPadel.id' => $registro_id
+                ],
+                'link' => [
+                    'Usuario'
+                ]
+            ]);
+
+            $placeholders = [
+                "{{usuario_nome}}"
+            ];
+
+            $values = [
+                $dados_registro['Usuario']['nome']
+            ];
+
+            $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+
+            $notification_data = [
+                "registro_id" => $registro_id, 
+                'motivo' => $motivo,
+            ];
+
+            $usuario_origem = $dados_registro['UsuarioDadosPadel']['dupla_fixa'];
+
+            //$big_picture = !empty($dados_registro['UsuarioDadosPadel']['img']) ? $dados_registro['UsuarioDadosPadel']['img'] : $dados_registro['Usuario']['img'];
+            $large_icon = !empty($dados_registro['UsuarioDadosPadel']['img']) ? $this->getRoundThumbFromImage($dados_registro['UsuarioDadosPadel']['img']) : $this->getRoundThumbFromImage($dados_registro['Usuario']['img']);
+
+        }
+        else if ( $motivo === 'dupla_fixa_padel_resposta' ) {
+
+            $this->loadModel('UsuarioDadosPadel');
+    
+            $dados_registro = $this->UsuarioDadosPadel->find('first', [
+                'fields' => [
+                    'UsuarioDadosPadel.dupla_fixa',
+                    'UsuarioDadosPadel.dupla_fixa_aprovado',
+                ],
+                'conditions' => [
+                    'UsuarioDadosPadel.id' => $registro_id
+                ],
+                'link' => [
+                    'Usuario'
+                ]
+            ]);
+        
+            $dados_usuario_convidado = $this->UsuarioDadosPadel->find('first', [
+                'fields' => [
+                    'UsuarioDadosPadel.id',
+                    'UsuarioDadosPadel.img',
+                    'UsuarioDadosPadel.usuario_id',
+                    'Usuario.nome',
+                    'Usuario.img'
+                ],
+                'conditions' => [
+                    'UsuarioDadosPadel.usuario_id' => $dados_registro['UsuarioDadosPadel']['dupla_fixa']
+                ],
+                'link' => [
+                    'Usuario'
+                ]
+            ]);
+
+            $resposta = $dados_registro['UsuarioDadosPadel']['dupla_fixa_aprovado'] === 'Y' ? "aceitou seu pedido de dupla fixa." : "recusou seu pedido de dupla fixa.";
+
+            $placeholders = [
+                "{{usuario_nome}}",
+                "{{resposta}}"
+            ];
+
+            $values = [
+                $dados_usuario_convidado['Usuario']['nome'],
+                $resposta
+            ];
+
+            $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+
+            $notification_data = [
+                "registro_id" => $registro_id, 
+                'motivo' => $motivo,
+            ];
+
+            $usuario_origem = $dados_usuario_convidado['UsuarioDadosPadel']['usuario_id'];
+
+            //$big_picture = !empty($dados_registro['UsuarioDadosPadel']['img']) ? $dados_registro['UsuarioDadosPadel']['img'] : $dados_registro['Usuario']['img'];
+            $large_icon = !empty($dados_usuario_convidado['UsuarioDadosPadel']['img']) ? $this->getRoundThumbFromImage($dados_usuario_convidado['UsuarioDadosPadel']['img']) : $this->getRoundThumbFromImage($dados_usuario_convidado['Usuario']['img']);
+
+        }
 
 		$heading = array(
 			"en" => $titulo
@@ -1452,6 +1551,21 @@ class AppController extends Controller {
             'headings' => $heading,
             'contents' => $content,
         ];
+
+        if (!empty($big_picture)) {
+            $fields['ios_attachments'] = [
+                'id1' => $big_picture, // URL da imagem para iOS
+            ];
+            $fields['mutable_content'] = true;
+            $fields['big_picture'] = $big_picture; // URL da imagem para Android
+        } 
+        else if (!empty($large_icon)) {
+            $fields['ios_attachments'] = [
+                'id1' => $large_icon, // URL da imagem para iOS
+            ];
+            $fields['mutable_content'] = true;
+            $fields['large_icon'] = $large_icon; // URL da imagem para Android
+        }
         
         $fields = json_encode($fields);
         
@@ -1480,6 +1594,9 @@ class AppController extends Controller {
                     'notificacao_motivo_id' => $motivo_dados['NotificacaoMotivo']['id'],
                     'agendamento_data_hora' => $agendamento_data_hora,
                     'json' => json_encode($response),
+                    'big_picture' => !empty($big_picture) ? $big_picture : null,
+                    'large_icon' => !empty($large_icon) ? $large_icon : null,
+                    'usuario_origem' => $usuario_origem
                 ]
       
             ];
@@ -1681,7 +1798,8 @@ class AppController extends Controller {
                     $n_fixos_cancelados = $this->AgendamentoFixoCancelado->find('count',[
                         'conditions' => [
                             'AgendamentoFixoCancelado.horario' => $data . ' ' . $horario['time'],
-                            'Agendamento.servico_id' => $servico_id
+                            'Agendamento.servico_id' => $servico_id,
+                            'Agendamento.cancelado' => 'N'
                         ],
                         'link' => [
                             'Agendamento'
@@ -1870,14 +1988,36 @@ class AppController extends Controller {
 	}
 
     public function getThumbFromImage($image_url = null) {
-
-        if ( empty($image_url) ) {
+        if (empty($image_url)) {
             return null;
         }
-
+    
         $pathInfo = pathinfo($image_url);
-        $newUrl = $pathInfo['dirname'] . '/' . 'thumb_' . $pathInfo['basename'];
+        // Em vez de ".../users/thumb_<nome>.jpg"
+        // queremos ".../users/thumbs/<nome>.jpg"
+        $newUrl = $pathInfo['dirname'] . '/thumbs/' . $pathInfo['basename'];
+    
+        return $newUrl;
+    }
 
+    public function getRoundThumbFromImage($image_url = null) {
+        if (empty($image_url)) {
+            return null;
+        }
+    
+        // Obtem informações da URL
+        $pathInfo = pathinfo($image_url);
+    
+        // pathInfo['dirname'] => https://buzke-images.s3.sa-east-1.amazonaws.com/users
+        // pathInfo['filename'] => 49430452192734f43a0ec6ad5169a6c5 (sem extensão)
+        // pathInfo['extension'] => jpg (ou gif, ou png...)
+    
+        // Força a extensão para .png
+        $fileNamePng = $pathInfo['filename'] . '.png';
+    
+        // Gera a URL final => users/round_thumbs/<nome>.png
+        $newUrl = $pathInfo['dirname'] . '/round_thumbs/' . $fileNamePng;
+    
         return $newUrl;
     }
 

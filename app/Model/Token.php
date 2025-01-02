@@ -73,8 +73,8 @@ class Token extends AppModel {
 				]
 			],
 			'link' => ['Usuario'],
-			'order' => ['Token.id DESC'],
-			'group' => ['Token.notification_id']
+			'order' => ['Token.data_validade DESC'],
+			//'group' => ['Token.notification_id']
 		]);
 
 		if ( count($notification_data) == 0 ){

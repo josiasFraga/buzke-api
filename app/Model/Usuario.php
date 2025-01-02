@@ -61,7 +61,7 @@ class Usuario extends AppModel {
         $imageUploader = new ImageUploader();
 
         // Faz o upload da imagem para o S3
-        $imageUrl = $imageUploader->uploadToS3($file, 'users');
+        $imageUrl = $imageUploader->uploadToS3($file, 'users', true);
 
         if ($imageUrl) {
             // Armazene a URL da imagem no banco de dados (ou qualquer outra ação)
@@ -84,7 +84,38 @@ class Usuario extends AppModel {
             // Faça o upload da imagem
             $this->uploadImage($file);
         }
+    
+        if ( empty($this->data['Usuario']['id']) && empty($this->data['Usuario']['usuario']) ) {
+            // Gera o nome de usuário apenas se não for uma atualização e se o nome de usuário não estiver definido
+            $usuario = $this->generateUsername($this->data['Usuario']['nome']);
+            $this->data['Usuario']['usuario'] = $usuario;
+        }
         return true;
+    }
+
+    private function generateUsername($nome) {
+        // Inicializa o nome base (sem número sequencial)
+        $nomeBase = '@' . preg_replace('/[^a-zA-Z0-9]/', '', $nome); // Remove caracteres especiais
+        $usuario = $nomeBase;
+        
+        // Verifica se já existe um usuário com esse nome
+        $count = $this->find('count', [
+            'conditions' => ['Usuario.usuario' => $usuario]
+        ]);
+
+        // Se já existir, adiciona um número sequencial
+        if ($count > 0) {
+            $i = 1;
+            do {
+                $usuario = $nomeBase . $i;
+                $i++;
+                $count = $this->find('count', [
+                    'conditions' => ['Usuario.usuario' => $usuario]
+                ]);
+            } while ($count > 0);
+        }
+
+        return $usuario;
     }
 
     public function listUsuarios() {
@@ -265,5 +296,8 @@ class Usuario extends AppModel {
             ]
         ]);
 	}
+
+
+
 
 }

@@ -18,6 +18,7 @@ class UsuarioDadosPadel extends AppModel {
 		return $this->find('first',[
 			'fields' => [
 				'Usuario.nome',
+				'Usuario.img',
 				'UsuarioDadosPadel.*',
 				'ClienteCliente.sexo',
 				'ClienteCliente.data_nascimento'
@@ -42,11 +43,11 @@ class UsuarioDadosPadel extends AppModel {
     public $validate = array();
 
     // Método que será chamado para fazer o upload da imagem
-    public function uploadImage($file, $directory) {
+    public function uploadImage($file, $directory, $rounded) {
         $imageUploader = new ImageUploader();
 
         // Faz o upload da imagem para o S3
-        $imageUrl = $imageUploader->uploadToS3($file, $directory);
+        $imageUrl = $imageUploader->uploadToS3($file, $directory, $rounded);
 
         if ($imageUrl) {
             // Armazene a URL da imagem no banco de dados (ou qualquer outra ação)
@@ -65,15 +66,24 @@ class UsuarioDadosPadel extends AppModel {
         if (!empty($this->data['UsuarioDadosPadel']['img'])) {
             $file = $this->data['UsuarioDadosPadel']['img'];
             // Faça o upload da imagem
-            $this->data['UsuarioDadosPadel']['img'] = $this->uploadImage($file, 'athletes/profiles');
+            $this->data['UsuarioDadosPadel']['img'] = $this->uploadImage($file, 'athletes/profiles', true);
         }
 
         if (!empty($this->data['UsuarioDadosPadel']['img_capa'])) {
             $file = $this->data['UsuarioDadosPadel']['img_capa'];
             // Faça o upload da imagem
-            $this->data['UsuarioDadosPadel']['img_capa'] = $this->uploadImage($file, 'athletes/covers');
+            $this->data['UsuarioDadosPadel']['img_capa'] = $this->uploadImage($file, 'athletes/covers', false);
         }
         return true;
+    }
+
+    public function checkIsAthlete($usuario_id = null) {
+        return $this->find('count',[
+            'conditions' => [
+                'usuario_id' => $usuario_id
+            ],
+            'link' => []
+        ]) > 0;
     }
 
 }

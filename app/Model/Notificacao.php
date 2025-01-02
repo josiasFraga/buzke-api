@@ -29,6 +29,8 @@ class Notificacao extends AppModel {
                 'Notificacao.notificacao_motivo_id',
                 'Notificacao.agendamento_data_hora',
                 'Notificacao.read',
+                'Notificacao.usuario_origem',
+                'NotificacaoMotivo.nome'
             ],
             'conditions' => [
                 'NotificacaoUsuario.token' => $tokens
@@ -39,7 +41,7 @@ class Notificacao extends AppModel {
             'group' => [
                 'Notificacao.id'
             ],
-            'link' => ['NotificacaoUsuario']
+            'link' => ['NotificacaoUsuario', 'NotificacaoMotivo']
         ]);
 
     }
@@ -60,6 +62,11 @@ class Notificacao extends AppModel {
                 'Notificacao.notificacao_motivo_id',
                 'Notificacao.agendamento_data_hora',
                 'Notificacao.read',
+                'Notificacao.acao_selecionada',
+                'Notificacao.acao_selecionada_desc',
+                'Notificacao.large_icon',
+                'Notificacao.usuario_origem',
+                'NotificacaoMotivo.nome'
             ],
             'conditions' => [
                 'NotificacaoUsuario.usuario_id' => $user_id
@@ -70,7 +77,7 @@ class Notificacao extends AppModel {
             'group' => [
                 'Notificacao.id'
             ],
-            'link' => ['NotificacaoUsuario']
+            'link' => ['NotificacaoUsuario', 'NotificacaoMotivo']
         ]);
 
     }

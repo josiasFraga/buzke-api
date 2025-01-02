@@ -845,7 +845,9 @@ class UsuariosController extends AppController {
 
         $asaas_id = $asaas_dados['id'];
     
-        $dados_salvar['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')] = $asaas_id;        
+        $dados_salvar['Cliente'][getenv('CAMPO_CLIENTE_GATEWAY_ID')] = $asaas_id;
+
+        $dados_salvar['Usuario']['usuario'] = $this->Usuario->generateUsername($nome_rofissional);
 
         $this->Usuario->set($dados_salvar);
         if ($this->Usuario->saveAssociated($dados_salvar)) {
@@ -1643,6 +1645,63 @@ class UsuariosController extends AppController {
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Seu cadastro foi excluído com sucesso!'))));
+
+    }
+
+    public function perfis_esportista() {
+        
+        $this->layout = 'ajax';
+        
+        $dados = $this->request->query;      
+    
+        if ( empty($dados['token']) ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        if ( empty($dados['email']) ) {
+            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => []))));
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+
+        $dados_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $usuario_id = $dados_usuario['Usuario']['id'];
+
+        $this->loadModel('UsuarioDadosPadel');
+        $this->loadModel('Subcategoria');
+    
+        $esportes = $this->Subcategoria->find('all', [
+            'conditions' => [
+                'NOT' => [
+                    'Subcategoria.esporte_nome' => null,
+                    'Subcategoria.cena_criacao_perfil' => null
+                ]
+            ],
+            'link' => []
+        ]);
+
+        $check_is_padelist = $this->UsuarioDadosPadel->checkIsAthlete($dados_usuario['Usuario']['id']);
+
+        
+        $esportes_retornar = array_filter($esportes, function($esporte) use ($check_is_padelist) {
+            if ($esporte['Subcategoria']['id'] == 7 && $check_is_padelist) {
+                return true;
+            }
+            return false;
+        });
+        
+        
+        $esportes_retornar = array_map(function($esporte) {
+            return $esporte['Subcategoria'];
+        },$esportes_retornar);
+
+        
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $esportes_retornar))));
 
     }
 

@@ -84,7 +84,7 @@ class Cliente extends AppModel {
         $imageUploader = new ImageUploader();
 
         // Faz o upload da imagem para o S3
-        $imageUrl = $imageUploader->uploadToS3($file, 'business');
+        $imageUrl = $imageUploader->uploadToS3($file, 'business', true);
 
         if ($imageUrl) {
             // Armazene a URL da imagem no banco de dados (ou qualquer outra ação)

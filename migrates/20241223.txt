@@ -59,3 +59,124 @@ ALTER TABLE `cliente_servico_fotos`
 
 
 UPDATE cliente_servico_fotos SET imagem = CONCAT('https://buzke-images.s3.sa-east-1.amazonaws.com/services/', imagem);
+
+
+ALTER TABLE `usuarios`
+	ADD COLUMN `usuario` VARCHAR(80) NULL DEFAULT NULL AFTER `nome`;
+
+
+
+
+UPDATE usuarios u
+LEFT JOIN clientes c ON u.cliente_id = c.id
+SET u.usuario = CONCAT(
+  '@',
+  REGEXP_REPLACE(
+    -- Substituição de cada grupo de caracteres acentuados
+    REGEXP_REPLACE(
+      REGEXP_REPLACE(
+        REGEXP_REPLACE(
+          REGEXP_REPLACE(
+            REGEXP_REPLACE(
+                          REGEXP_REPLACE(
+                            CASE 
+                              WHEN u.cliente_id IS NOT NULL THEN c.nome
+                              ELSE u.nome
+                            END
+                        , '[áàâãä]', 'a')       -- a minúsculo
+                    , '[éèêë]', 'e')           -- e minúsculo
+                , '[íìîï]', 'i')               -- i minúsculo
+            , '[óòôõö]', 'o')                 -- o minúsculo
+        , '[úùûü]', 'u')                      -- u minúsculo
+    , '[ç]', 'c'),                            -- ç minúsculo
+    
+    -- Por último, remove qualquer caractere que não seja alfanumérico
+    '[^a-zA-Z0-9]', ''
+  )
+);
+
+
+
+
+
+
+SET @count := 0;
+SET @prev_usuario := '';  -- Variável para armazenar o valor do usuário anterior
+
+UPDATE usuarios u1
+JOIN (
+    SELECT id, usuario, 
+           @count := IF(@prev_usuario = usuario, @count + 1, 1) AS seq,  -- Reinicia o contador para duplicados
+           @prev_usuario := usuario
+    FROM usuarios
+    ORDER BY usuario, id  -- Ordena pelo usuario e id para garantir que os duplicados sejam contados corretamente
+) u2 ON u1.id = u2.id
+SET u1.usuario = CONCAT(u2.usuario, IF(u2.seq > 1, u2.seq, ''))  -- Aplica o contador apenas para duplicados
+WHERE u2.seq > 1;  -- Aplica apenas para os duplicados
+
+
+
+ALTER TABLE `usuarios`
+	ADD UNIQUE INDEX `usuario` (`usuario`),
+	ADD UNIQUE INDEX `email` (`email`);
+
+
+
+ALTER TABLE `subcategorias`
+	ADD COLUMN `icone` VARCHAR(50) NULL DEFAULT NULL AFTER `mostrar_no_to_pro_jogo`,
+	ADD COLUMN `cena_criacao_perfil` VARCHAR(80) NULL DEFAULT NULL AFTER `icone`;
+
+
+ALTER TABLE `usuarios_dados_padel`
+	ADD COLUMN `privado` ENUM('Y','N') NOT NULL DEFAULT 'N' AFTER `img_capa`;
+
+
+ALTER TABLE usuarios ADD FULLTEXT idx_fulltext_usuario_nome_email (usuario, nome, email);
+
+
+ALTER TABLE `usuarios_dados_padel`
+	ADD COLUMN `dupla_fixa` INT NULL DEFAULT NULL AFTER `privado`;
+
+
+ALTER TABLE `usuarios_dados_padel`
+	ADD COLUMN `dupla_fixa` INT NULL DEFAULT NULL AFTER `privado`,
+	ADD COLUMN `dupla_fixa_aprovado` ENUM('Y','N') NULL DEFAULT NULL AFTER `dupla_fixa`,
+	ADD CONSTRAINT `FK_usuarios_dados_padel_usuarios_2` FOREIGN KEY (`dupla_fixa`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+ALTER TABLE `notificacoes_motivos`
+	ADD COLUMN `acao_usuario` VARCHAR(50) NULL DEFAULT NULL AFTER `msg_notificacao`;
+
+INSERT INTO `buzke_v2`.`notificacoes_motivos` (`created`, `titulo`, `nome`, `grupo`, `titulo_notificacao`, `msg_notificacao`) VALUES ('2024-12-28 21:28:04', 'Adicionou voce Como Dupla fixa de Padel', 'dupla_fixa_padel', 'dupla_padel', 'Voce foi adicionado como dupla fixa de padel', '{{usuario_nome}} adicionou você como dupla fixa. Deseja confirmar essa parceria?');
+
+
+ALTER TABLE `notificacoes`
+	ADD COLUMN `big_picture` VARCHAR(200) NULL DEFAULT NULL AFTER `json`;
+
+
+ALTER TABLE `notificacoes`
+	ADD COLUMN `large_icon` VARCHAR(200) NULL DEFAULT NULL AFTER `big_picture`;
+
+ALTER TABLE `notificacoes`
+	ADD COLUMN `acao_selecionada` VARCHAR(20) NULL DEFAULT NULL AFTER `large_icon`;
+
+
+ALTER TABLE `notificacoes`
+	ADD COLUMN `usuario_origem` VARCHAR(20) NULL DEFAULT NULL AFTER `acao_selecionada`;
+
+ALTER TABLE `notificacoes`
+	CHANGE COLUMN `usuario_origem` `usuario_origem` INT NULL DEFAULT NULL COLLATE 'latin1_swedish_ci' AFTER `acao_selecionada`,
+	ADD CONSTRAINT `FK_notificacoes_usuarios` FOREIGN KEY (`usuario_origem`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE NO ACTION;
+
+ALTER TABLE `notificacoes`
+	ADD INDEX `acao_selecionada` (`acao_selecionada`);
+
+
+ALTER TABLE `notificacoes`
+	ADD INDEX `registro_id` (`registro_id`);
+
+ALTER TABLE `notificacoes`
+	ADD COLUMN `acao_selecionada_desc` VARCHAR(20) NULL DEFAULT NULL AFTER `acao_selecionada`;
+
+
+INSERT INTO `notificacoes_motivos` (`id`, `created`, `updated`, `titulo`, `nome`, `permissao`, `grupo`, `titulo_notificacao`, `msg_notificacao`) VALUES (20, '2025-01-02 17:30:54', NULL, 'Resposta de convite de dupla fixa', 'dupla_fixa_padel_resposta', NULL, 'dupla_padel', 'Resposta de parceria', '{{usuario_nome}} {{resposta}}');

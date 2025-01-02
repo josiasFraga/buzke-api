@@ -1,4 +1,5 @@
 <?php
+ini_set('memory_limit', '512M');
 class RodarEExcluirController extends AppController {
 
     public $components = array('RequestHandler');
@@ -36,45 +37,6 @@ class RodarEExcluirController extends AppController {
         ]);
     }
 
-    function migra_horarios() {
-        
-        $this->layout = 'ajax';
-        
-        $this->loadModel('ClienteHorarioAtendimento');
-        $this->loadModel('ClienteServico');
-        $this->loadModel('ClienteServicoHorario');
-
-        $horarios = $this->ClienteHorarioAtendimento->find('all');
-
-        foreach( $horarios as $key => $horario ) {
-            $servicos = $this->ClienteServico->find('all',[
-                'conditions' => [
-                    'ClienteServico.cliente_id' => $horario['ClienteHorarioAtendimento']['cliente_id']
-                ],
-                'link' => []
-            ]);
-
-            foreach ( $servicos as $key_servico => $servico ) {
-
-                $dados_horario_salvar = [
-                    'cliente_servico_id' => $servico['ClienteServico']['id'],
-                    'inicio' => $horario['ClienteHorarioAtendimento']['abertura'],
-                    'fim' => $horario['ClienteHorarioAtendimento']['fechamento'],
-                    'dia_semana' => $horario['ClienteHorarioAtendimento']['horario_dia_semana'],
-                    'duracao' => $horario['ClienteHorarioAtendimento']['intervalo_horarios'],
-                    'a_domicilio' => $horario['ClienteHorarioAtendimento']['a_domicilio'],
-                    'apenas_a_domocilio' => 0,
-                ];
-
-                $this->ClienteServicoHorario->create();
-                $this->ClienteServicoHorario->save($dados_horario_salvar);
-
-            }
-        }
-    
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Impedimentos cadastrados com sucesso!'))));
-    }
-
     function seta_vencedor() {
         $this->loadModel('TorneioJogo');
         $this->loadModel('TorneioJogoPlacar');
@@ -104,65 +66,415 @@ class RodarEExcluirController extends AppController {
 
     }
 
-    function envia_imagens_pro_bucket($tipo = 'user') {
 
-        if ($tipo == 'user') {
-            $this->loadModel('Usuario');
-            $diretorio_bucket = 'users';
-            $usuarios = $this->Usuario->find('all', [
-                'fields' => [
-                    'Usuario.img'
-                ],
-                'conditions' => [
-                    'not' => [
-                        'Usuario.img' => 'thumb_user.png'
-                    ]
-                ]
+
+
+    function cria_thumbs_redondas($diretorio = 'default_directory') {
+        $this->autoRender = false;
+    
+        // Verifica se o cliente S3 está inicializado
+        if (!$this->s3Client) {
+            throw new Exception('Cliente S3 não inicializado.');
+        }
+
+        $args = $this->request->params['pass'];
+        // Se quiser juntar de volta:
+        $diretorio = implode('/', $args);
+    
+        try {
+            // Listar objetos no S3
+            $objects = $this->s3Client->listObjectsV2([
+                'Bucket' => $this->s3Bucket,
+                'Prefix' => $diretorio . '/',
             ]);
+    
+            if (empty($objects['Contents'])) {
+                echo "Nenhuma imagem encontrada no diretório: {$diretorio}\n";
+                return;
+            }
+    
+            foreach ($objects['Contents'] as $object) {
+                $fileName = basename($object['Key']);
+                
+                if ( $object['Key'] === $diretorio . '/' ) continue;
+    
+                // Ignorar arquivos que já possuem "thumb_" ou "round_" no nome
+                if (strpos($fileName, 'thumbs') === 0 || strpos($fileName, 'round_thumbs') === 0) {
+                    continue;
+                }
+    
+                // Nome da nova imagem redonda
+                $fileNameNoExt = pathinfo($fileName, PATHINFO_FILENAME); 
+                $roundFileName = $diretorio . '/round_thumbs/' . $fileNameNoExt . '.png';
+    
+                // Verificar se a imagem redonda já existe
+                if ($this->checkIfFileExists($fileNameNoExt . '.png', $diretorio . '/round_thumbs')) {
+                    echo "A imagem redonda já existe para: {$fileName}\n";
+                    continue;
+                }
+    
+                // Baixar a imagem original
+                $result = $this->s3Client->getObject([
+                    'Bucket' => $this->s3Bucket,
+                    'Key'    => $object['Key'],
+                ]);
 
-            foreach ($usuarios as $usuario) {
-                $imagem = $usuario['Usuario']['img'];
+                if (empty($result['Body'])) {
+                    echo "A imagem {$fileName} está vazia ou inválida.\n";
+                    continue;
+                }
+    
+                // Converta o stream em uma string
+                $originalImageData = (string) $result['Body']; // Conteúdo binário
 
-                // Verificar se a imagem existe na pasta antes de enviar para o S3
-                $filePath = WWW_ROOT . 'img' . DS . 'usuarios' . DS . $imagem;
 
-                // Verifica se a imagem existe na pasta
-                if (file_exists($filePath)) {
 
-                    // Verificar se a imagem já existe no bucket
-                    if ($this->checkIfFileExists($imagem, $diretorio_bucket)) {
-                        echo "A imagem {$imagem} já existe no bucket S3.\n";
+                if (empty($originalImageData)) {
+                    echo "A imagem {$fileName} está vazia ou inválida.\n";
+                    continue;
+                }
 
-                        // Verifique se o nome da imagem contém o diretório correto
-                        if (strpos($imagem, $diretorio_bucket.'/') === 0) {
-                            $this->Usuario->id = $usuario['Usuario']['id'];
-                            $this->Usuario->save(['img' => "https://buzke-images.s3.sa-east-1.amazonaws.com/{$diretorio_bucket}/" . $imagem]);
-                        }
-                        continue; // Se a imagem já existe, pula para a próxima
-                    }
+                // Criar a imagem redonda
+                $roundImageData = $this->createRoundImage($originalImageData);
+    
+                // Enviar a nova imagem para o S3
+                $this->s3Client->putObject([
+                    'Bucket'      => $this->s3Bucket,
+                    'Key'         => $roundFileName,
+                    'Body'        => $roundImageData,  // binário
+                    'ContentType' => 'image/png',
+                ]);
+    
+                echo "Imagem redonda criada e enviada para o S3: {$roundFileName}\n";
+                //die();
+            }
+        } catch (Exception $e) {
+            echo "Erro: " . $e->getMessage() . "\n";
+        }
+    }
 
-                    // Enviar a imagem para o bucket S3 e obter a URL
-                    $imageUrl = $this->uploadImageToS3($filePath, $diretorio_bucket, $imagem);
-                    echo "Imagem {$imagem} enviada para o S3.\n";
-
-                    // Atualizar o nome da imagem no banco com a URL do S3
-                    if ($imageUrl) {
-                        $this->Usuario->id = $usuario['Usuario']['id'];
-                        $this->Usuario->save(['img' => $imageUrl]);
-                        echo "A URL da imagem foi atualizada no banco de dados.\n";
-                    }
-                } else {
-                    echo "A imagem {$imagem} não foi encontrada na aplicação.\n";
+    private function createRoundImage($imageData)
+    {
+        // 1. Salvar em um arquivo temporário para ler EXIF
+        $tempFile = tempnam(sys_get_temp_dir(), 'orientation_');
+        file_put_contents($tempFile, $imageData);
+    
+        // 2. Carrega a imagem a partir do arquivo
+        $im = imagecreatefromstring(file_get_contents($tempFile));
+        if (!$im) {
+            unlink($tempFile);
+            throw new Exception("Falha ao criar imagem a partir dos dados fornecidos.");
+        }
+    
+        // 3. Se for JPEG, corrigir orientação via EXIF
+        //    Você pode tentar identificar a extensão do arquivo (por ex., pathinfo($tempFile)),
+        //    ou apenas checar se exif_read_data tem Orientation e rotacionar.
+        $exif = @exif_read_data($tempFile);
+        if ($exif && isset($exif['Orientation'])) {
+            switch ($exif['Orientation']) {
+                case 3:
+                    $im = imagerotate($im, 180, 0);
+                    break;
+                case 6:
+                    $im = imagerotate($im, -90, 0);
+                    break;
+                case 8:
+                    $im = imagerotate($im, 90, 0);
+                    break;
+            }
+        }
+    
+        // Agora, a imagem $im está fisicamente na posição correta
+    
+        // 4. Dimensões
+        $origWidth  = imagesx($im);
+        $origHeight = imagesy($im);
+    
+        // Tamanho final
+        $targetSize = 512;
+    
+        // 5. Redimensionar mantendo proporção (usando max() para preencher 512 e recortar bordas)
+        $scale = max($targetSize / $origWidth, $targetSize / $origHeight);
+        $scaledWidth  = (int)($origWidth  * $scale);
+        $scaledHeight = (int)($origHeight * $scale);
+    
+        $scaledImage = imagecreatetruecolor($scaledWidth, $scaledHeight);
+        imagealphablending($scaledImage, false);
+        imagesavealpha($scaledImage, true);
+        $transparent = imagecolorallocatealpha($scaledImage, 0, 0, 0, 127);
+        imagefill($scaledImage, 0, 0, $transparent);
+    
+        // Copiar redimensionado
+        imagecopyresampled(
+            $scaledImage,
+            $im,
+            0, 0, 0, 0,
+            $scaledWidth, $scaledHeight,
+            $origWidth, $origHeight
+        );
+    
+        // 6. Recorta 512×512 do centro
+        $finalImage = imagecreatetruecolor($targetSize, $targetSize);
+        imagealphablending($finalImage, false);
+        imagesavealpha($finalImage, true);
+    
+        $transparent2 = imagecolorallocatealpha($finalImage, 0, 0, 0, 127);
+        imagefill($finalImage, 0, 0, $transparent2);
+    
+        $offsetX = (int)(($scaledWidth  - $targetSize) / 2);
+        $offsetY = (int)(($scaledHeight - $targetSize) / 2);
+    
+        imagecopy(
+            $finalImage,
+            $scaledImage,
+            0, 0,
+            $offsetX, $offsetY,
+            $targetSize, $targetSize
+        );
+    
+        // 7. Aplicar máscara circular pixel a pixel
+        $center = $targetSize / 2; // 256
+        $radius = $targetSize / 2; // 256
+    
+        for ($x = 0; $x < $targetSize; $x++) {
+            for ($y = 0; $y < $targetSize; $y++) {
+                $dist = sqrt(pow($x - $center, 2) + pow($y - $center, 2));
+                if ($dist > $radius) {
+                    imagesetpixel($finalImage, $x, $y, $transparent2);
                 }
             }
-        } 
+        }
+    
+        // 8. Converter para PNG em string
+        ob_start();
+        imagepng($finalImage);
+        $output = ob_get_clean();
+    
+        // 9. Liberar memória
+        imagedestroy($im);
+        imagedestroy($scaledImage);
+        imagedestroy($finalImage);
+    
+        // 10. Exclui o arquivo temporário
+        unlink($tempFile);
+    
+        // Retorna binário PNG
+        return $output;
+    }
+    
 
-        // Definir o tipo de resposta como JSON (se necessário)
-        $this->set([
-            'status' => 'ok',
-            'msg' => 'Imagens enviadas com sucesso.',
-            '_serialize' => ['status', 'msg']
-        ]);
+
+
+    public function cria_thumbs_quadradas($diretorio = 'default_directory') {
+        $this->autoRender = false;
+    
+        if (!$this->s3Client) {
+            throw new Exception('Cliente S3 não inicializado.');
+        }
+
+        $args = $this->request->params['pass'];
+        // Se quiser juntar de volta:
+        $diretorio = implode('/', $args);
+    
+        try {
+            // Listar objetos no S3
+            $objects = $this->s3Client->listObjectsV2([
+                'Bucket' => $this->s3Bucket,
+                'Prefix' => $diretorio . '/',
+            ]);
+    
+            if (empty($objects['Contents'])) {
+                echo "Nenhuma imagem encontrada no diretório: {$diretorio}\n";
+                return;
+            }
+    
+            foreach ($objects['Contents'] as $object) {
+                $fileName = basename($object['Key']);
+    
+                // Pular "pasta" se for só o prefixo
+                if ($object['Key'] === $diretorio . '/') {
+                    continue;
+                }
+    
+                // Ignorar arquivos que já estejam em "thumbs/" ou "round_thumbs/"
+                if (strpos($object['Key'], $diretorio . '/thumbs/') === 0) {
+                    // Já está na pasta de thumbs
+                    continue;
+                }
+                if (strpos($object['Key'], $diretorio . '/round_thumbs/') === 0) {
+                    // Já está na pasta de round_thumbs
+                    continue;
+                }
+    
+                // Descobrir a extensão (ex.: .jpg, .png, .gif)
+                $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+    
+                // Nome do novo arquivo (por exemplo, "thumbs/foto.png" se original era ".png")
+                $thumbFileName = $diretorio . '/thumbs/' . $fileName; 
+                // Ex: users/thumbs/foto.png
+    
+                // Verificar se a thumb já existe
+                if ($this->checkIfFileExists($fileName, $diretorio . '/thumbs')) {
+                    echo "A thumb já existe para: {$fileName}\n";
+                    continue;
+                }
+    
+                // Baixar a imagem original do S3
+                $result = $this->s3Client->getObject([
+                    'Bucket' => $this->s3Bucket,
+                    'Key'    => $object['Key'],
+                ]);
+    
+                if (empty($result['Body'])) {
+                    echo "A imagem {$fileName} está vazia ou inválida.\n";
+                    continue;
+                }
+    
+                // Converte o stream em string binária
+                $originalImageData = (string) $result['Body'];
+                if (empty($originalImageData)) {
+                    echo "A imagem {$fileName} está vazia ou inválida.\n";
+                    continue;
+                }
+    
+                // Criar a thumb 512x512 (mantendo extensão)
+                $thumbData = $this->createThumb512($originalImageData, $extension);
+    
+                // Subir a nova imagem para o S3
+                $this->s3Client->putObject([
+                    'Bucket'      => $this->s3Bucket,
+                    'Key'         => $thumbFileName,
+                    'Body'        => $thumbData,
+                    'ContentType' => $this->getMimeTypeByExtension($extension), 
+                ]);
+    
+                echo "Thumb criada e enviada para o S3: {$thumbFileName}\n";
+    
+                // Libera memória (se tiver resources GD)
+                // Nesse caso, a createThumb512 já faz o imagedestroy, mas você pode chamar gc_collect_cycles() se quiser
+            }
+        } catch (Exception $e) {
+            echo "Erro: " . $e->getMessage() . "\n";
+        }
+    }
+    
+    private function createThumb512($imageData, $extension) {
+
+        // 1. Criar um arquivo temporário para podermos ler EXIF
+        $tempFile = tempnam(sys_get_temp_dir(), 'orientation_');
+        file_put_contents($tempFile, $imageData);
+    
+        // 2. Carregar a imagem a partir do arquivo
+        $im = imagecreatefromstring(file_get_contents($tempFile));
+        if (!$im) {
+            unlink($tempFile);
+            throw new Exception("Falha ao criar imagem a partir dos dados fornecidos.");
+        }
+    
+        // 3. Se for JPEG, corrigir orientação lendo EXIF
+        if (in_array(strtolower($extension), ['jpg','jpeg'])) {
+            $im = $this->fixOrientationIfNeeded($im, $tempFile);
+        }
+    
+        // AGORA, a imagem $im está fisicamente rotacionada corretamente,
+        // e podemos prosseguir com o redimensionamento.
+    
+        $origWidth  = imagesx($im);
+        $origHeight = imagesy($im);
+        $targetSize = 512;
+    
+        // min() => encaixar sem recortar
+        $scale = min($targetSize / $origWidth, $targetSize / $origHeight);
+        $scaledWidth  = (int)($origWidth  * $scale);
+        $scaledHeight = (int)($origHeight * $scale);
+    
+        $thumb = imagecreatetruecolor($scaledWidth, $scaledHeight);
+    
+        // Se for PNG/GIF, preservar transparência
+        if (in_array(strtolower($extension), ['png','gif'])) {
+            imagealphablending($thumb, false);
+            imagesavealpha($thumb, true);
+            $transparent = imagecolorallocatealpha($thumb, 0, 0, 0, 127);
+            imagefill($thumb, 0, 0, $transparent);
+        }
+    
+        // Redimensiona
+        imagecopyresampled(
+            $thumb,
+            $im,
+            0, 0, 0, 0,
+            $scaledWidth, $scaledHeight,
+            $origWidth, $origHeight
+        );
+    
+        // Converter para string binária
+        ob_start();
+        switch (strtolower($extension)) {
+            case 'png':
+                imagepng($thumb);
+                break;
+            case 'gif':
+                imagegif($thumb);
+                break;
+            case 'jpg':
+            case 'jpeg':
+                imagejpeg($thumb, null, 90);
+                break;
+            default:
+                imagejpeg($thumb, null, 90);
+                break;
+        }
+        $thumbData = ob_get_clean();
+    
+        // Limpar recursos
+        imagedestroy($im);
+        imagedestroy($thumb);
+    
+        // Exclui o arquivo temporário
+        unlink($tempFile);
+    
+        return $thumbData;
+    }
+    
+    
+    
+    
+    /**
+     * Retorna um mime-type básico para a extensão dada.
+     */
+    private function getMimeTypeByExtension($ext) {
+        switch (strtolower($ext)) {
+            case 'png': return 'image/png';
+            case 'gif': return 'image/gif';
+            case 'jpg':
+            case 'jpeg': return 'image/jpeg';
+            default: return 'application/octet-stream';
+        }
+    }
+
+    private function fixOrientationIfNeeded($im, $filePath) {
+        // Lê EXIF do arquivo
+        $exif = @exif_read_data($filePath);
+        if (!$exif || !isset($exif['Orientation'])) {
+            return $im; // Sem Orientation => nada a fazer
+        }
+    
+        switch ($exif['Orientation']) {
+            case 3:
+                // Rotaciona 180°
+                $im = imagerotate($im, 180, 0);
+                break;
+            case 6:
+                // Rotaciona 90° horário
+                $im = imagerotate($im, -90, 0);
+                break;
+            case 8:
+                // Rotaciona 90° anti-horário
+                $im = imagerotate($im, 90, 0);
+                break;
+        }
+    
+        return $im;
     }
 
     // Função para verificar se o arquivo existe no S3
@@ -206,13 +518,13 @@ class RodarEExcluirController extends AppController {
             // Enviar para o bucket S3
             $result_thumb = $this->s3Client->putObject([
                 'Bucket' => $this->s3Bucket,
-                'Key'    => $directory . '/thumb_' . $fileName, // Caminho do arquivo no S3
+                'Key'    => $directory . '/thumbs/' . $fileName, // Caminho do arquivo no S3
                 'SourceFile' => $filePath, // Caminho local do arquivo
                 'ContentType' => $mimeType, // Tipo de conteúdo da imagem
             ]);
 
             // Retornar a URL do arquivo no S3
-            return $result['ObjectURL'];
+            return $fileName;
 
         } catch (Exception $e) {
             // Tratar erro
@@ -220,4 +532,6 @@ class RodarEExcluirController extends AppController {
             return false;
         }
     }
+    
+
 }
