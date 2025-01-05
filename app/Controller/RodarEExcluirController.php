@@ -3,6 +3,7 @@ ini_set('memory_limit', '512M');
 class RodarEExcluirController extends AppController {
 
     public $components = array('RequestHandler');
+    public $uses = array('Usuario', 'ClienteCliente', 'TorneioInscricaoJogador', 'TorneioJogo');
 
     private $s3Client;
     private $s3Bucket = 'buzke-images'; // Nome do seu bucket S3
@@ -532,6 +533,129 @@ class RodarEExcluirController extends AppController {
             return false;
         }
     }
+
+
+
+    // Função atualizar estatisticas padel
+    public function popula_estatisticas_padel()
+    {
+        $this->autoRender = false;
+        $this->response->type('json');
+
+        $this->loadModel('EstatisticaPadel');
+
+        // Query para calcular a pontuação
+        $sql = "
+            SELECT
+                u.id AS usuario_id,
+
+                -- Torneios Vencidos (Final Vencida = 25 pontos)
+                COUNT(DISTINCT CASE
+                    WHEN tj.fase_nome = 'Final' AND tj.vencedor = ti.id THEN tj.id
+                END) AS torneios_vencidos,
+
+                -- Finais Perdidas (Final Perdida = 10 pontos)
+                COUNT(DISTINCT CASE
+                    WHEN tj.fase_nome = 'Final' AND tj.vencedor != ti.id AND (tj.time_1 = ti.id OR tj.time_2 = ti.id) THEN tj.id
+                END) AS finais_perdidas,
+
+                -- Avanços de Fase (Avanço de Fase = 5 pontos, exceto em finais)
+                COUNT(DISTINCT CASE
+                    WHEN tj.fase > 1 AND tj.fase_nome != 'Final' THEN tj.id
+                END) AS avancos_de_fase,
+
+                COUNT(DISTINCT tor.id) AS torneios_participados,
+        
+                COUNT(DISTINCT tj.id) AS jogos_participados,
+
+                -- Vitórias em Jogos (Jogo Ganho = 2 pontos, exceto em finais vencidas)
+                COUNT(DISTINCT CASE
+                    WHEN tj.vencedor = ti.id THEN tj.id
+                END) AS vitorias_jogos,
+
+                tc.categoria_id as tc_id,
+                tc.sexo as tc_sexo
+
+
+            FROM usuarios u
+
+            -- Subquery: Une o usuário às inscrições únicas
+            INNER JOIN (
+                SELECT DISTINCT cc.usuario_id, ti.id AS torneio_inscricao_id
+                FROM clientes_clientes cc
+                INNER JOIN torneio_inscricao_jogadores tij ON tij.cliente_cliente_id = cc.id
+                INNER JOIN torneio_inscricoes ti ON ti.id = tij.torneio_inscricao_id
+            ) AS inscricoes ON inscricoes.usuario_id = u.id
+
+            -- Jogos relacionados às inscrições
+            LEFT JOIN torneio_jogos tj ON tj.time_1 = inscricoes.torneio_inscricao_id OR tj.time_2 = inscricoes.torneio_inscricao_id
+
+            -- Vinculação final com torneio_inscricoes
+            LEFT JOIN torneio_inscricoes ti ON ti.id = inscricoes.torneio_inscricao_id
+
+            -- Vinculação final com torneio_inscricoes
+            LEFT JOIN torneio_categorias tc ON tj.torneio_categoria_id = tc.id
+
+            -- Vinculação categorias com torneios
+            LEFT JOIN torneios tor ON tc.torneio_id = tor.id
+
+            WHERE u.ativo = 'Y' AND tj.vencedor IS NOT NULL
+            GROUP BY u.id, tc.categoria_id, tc.sexo";
+
+
+        // Executa a query diretamente
+        $results = $this->Usuario->query($sql);
+
+        // Formata os resultados
+        $ranking = array();
+        foreach ($results as $row) {
+            $dados_salvar = [
+                'categoria_id' => $row['tc']['tc_id'],
+                'sexo' => $row['tc']['tc_sexo'],
+                'vitorias' => $row[0]['vitorias_jogos'],
+                'torneio_jogos' => $row[0]['jogos_participados'],
+                'torneios_participados' => $row[0]['torneios_participados'],
+                'torneios_vencidos' => $row[0]['torneios_vencidos'],
+                'usuario_id' => $row['u']['usuario_id'],
+                'finais_perdidas' => $row[0]['finais_perdidas'],
+                'avancos_de_fase' => $row[0]['avancos_de_fase'],
+                'pontuacao_total' => $this->calcula_pontuacao_total($row)
+            ];
+
+            try {
+                $this->EstatisticaPadel->create();
+                if (!$this->EstatisticaPadel->save($dados_salvar)) {
+                    // Caso a operação de save falhe sem lançar uma exceção
+                    // Você pode lidar com isso aqui, por exemplo, logando os erros de validação
+                    debug($this->EstatisticaPadel->validationErrors);
+                    // Opcionalmente, você pode continuar ou interromper a execução
+                    // continue; // Para continuar com o próximo loop
+                    // ou
+                    // throw new Exception('Falha ao salvar estatísticas para o usuário ID: ' . $row['u']['usuario_id']);
+                }
+            } catch (Exception $e) {
+                debug($dados_salvar);
+                // Captura qualquer exceção lançada durante o processo de save
+                debug($e->getMessage());
+                // Termina a execução. Você pode optar por não usar `die()` em ambientes de produção
+                die();
+            }
+            
+        }
+
+        // Retorna o JSON
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_salvar))));
+    }
     
+    private function calcula_pontuacao_total($row) {
+        $pontuacao_total = 0;
+
+        $pontuacao_total += $row[0]['torneios_vencidos'] * 23;
+        $pontuacao_total += $row[0]['finais_perdidas'] * 10;
+        $pontuacao_total += $row[0]['avancos_de_fase'] * 5;
+        $pontuacao_total += $row[0]['vitorias_jogos'] * 2;
+
+        return $pontuacao_total;
+    }
 
 }

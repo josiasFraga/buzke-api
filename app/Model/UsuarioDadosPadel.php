@@ -19,6 +19,7 @@ class UsuarioDadosPadel extends AppModel {
 			'fields' => [
 				'Usuario.nome',
 				'Usuario.img',
+				'Usuario.usuario',
 				'UsuarioDadosPadel.*',
 				'ClienteCliente.sexo',
 				'ClienteCliente.data_nascimento'

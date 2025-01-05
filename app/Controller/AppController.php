@@ -1430,6 +1430,7 @@ class AppController extends Controller {
                 'fields' => [
                     'UsuarioDadosPadel.id',
                     'UsuarioDadosPadel.img',
+                    'Usuario.id',
                     'Usuario.nome',
                     'Usuario.img'
                 ],
@@ -1456,7 +1457,7 @@ class AppController extends Controller {
                 'motivo' => $motivo,
             ];
 
-            $usuario_origem = $dados_registro['UsuarioDadosPadel']['dupla_fixa'];
+            $usuario_origem = $dados_registro['Usuario']['id'];
 
             //$big_picture = !empty($dados_registro['UsuarioDadosPadel']['img']) ? $dados_registro['UsuarioDadosPadel']['img'] : $dados_registro['Usuario']['img'];
             $large_icon = !empty($dados_registro['UsuarioDadosPadel']['img']) ? $this->getRoundThumbFromImage($dados_registro['UsuarioDadosPadel']['img']) : $this->getRoundThumbFromImage($dados_registro['Usuario']['img']);

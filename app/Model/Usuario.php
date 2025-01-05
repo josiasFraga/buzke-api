@@ -39,6 +39,9 @@ class Usuario extends AppModel {
         ],
         'SincronizacaoAgenda' => [
 			'foreignKey' => 'usuario_id'
+        ],
+        'EstatisticaPadel' => [
+			'foreignKey' => 'usuario_id'
         ]
     );
 

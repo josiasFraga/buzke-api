@@ -142,11 +142,11 @@ class EsportistasController extends AppController {
         }
 
         $dados_retornar = [];
-        if ( $tipo === 'padel' ) {
-            $dados_retornar = $this->buscaDadosPadel(!empty($dados['usuario_id']) ? $dados['usuario_id'] : $dados_usuario['Usuario']['id']);
-        }
+        $usuario_id = !empty($dados['usuario_id']) ? $dados['usuario_id'] : $dados_usuario['Usuario']['id'];
 
-        $dados_retornar['_user'] = $dados_usuario['Usuario']['usuario'];
+        if ( $tipo === 'padel' ) {
+            $dados_retornar = $this->buscaDadosPadel($usuario_id);
+        }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_retornar))));
 
@@ -163,7 +163,9 @@ class EsportistasController extends AppController {
             return [
                 'sexo' => '',
                 'lado' => '',
+                'localidade' => '',
                 'categorias' => [],
+                'privado' => '',
             ];
         }
 
@@ -212,6 +214,8 @@ class EsportistasController extends AppController {
                 'img_padel' => $dados_dupla_fixa['UsuarioDadosPadel']['img'],
             ];
         }
+
+        $dados_retornar['_user'] = $dados['Usuario']['usuario'];
 
         return $dados_retornar;
     }
@@ -296,6 +300,10 @@ class EsportistasController extends AppController {
 
         if ( !empty($dados->data_nascimento) ) {
             $dados_cliente_cliente_atualizar['ClienteCliente.data_nascimento'] = $dados->data_nascimento;
+        }
+
+        if ( !empty($dados->localidade) ) {
+            $dados_padelista_atualizar['localidade'] = $dados->localidade;
         }
 
         $dados_padelista = $this->UsuarioDadosPadel->find('first',[
@@ -536,7 +544,7 @@ class EsportistasController extends AppController {
             else if ($acao == 2) {
                 $this->Notificacao->updateAll([
                     'acao_selecionada' => "'N'",
-                    'acao_selecionada_desc' => 'Recusado'
+                    'acao_selecionada_desc' => "'Recusado'"
                 ], [
                     'Notificacao.id' => $notificacoes_atualizar
                 ]);
@@ -568,10 +576,184 @@ class EsportistasController extends AppController {
                 );
             }
     
-
         }
 
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Ação registrada com sucesso!'))));
+
+    }
+
+    public function busca_stats() {
+        
+        $dados = $this->request->query;
+        
+        if ((!isset($dados['token']) || $dados['token'] == "") ||  (!isset($dados['email']) || $dados['email'] == "")) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+        
+        if ( empty($dados['tipo']) ) {
+            throw new BadRequestException('Tipo não informado!', 401);
+        }
+
+        $token = $dados['token'];
+        $email = $dados['email'];
+        $tipo = $dados['tipo'];
+
+        $dados_usuario = $this->verificaValidadeToken($token, $email);
+
+        if ( !$dados_usuario ) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        $dados_retornar = [];
+        $usuario_id = !empty($dados['usuario_id']) ? $dados['usuario_id'] : $dados_usuario['Usuario']['id'];
+        if ( $tipo === 'padel' ) {
+            $dados_retornar = $this->buscaStats($usuario_id);
+        }
+
+        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_retornar))));
+
+    }
+
+    private function buscaStats($usuario_id = null) {
+
+        // Busca o numero de torneios que o usuario se inscreveu
+        $this->loadModel('Torneio');
+
+        $n_torneios = $this->Torneio->find('count',[
+            'conditions' => [
+                'ClienteCliente.usuario_id' => $usuario_id
+            ],
+            'link' => [
+                'TorneioInscricao' => [
+                    'TorneioInscricaoJogador' => [
+                        'ClienteCliente'
+                    ]
+                ]
+            ],
+            'group' => [
+                'Torneio.id'
+            ]
+        ]);
+
+        // Busca o numero de jogos de torneios que o usuario se inscreveu
+        $this->loadModel('TorneioJogo');
+
+        $n_jogos = $this->TorneioJogo->find('count',[
+            'conditions' => [
+                'OR' => [
+                    ['JogadorTimeUm.usuario_id' => $usuario_id],
+                    ['JogadorTimeDois.usuario_id' => $usuario_id]
+                ]
+            ],
+            'joins' => [
+                [
+                    'table' => 'torneio_inscricoes',
+                    'alias' => 'TimeUm',
+                    'type' => 'LEFT',
+                    'conditions' => ['TorneioJogo.time_1 = TimeUm.id']
+                ],
+                [
+                    'table' => 'torneio_inscricao_jogadores',
+                    'alias' => 'JogadorTimeUmTime',
+                    'type' => 'LEFT',
+                    'conditions' => ['TimeUm.id = JogadorTimeUmTime.torneio_inscricao_id']
+                ],
+                [
+                    'table' => 'clientes_clientes',
+                    'alias' => 'JogadorTimeUm',
+                    'type' => 'LEFT',
+                    'conditions' => ['JogadorTimeUmTime.cliente_cliente_id = JogadorTimeUm.id']
+                ],
+                [
+                    'table' => 'torneio_inscricoes',
+                    'alias' => 'TimeDois',
+                    'type' => 'LEFT',
+                    'conditions' => ['TorneioJogo.time_2 = TimeDois.id']
+                ],
+                [
+                    'table' => 'torneio_inscricao_jogadores',
+                    'alias' => 'JogadorTimeDoisTime',
+                    'type' => 'LEFT',
+                    'conditions' => ['TimeDois.id = JogadorTimeDoisTime.torneio_inscricao_id']
+                ],
+                [
+                    'table' => 'clientes_clientes',
+                    'alias' => 'JogadorTimeDois',
+                    'type' => 'LEFT',
+                    'conditions' => ['JogadorTimeDoisTime.cliente_cliente_id = JogadorTimeDois.id']
+                ],
+            ],
+            'link' => [],
+            'group' => [
+                'TorneioJogo.id'
+            ]
+        ]);
+
+        $n_vitorias = $this->TorneioJogo->find('count', [
+            'conditions' => [
+                'OR' => [
+                    // Condição 1: Usuário está no TimeUm e TimeUm é o vencedor
+                    [
+                        'JogadorTimeUm.usuario_id' => $usuario_id,
+                        'TorneioJogo.vencedor = TimeUm.id'
+                    ],
+                    // Condição 2: Usuário está no TimeDois e TimeDois é o vencedor
+                    [
+                        'JogadorTimeDois.usuario_id' => $usuario_id,
+                        'TorneioJogo.vencedor = TimeDois.id'
+                    ]
+                ]
+            ],
+            'joins' => [
+                [
+                    'table' => 'torneio_inscricoes',
+                    'alias' => 'TimeUm',
+                    'type' => 'LEFT',
+                    'conditions' => ['TorneioJogo.time_1 = TimeUm.id']
+                ],
+                [
+                    'table' => 'torneio_inscricao_jogadores',
+                    'alias' => 'JogadorTimeUmTime',
+                    'type' => 'LEFT',
+                    'conditions' => ['TimeUm.id = JogadorTimeUmTime.torneio_inscricao_id']
+                ],
+                [
+                    'table' => 'clientes_clientes',
+                    'alias' => 'JogadorTimeUm',
+                    'type' => 'LEFT',
+                    'conditions' => ['JogadorTimeUmTime.cliente_cliente_id = JogadorTimeUm.id']
+                ],
+                [
+                    'table' => 'torneio_inscricoes',
+                    'alias' => 'TimeDois',
+                    'type' => 'LEFT',
+                    'conditions' => ['TorneioJogo.time_2 = TimeDois.id']
+                ],
+                [
+                    'table' => 'torneio_inscricao_jogadores',
+                    'alias' => 'JogadorTimeDoisTime',
+                    'type' => 'LEFT',
+                    'conditions' => ['TimeDois.id = JogadorTimeDoisTime.torneio_inscricao_id']
+                ],
+                [
+                    'table' => 'clientes_clientes',
+                    'alias' => 'JogadorTimeDois',
+                    'type' => 'LEFT',
+                    'conditions' => ['JogadorTimeDoisTime.cliente_cliente_id = JogadorTimeDois.id']
+                ],
+            ],
+            'link' => [],
+            'group' => [
+                'TorneioJogo.id'
+            ]
+        ]);
+
+        $dados_retornar['n_torneios'] = $n_torneios;
+        $dados_retornar['n_jogos'] = $n_jogos;
+        $dados_retornar['n_vitorias'] = $n_vitorias;
+        
+
+        return $dados_retornar;
 
     }
 }

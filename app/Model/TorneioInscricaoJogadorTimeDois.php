@@ -2,13 +2,15 @@
 class TorneioInscricaoJogadorTimeDois extends AppModel {
 	public $useTable = 'torneio_inscricao_jogadores';
 
-	public $belongsTo = array(
-		'TorneioJogoTimeDois' => array(
+	public $belongsTo = [
+		'TorneioJogoTimeDois' => [
 			'foreignKey' => 'torneio_inscricao_id'
-        )
-	);
-
-	public $hasMany = array(
-	);
+        ],
+		'ClienteClienteTimeDois' => [
+			'className' => 'ClienteCliente',
+			'foreignKey' => 'cliente_cliente_id',
+			'dependent' => false,
+		],
+	];
 
 }

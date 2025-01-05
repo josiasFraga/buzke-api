@@ -29,6 +29,13 @@ class ClienteCliente extends AppModel {
 		'AgendamentoClienteCliente' => array(
 			'foreignKey' => 'cliente_cliente_id'
 		),
+		'TorneioInscricaoJogadorTimeUm' => [
+			'foreignKey' => 'cliente_cliente_id'
+		],
+		'TorneioInscricaoJogadorTimeDois' => [
+			'foreignKey' => 'cliente_cliente_id'
+		]
+		
     );
 
     public $hasOne = array(

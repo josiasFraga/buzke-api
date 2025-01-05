@@ -180,3 +180,32 @@ ALTER TABLE `notificacoes`
 
 
 INSERT INTO `notificacoes_motivos` (`id`, `created`, `updated`, `titulo`, `nome`, `permissao`, `grupo`, `titulo_notificacao`, `msg_notificacao`) VALUES (20, '2025-01-02 17:30:54', NULL, 'Resposta de convite de dupla fixa', 'dupla_fixa_padel_resposta', NULL, 'dupla_padel', 'Resposta de parceria', '{{usuario_nome}} {{resposta}}');
+
+
+CREATE TABLE `estatisticas_padel` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`created` TIMESTAMP NOT NULL,
+	`modified` TIMESTAMP NOT NULL,
+	`categoria_id` INT NULL DEFAULT NULL,
+	`usuario_id` INT NOT NULL,
+	`sexo` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
+	`vitorias` SMALLINT NOT NULL DEFAULT '0',
+	`torneios_participados` SMALLINT NOT NULL DEFAULT '0',
+	`torneios_vencidos` SMALLINT NOT NULL DEFAULT '0',
+	`finais_perdidas` SMALLINT NOT NULL DEFAULT '0',
+	`avancos_de_fase` SMALLINT NOT NULL DEFAULT '0',
+	`pontuacao_total` SMALLINT NOT NULL DEFAULT '0',
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `FK_ranking_padel_padel_categorias` (`categoria_id`) USING BTREE,
+	INDEX `FK_ranking_padel_usuarios` (`usuario_id`) USING BTREE,
+	CONSTRAINT `FK_ranking_padel_padel_categorias` FOREIGN KEY (`categoria_id`) REFERENCES `padel_categorias` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT `FK_ranking_padel_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+)
+COLLATE='utf8mb4_general_ci'
+ENGINE=InnoDB
+;
+
+
+ALTER TABLE `usuarios_dados_padel`
+	ADD COLUMN `localidade` VARCHAR(180) NULL DEFAULT NULL AFTER `dupla_fixa_aprovado`;
+
