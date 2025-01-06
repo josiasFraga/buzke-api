@@ -78,4 +78,37 @@ class ToProJogo extends AppModel {
 		return $dados;
 
 	}
+
+	public function buscaDisponibilidadeUsuario($subcategorias = [], $usuario_id = null) {
+
+		$dados = $this->find('all', [
+			'fields' => [
+				'ToProJogo.id',
+				'ToProJogo.dia_semana',
+				'ToProJogo.hora_inicio',
+				'ToProJogo.hora_fim'
+			],
+			'conditions' => [
+				'ToProJogoEsporte.subcategoria_id' => $subcategorias,
+				'ClienteCliente.usuario_id' => $usuario_id,
+			],
+			'link' => [
+				'ToProJogoEsporte',
+				'ClienteCliente'
+			]
+		]);
+
+		if ( !empty($dados) ) {
+			return array_map(function($dado) {
+				return [
+					'id' => $dado['ToProJogo']['id'],
+					'dia_semana' => $dado['ToProJogo']['dia_semana'],
+					'hora_inicio' => $dado['ToProJogo']['hora_inicio'],
+					'hora_fim' => $dado['ToProJogo']['hora_fim'],
+				];
+			}, $dados);
+		}
+
+		return [];
+	}
 }

@@ -156,6 +156,8 @@ class EsportistasController extends AppController {
 
         $this->loadModel('UsuarioDadosPadel');
         $this->loadModel('UsuarioPadelCategoria');
+        $this->loadModel('ToProJogo');
+
 
         $dados = $this->UsuarioDadosPadel->findByUserId($usuario_id);
 
@@ -166,6 +168,9 @@ class EsportistasController extends AppController {
                 'localidade' => '',
                 'categorias' => [],
                 'privado' => '',
+                'receber_convites' => 'Y',
+                'restringir_horarios_convites' => 'N',
+                'horarios_convites' => []
             ];
         }
 
@@ -183,6 +188,8 @@ class EsportistasController extends AppController {
         }
 
         $dados_retornar['categorias'] = $categorias_retornar;
+
+        $dados_retornar['horarios_convites'] = $this->ToProJogo->buscaDisponibilidadeUsuario([7], $usuario_id);
 
         if ( !empty($dados_retornar['dupla_fixa']) ) {
 
@@ -260,11 +267,13 @@ class EsportistasController extends AppController {
         $this->loadModel('UsuarioDadosPadel');
         $this->loadModel('ClienteCliente');
         $this->loadModel('UsuarioPadelCategoria');
+        $this->loadModel('ToProJogo');
     
         $dados_padelista_atualizar = [];
         $dados_cliente_cliente_atualizar = [];
 
         $categorias = isset($dados->categorias) ? $dados->categorias : [];
+        $horarios_convites = !empty($dados->horarios_convites) ? $dados->horarios_convites : [];
         
         if ( empty($categorias) && empty($this->request->params['form']['img'])  &&  empty($this->request->params['form']['img_capa']) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'warning', 'msg' => 'Selecione ao menos uma categoria antes de clicar em "Atualizar Dados"'))));
@@ -304,6 +313,14 @@ class EsportistasController extends AppController {
 
         if ( !empty($dados->localidade) ) {
             $dados_padelista_atualizar['localidade'] = $dados->localidade;
+        }
+
+        if ( !empty($dados->receber_convites) ) {
+            $dados_padelista_atualizar['receber_convites'] = $dados->receber_convites;
+        }
+
+        if ( !empty($dados->restringir_horarios_convites) ) {
+            $dados_padelista_atualizar['restringir_horarios_convites'] = $dados->restringir_horarios_convites;
         }
 
         $dados_padelista = $this->UsuarioDadosPadel->find('first',[
@@ -401,6 +418,87 @@ class EsportistasController extends AppController {
                     if ( !$this->UsuarioPadelCategoria->save($dados_salvar) ) {
                         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro em nosso servidor. Por favor, tente mais tarde!'))));
                     }
+                }
+
+            }
+        }
+
+        // Atualiza os horários de convites de jogos e desafios
+        if ( !empty($horarios_convites) ) {
+
+            $meus_ids_de_cliente = $this->ClienteCliente->buscaDadosSemVinculo($usuario_id, false);
+
+            if ( count($meus_ids_de_cliente) == 0 ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Não encontramos seus dados como cliente.'))));
+            }
+
+            $dados_to_pro_jogo_salvar = [];
+            $horarios_convites = json_decode(json_encode($horarios_convites), true);
+
+            $ids_permanecer = [];
+            foreach( $horarios_convites as $key => $horario_convite ) {
+                if ( !empty($horario_convite['id']) ) {
+                    $ids_permanecer[] = $horario_convite['id'];
+                }
+            }
+
+            $ids_excluir = array_values($this->ToProJogo->find('list',[
+                'conditions' => [
+                    'not' => [
+                        'ToProJogo.id' => $ids_permanecer
+                    ],
+                    'ToProJogo.cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id'],
+                    'ToProJogoEsporte.subcategoria_id' => 7
+                ],
+                'fields' => [
+                    'ToProJogo.id',
+                    'ToProJogo.id'
+                ],
+                'link' => ['ToProJogoEsporte']
+            ]));
+
+            if ( count($ids_excluir) > 0 ) {
+                $this->ToProJogo->deleteAll(['ToProJogo.id' => $ids_excluir]);
+            }
+            
+
+            foreach( $horarios_convites as $key => $horario_convite ) {
+                $dados_to_pro_jogo_salvar['ToProJogo'] = [
+                    'cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id'],
+                    'dia_semana' => $horario_convite['dia_semana'],
+                    'hora_fim' => $horario_convite['hora_fim'],
+                    'hora_inicio' => $horario_convite['hora_inicio']
+                ];
+
+                // Se o usuário tiver alterando um item
+                if ( !empty($horario_convite['id']) ) {
+                    $check_item = $this->ToProJogo->find('count', [
+                        'conditions' => [
+                            'ToProJogo.id' => $horario_convite['id'],
+                            'ToProJogo.cliente_cliente_id' => $meus_ids_de_cliente[0]['ClienteCliente']['id']
+                        ],
+                        'link' => []
+                    ]);
+
+                    // o item não pertense ao cliente
+                    if ( $check_item === 0 ) {
+                        continue;
+                    }
+
+                    $dados_to_pro_jogo_salvar['ToProJogo']['id'] = $horario_convite['id'];
+
+                } else {
+                    $this->ToProJogo->create();
+                    
+                    $dados_to_pro_jogo_salvar['ToProJogoEsporte'] = [];
+                    $dados_to_pro_jogo_salvar['ToProJogoEsporte'][] = [
+                        'subcategoria_id' => 7
+                    ];
+                }
+
+
+                if ( !$this->ToProJogo->saveAssociated($dados_to_pro_jogo_salvar, ['deep' => true]) ) {
+                    return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Não conseguimos salvar seus horários para convites de jogos.'))));
                 }
 
             }
@@ -615,145 +713,84 @@ class EsportistasController extends AppController {
     }
 
     private function buscaStats($usuario_id = null) {
-
-        // Busca o numero de torneios que o usuario se inscreveu
-        $this->loadModel('Torneio');
-
-        $n_torneios = $this->Torneio->find('count',[
-            'conditions' => [
-                'ClienteCliente.usuario_id' => $usuario_id
+        $this->loadModel('EstatisticaPadel');
+    
+        // Busca estatísticas do usuário
+        $estatisticas = $this->EstatisticaPadel->find('all', [
+            'fields' => [
+                'EstatisticaPadel.usuario_id',
+                'SUM(EstatisticaPadel.vitorias) as total_vitorias',
+                'SUM(EstatisticaPadel.torneio_jogos) as total_torneio_jogos',
+                'SUM(EstatisticaPadel.torneios_participados) as total_torneios_participados',
+                'SUM(EstatisticaPadel.torneios_vencidos) as total_torneios_vencidos',
+                'SUM(EstatisticaPadel.finais_perdidas) as total_finais_perdidas',
+                'SUM(EstatisticaPadel.avancos_de_fase) as total_avancos_de_fase',
+                'SUM(EstatisticaPadel.pontuacao_total) as total_pontuacao'
             ],
-            'link' => [
-                'TorneioInscricao' => [
-                    'TorneioInscricaoJogador' => [
-                        'ClienteCliente'
-                    ]
-                ]
-            ],
-            'group' => [
-                'Torneio.id'
-            ]
+            'conditions' => ['EstatisticaPadel.usuario_id' => $usuario_id],
+            'group' => ['EstatisticaPadel.usuario_id']
         ]);
-
-        // Busca o numero de jogos de torneios que o usuario se inscreveu
-        $this->loadModel('TorneioJogo');
-
-        $n_jogos = $this->TorneioJogo->find('count',[
-            'conditions' => [
-                'OR' => [
-                    ['JogadorTimeUm.usuario_id' => $usuario_id],
-                    ['JogadorTimeDois.usuario_id' => $usuario_id]
-                ]
-            ],
-            'joins' => [
-                [
-                    'table' => 'torneio_inscricoes',
-                    'alias' => 'TimeUm',
-                    'type' => 'LEFT',
-                    'conditions' => ['TorneioJogo.time_1 = TimeUm.id']
-                ],
-                [
-                    'table' => 'torneio_inscricao_jogadores',
-                    'alias' => 'JogadorTimeUmTime',
-                    'type' => 'LEFT',
-                    'conditions' => ['TimeUm.id = JogadorTimeUmTime.torneio_inscricao_id']
-                ],
-                [
-                    'table' => 'clientes_clientes',
-                    'alias' => 'JogadorTimeUm',
-                    'type' => 'LEFT',
-                    'conditions' => ['JogadorTimeUmTime.cliente_cliente_id = JogadorTimeUm.id']
-                ],
-                [
-                    'table' => 'torneio_inscricoes',
-                    'alias' => 'TimeDois',
-                    'type' => 'LEFT',
-                    'conditions' => ['TorneioJogo.time_2 = TimeDois.id']
-                ],
-                [
-                    'table' => 'torneio_inscricao_jogadores',
-                    'alias' => 'JogadorTimeDoisTime',
-                    'type' => 'LEFT',
-                    'conditions' => ['TimeDois.id = JogadorTimeDoisTime.torneio_inscricao_id']
-                ],
-                [
-                    'table' => 'clientes_clientes',
-                    'alias' => 'JogadorTimeDois',
-                    'type' => 'LEFT',
-                    'conditions' => ['JogadorTimeDoisTime.cliente_cliente_id = JogadorTimeDois.id']
-                ],
-            ],
-            'link' => [],
-            'group' => [
-                'TorneioJogo.id'
-            ]
-        ]);
-
-        $n_vitorias = $this->TorneioJogo->find('count', [
-            'conditions' => [
-                'OR' => [
-                    // Condição 1: Usuário está no TimeUm e TimeUm é o vencedor
-                    [
-                        'JogadorTimeUm.usuario_id' => $usuario_id,
-                        'TorneioJogo.vencedor = TimeUm.id'
-                    ],
-                    // Condição 2: Usuário está no TimeDois e TimeDois é o vencedor
-                    [
-                        'JogadorTimeDois.usuario_id' => $usuario_id,
-                        'TorneioJogo.vencedor = TimeDois.id'
-                    ]
-                ]
-            ],
-            'joins' => [
-                [
-                    'table' => 'torneio_inscricoes',
-                    'alias' => 'TimeUm',
-                    'type' => 'LEFT',
-                    'conditions' => ['TorneioJogo.time_1 = TimeUm.id']
-                ],
-                [
-                    'table' => 'torneio_inscricao_jogadores',
-                    'alias' => 'JogadorTimeUmTime',
-                    'type' => 'LEFT',
-                    'conditions' => ['TimeUm.id = JogadorTimeUmTime.torneio_inscricao_id']
-                ],
-                [
-                    'table' => 'clientes_clientes',
-                    'alias' => 'JogadorTimeUm',
-                    'type' => 'LEFT',
-                    'conditions' => ['JogadorTimeUmTime.cliente_cliente_id = JogadorTimeUm.id']
-                ],
-                [
-                    'table' => 'torneio_inscricoes',
-                    'alias' => 'TimeDois',
-                    'type' => 'LEFT',
-                    'conditions' => ['TorneioJogo.time_2 = TimeDois.id']
-                ],
-                [
-                    'table' => 'torneio_inscricao_jogadores',
-                    'alias' => 'JogadorTimeDoisTime',
-                    'type' => 'LEFT',
-                    'conditions' => ['TimeDois.id = JogadorTimeDoisTime.torneio_inscricao_id']
-                ],
-                [
-                    'table' => 'clientes_clientes',
-                    'alias' => 'JogadorTimeDois',
-                    'type' => 'LEFT',
-                    'conditions' => ['JogadorTimeDoisTime.cliente_cliente_id = JogadorTimeDois.id']
-                ],
-            ],
-            'link' => [],
-            'group' => [
-                'TorneioJogo.id'
-            ]
-        ]);
-
-        $dados_retornar['n_torneios'] = $n_torneios;
-        $dados_retornar['n_jogos'] = $n_jogos;
-        $dados_retornar['n_vitorias'] = $n_vitorias;
-        
-
+    
+        // Inicializa com valores zerados se não houver estatísticas
+        if (empty($estatisticas)) {
+            $dados_retornar = [
+                'n_torneios' => 0,
+                'n_torneios_vencidos' => 0,
+                'n_jogos' => 0,
+                'n_vitorias' => 0,
+                'n_finais_perdidas' => 0,
+                'n_avancos_fase' => 0,
+                'pontuacao_total' => 0,
+                'posicao_ranking' => $this->calcularPosicaoRanking(0) // Calcula posição no ranking com pontuação 0
+            ];
+        } else {
+            // Extrai os dados retornados pelo banco
+            $dados_retornar = [
+                'n_torneios' => $estatisticas[0][0]['total_torneios_participados'],
+                'n_torneios_vencidos' => $estatisticas[0][0]['total_torneios_vencidos'],
+                'n_jogos' => $estatisticas[0][0]['total_torneio_jogos'],
+                'n_vitorias' => $estatisticas[0][0]['total_vitorias'],
+                'n_finais_perdidas' => $estatisticas[0][0]['total_finais_perdidas'],
+                'n_avancos_fase' => $estatisticas[0][0]['total_avancos_de_fase'],
+                'pontuacao_total' => $estatisticas[0][0]['total_pontuacao'],
+                'posicao_ranking' => $this->calcularPosicaoRanking($estatisticas[0][0]['total_pontuacao']) // Calcula posição com a pontuação do usuário
+            ];
+        }
+    
         return $dados_retornar;
-
+    }
+    
+    /**
+     * Calcula a posição do usuário no ranking
+     * @param int $pontuacao Pontuação total do usuário
+     * @return int Posição no ranking
+     */
+    private function calcularPosicaoRanking($pontuacao) {
+        $this->loadModel('EstatisticaPadel');
+    
+        // Busca todas as pontuações, ordenadas por pontuacao_total desc
+        $ranking = $this->EstatisticaPadel->find('all', [
+            'fields' => ['EstatisticaPadel.usuario_id', 'SUM(EstatisticaPadel.pontuacao_total) as total_pontuacao'],
+            'group' => ['EstatisticaPadel.usuario_id'],
+            'order' => ['total_pontuacao DESC']
+        ]);
+    
+        // Se não há registros, posição é 1 (primeiro lugar)
+        if (empty($ranking)) {
+            return 1;
+        }
+    
+        // Itera para determinar a posição
+        $posicao = 1;
+        foreach ($ranking as $entry) {
+            if ($entry[0]['total_pontuacao'] > $pontuacao) {
+                $posicao++;
+            } else {
+                break;
+            }
+        }
+    
+        // Retorna a posição no ranking
+        return $posicao;
     }
 }
