@@ -42,6 +42,20 @@ class Usuario extends AppModel {
         ],
         'EstatisticaPadel' => [
 			'foreignKey' => 'usuario_id'
+        ],
+        'Seguindo' => [
+            'className' => 'Seguidor',
+            'foreignKey' => 'usuario_seguidor_id',
+            //'conditions' => ['Seguindo.deleted' => 0], // Filtra registros não deletados
+            'fields' => '',
+            'order' => ''
+        ],
+        'Seguidores' => [
+            'className' => 'Seguidor',
+            'foreignKey' => 'usuario_seguido_id',
+            //'conditions' => ['Seguidores.deleted' => 0], // Filtra registros não deletados
+            'fields' => '',
+            'order' => ''
         ]
     );
 

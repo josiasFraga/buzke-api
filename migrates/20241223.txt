@@ -210,16 +210,34 @@ ALTER TABLE `usuarios_dados_padel`
 	ADD COLUMN `localidade` VARCHAR(180) NULL DEFAULT NULL AFTER `dupla_fixa_aprovado`;
 
 
--- 5 January 2025 12:45:04 PM
 ALTER TABLE `buzke_hmlg_app`.`usuarios_dados_padel`
 ADD COLUMN `receber_convites` enum('Y','N') NULL DEFAULT 'Y';
 
--- 5 January 2025 2:03:51 PM
 ALTER TABLE `buzke_hmlg_app`.`usuarios_dados_padel`
 CHANGE `receber_convites` `receber_convites` enum('Y','N') NOT NULL DEFAULT 'Y',
 ADD COLUMN `restringir_horarios_convites` enum('Y','N') NOT NULL DEFAULT 'N';
 
 
--- 5 January 2025 10:36:47 PM
 ALTER TABLE `buzke_hmlg_app`.`to_pro_jogo`
 CHANGE `localizacao_id` `localizacao_id` int NULL;
+
+CREATE TABLE `seguidores` (
+	`id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`created` TIMESTAMP NULL DEFAULT NULL,
+	`updated` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	`usuario_seguidor_id` INT NOT NULL,
+	`usuario_seguido_id` INT NOT NULL,
+	`status` ENUM('ativo','bloqueado','pendente') NULL DEFAULT 'ativo' COLLATE 'utf8mb4_general_ci',
+	`interacoes_totais` INT NULL DEFAULT '0',
+	`ultima_interacao` DATETIME NULL DEFAULT NULL,
+	`deleted` TINYINT(1) NULL DEFAULT '0',
+	PRIMARY KEY (`id`) USING BTREE,
+	UNIQUE INDEX `id` (`id`) USING BTREE,
+	UNIQUE INDEX `usuario_seguidor_id` (`usuario_seguidor_id`, `usuario_seguido_id`) USING BTREE,
+	INDEX `FK_seguidores_usuarios_2` (`usuario_seguido_id`) USING BTREE,
+	CONSTRAINT `FK_seguidores_usuarios` FOREIGN KEY (`usuario_seguidor_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT `FK_seguidores_usuarios_2` FOREIGN KEY (`usuario_seguido_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+)
+COLLATE='utf8mb4_general_ci'
+ENGINE=InnoDB
+;

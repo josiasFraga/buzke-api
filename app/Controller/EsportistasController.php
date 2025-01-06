@@ -793,4 +793,118 @@ class EsportistasController extends AppController {
         // Retorna a posição no ranking
         return $posicao;
     }
+
+    public function n_seguidores() {
+        
+        // Desabilita a renderização automática e define o tipo de resposta como JSON
+        $this->autoRender = false;
+        $this->response->type('json');
+    
+        $dados = $this->request->query;
+
+        $usuario_id = !empty($dados['usuario_id']) ? $dados['usuario_id'] : null;
+        $token = !empty($dados['token']) ? $dados['token'] : null;
+        $email = !empty($dados['token']) ? $dados['email'] : null;
+        
+        if ( empty($usuario_id) && empty($token) ) {
+            $response = [
+                'status' => 'ok',
+                'dados' => 0
+            ];
+            return $this->response->body(json_encode($response));
+        }
+
+        if ( !empty($token) ) {
+
+            $dados_usuario = $this->verificaValidadeToken($token, $email);
+    
+            if ( !$dados_usuario ) {
+                throw new BadRequestException('Usuário não logado!', 401);
+            }
+
+            if ( empty($usuario_id) ) {
+                $usuario_id = $dados_usuario['Usuario']['id'];
+            }
+
+        }
+
+        $this->loadModel('Seguidor');
+
+        $n_seguidores = $this->Seguidor->find('count', [
+            'conditions' => [
+                'Seguidor.usuario_seguido_id' => $usuario_id,
+                'status' => 'ativo',
+                'deleted' => '0'
+            ],
+            'link' => []
+        ]);
+
+        $response = [
+            'status' => 'ok',
+            'dados' => $n_seguidores,
+            'usuario_id' => $usuario_id
+        ];
+
+        return $this->response->body(json_encode($response));
+
+
+
+    }
+
+    public function n_seguindo() {
+        
+        // Desabilita a renderização automática e define o tipo de resposta como JSON
+        $this->autoRender = false;
+        $this->response->type('json');
+    
+        $dados = $this->request->query;
+
+        $usuario_id = !empty($dados['usuario_id']) ? $dados['usuario_id'] : null;
+        $token = !empty($dados['token']) ? $dados['token'] : null;
+        $email = !empty($dados['token']) ? $dados['email'] : null;
+        
+        if ( empty($usuario_id) && empty($token) ) {
+            $response = [
+                'status' => 'ok',
+                'dados' => 0
+            ];
+            return $this->response->body(json_encode($response));
+        }
+
+        if ( !empty($token) ) {
+
+            $dados_usuario = $this->verificaValidadeToken($token, $email);
+    
+            if ( !$dados_usuario ) {
+                throw new BadRequestException('Usuário não logado!', 401);
+            }
+
+            if ( empty($usuario_id) ) {
+                $usuario_id = $dados_usuario['Usuario']['id'];
+            }
+
+        }
+
+        $this->loadModel('Seguidor');
+
+        $n_seguidores = $this->Seguidor->find('count', [
+            'conditions' => [
+                'Seguidor.usuario_seguidor_id' => $usuario_id,
+                'status' => 'ativo',
+                'deleted' => '0'
+            ],
+            'link' => []
+        ]);
+
+        $response = [
+            'status' => 'ok',
+            'dados' => $n_seguidores,
+            'usuario_id' => $usuario_id
+        ];
+
+        return $this->response->body(json_encode($response));
+
+
+
+    }
 }
