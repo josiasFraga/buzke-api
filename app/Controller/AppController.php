@@ -1521,6 +1521,60 @@ class AppController extends Controller {
             $large_icon = !empty($dados_usuario_convidado['UsuarioDadosPadel']['img']) ? $this->getRoundThumbFromImage($dados_usuario_convidado['UsuarioDadosPadel']['img']) : $this->getRoundThumbFromImage($dados_usuario_convidado['Usuario']['img']);
 
         }
+        else if ( $motivo === 'seguidor_aceito' || $motivo === 'permissao_seguir' || $motivo === 'novo_seguidor' ) {
+
+            $this->loadModel('Seguidor');
+    
+            $dados_registro = $this->Seguidor->find('first', [
+                'fields' => [
+                    'UsuarioSeguidor.nome',
+                    'UsuarioSeguidor.img',
+                    'UsuarioSeguido.nome',
+                    'UsuarioSeguido.img',
+                    'Seguidor.usuario_seguidor_id',
+                    'Seguidor.usuario_seguido_id'
+                ],
+                'conditions' => [
+                    'Seguidor.id' => $registro_id
+                ],
+                'contain' => [
+                    'UsuarioSeguidor',
+                    'UsuarioSeguido'
+                ]
+            ]);
+        
+
+            $placeholders = [
+                "{{seguido_nome}}",
+                "{{seguidor_nome}}"
+            ];
+
+            $values = [
+                $dados_registro['UsuarioSeguido']['nome'],
+                $dados_registro['UsuarioSeguidor']['nome']
+            ];
+
+            $mensagem = trim(str_replace($placeholders, $values, $mensagem));
+            $titulo = trim(str_replace($placeholders, $values, $titulo));
+
+            $notification_data = [
+                "registro_id" => $registro_id, 
+                'motivo' => $motivo,
+            ];
+
+            if ( $motivo === 'seguidor_aceito' ) {
+                $usuario_origem = $dados_registro['Seguidor']['usuario_seguido_id'];
+                $large_icon = !empty($dados_registro['UsuarioSeguido']['img']) ? $this->getRoundThumbFromImage($dados_registro['UsuarioSeguido']['img']) : $this->getRoundThumbFromImage($dados_usuario_convidado['UsuarioSeguido']['img']);
+            } else if ( $motivo === 'permissao_seguir' || $motivo === 'novo_seguidor' ) {
+                $usuario_origem = $dados_registro['Seguidor']['usuario_seguidor_id'];
+                $large_icon = !empty($dados_registro['UsuarioSeguidor']['img']) ? $this->getRoundThumbFromImage($dados_registro['UsuarioSeguidor']['img']) : $this->getRoundThumbFromImage($dados_usuario_convidado['UsuarioSeguidor']['img']);
+            }
+
+
+            //$big_picture = !empty($dados_registro['UsuarioDadosPadel']['img']) ? $dados_registro['UsuarioDadosPadel']['img'] : $dados_registro['Usuario']['img'];
+            
+
+        }
 
 		$heading = array(
 			"en" => $titulo

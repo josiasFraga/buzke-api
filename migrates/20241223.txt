@@ -241,3 +241,34 @@ CREATE TABLE `seguidores` (
 COLLATE='utf8mb4_general_ci'
 ENGINE=InnoDB
 ;
+
+
+
+CREATE TABLE `usuarios_bloqueados` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`created` TIMESTAMP NULL DEFAULT NULL,
+	`modified` TIMESTAMP NULL DEFAULT NULL,
+	`usuario_bloqueador_id` INT NOT NULL,
+	`usuario_bloqueado_id` INT NOT NULL,
+	PRIMARY KEY (`id`) USING BTREE,
+	UNIQUE INDEX `usuario_bloqueador_id_usuario_bloqueado_id` (`usuario_bloqueador_id`, `usuario_bloqueado_id`) USING BTREE,
+	INDEX `FK_seguidores_bloqueados_usuarios_2` (`usuario_bloqueado_id`) USING BTREE,
+	CONSTRAINT `FK_seguidores_bloqueados_usuarios` FOREIGN KEY (`usuario_bloqueador_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT `FK_seguidores_bloqueados_usuarios_2` FOREIGN KEY (`usuario_bloqueado_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+)
+COLLATE='utf8mb4_general_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=11
+;
+
+
+
+ALTER TABLE `seguidores`
+	ADD COLUMN `prev_status` ENUM('ativo','bloqueado','pendente') NULL DEFAULT NULL AFTER `status`;
+
+
+INSERT INTO `buzke_v2`.`notificacoes_motivos` (`created`, `updated`, `titulo`, `nome`, `grupo`, `titulo_notificacao`, `msg_notificacao`) VALUES ('2025-01-08 09:38:20', '2025-01-08 09:38:20', 'Aceito como seguidor', 'seguidor_aceito', 'seguidor_aceito', '{{seguido_nome}} aceitou seu convite para seguir', '{{seguido_nome}} aceitou seu convite para seguir');
+
+INSERT INTO `buzke_v2`.`notificacoes_motivos` (`created`, `updated`, `titulo`, `nome`, `grupo`, `titulo_notificacao`, `msg_notificacao`) VALUES ('2025-01-08 09:55:56', '2025-01-08 09:55:58', 'Permissão Seguir', 'permissao_seguir', 'permissao_seguir', '{{seguidor_nome}} pediu pra seguir você', '{{seguidor_nome}} pediu pra seguir você');
+
+INSERT INTO `buzke_v2`.`notificacoes_motivos` (`created`, `updated`, `titulo`, `nome`, `grupo`, `titulo_notificacao`, `msg_notificacao`) VALUES ('2025-01-08 09:57:57', '2025-01-08 09:57:58', 'Novo Seguidor', 'novo_seguidor', 'novo_seguidor', '{{seguidor_nome}} está seguindo você', '{{seguidor_nome}} está seguindo você');
