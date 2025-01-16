@@ -73,7 +73,7 @@ class Token extends AppModel {
 				]
 			],
 			'link' => ['Usuario'],
-			'order' => ['Token.data_validade DESC'],
+			'order' => ['Token.data_validade DESC', 'Token.id'],
 			//'group' => ['Token.notification_id']
 		]);
 

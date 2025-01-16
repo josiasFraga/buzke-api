@@ -231,7 +231,7 @@ class NotificacoesController extends AppController {
         $this->loadModel('Token');
         
         $notifications_ids = $this->Token->getIdsNotificationsUsuario($usuario_id);
-        
+         
 
         $this->sendNotificationNew( 
             $usuario_id,
@@ -241,6 +241,8 @@ class NotificacoesController extends AppController {
             $motivo,
             ["en"=> '$[notif_count] Novos Agendamentos']
         );
+
+        die('fim');
 
     }
 

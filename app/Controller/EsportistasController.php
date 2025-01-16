@@ -127,13 +127,13 @@ class EsportistasController extends AppController {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
         
-        if ( empty($dados['tipo']) ) {
-            throw new BadRequestException('Tipo não informado!', 401);
+        $tipo = null;
+        if ( !empty($dados['tipo']) ) {
+            $tipo = $dados['tipo'];
         }
 
         $token = $dados['token'];
         $email = $dados['email'];
-        $tipo = $dados['tipo'];
 
         $dados_usuario = $this->verificaValidadeToken($token, $email);
 
@@ -141,15 +141,61 @@ class EsportistasController extends AppController {
             throw new BadRequestException('Usuário não logado!', 401);
         }
 
+        $this->loadModel('Seguidor');
+        $this->loadModel('UsuarioBloqueado');
+
         $dados_retornar = [];
         $usuario_id = !empty($dados['usuario_id']) ? $dados['usuario_id'] : $dados_usuario['Usuario']['id'];
 
-        if ( $tipo === 'padel' ) {
+        $checkIsBlocked = $this->UsuarioBloqueado->checkIsBlocked($dados_usuario['Usuario']['id'], $usuario_id);
+
+        if ( $checkIsBlocked['isBloqued'] ) {
+            return new CakeResponse([
+                'type' => 'json', 
+                'body' => json_encode([
+                    'status' => 'ok', 
+                    'dados' => [], 
+                    'msg' => $checkIsBlocked['motive']
+                ])]);
+
+        }
+
+        if ( empty($tipo) ) {
+            $dados_retornar = $this->buscaDadosUsuario($usuario_id);
+        } else if ( $tipo === 'padel' ) {
             $dados_retornar = $this->buscaDadosPadel($usuario_id);
         }
 
+        $dados_retornar['_perfis'] = $this->busca_perfis_esportista($usuario_id);
+        $can_follow = $this->Seguidor->checkCanFollow($dados_usuario['Usuario']['id'], $usuario_id);
+        $dados_retornar['_can_follow'] = $can_follow;
+
         return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $dados_retornar))));
 
+    }
+
+    private function buscaDadosUsuario($usuario_id = null) {
+
+        $this->loadModel('Usuario');
+
+        $dados_usuario = $this->Usuario->find('first',[
+            'fields' => [
+                'Usuario.id',
+                'Usuario.nome',
+                'Usuario.usuario',
+                'Usuario.img'
+            ],
+            'conditions' => [
+                'Usuario.id' => $usuario_id
+            ],
+            'link' => []
+        ]);
+
+        $dados_retornar = $dados_usuario['Usuario'];
+        $dados_retornar['_img'] = $dados_usuario['Usuario']['img'];
+        $dados_retornar['_user'] = $dados_usuario['Usuario']['usuario'];
+
+        return $dados_retornar;
     }
 
     private function buscaDadosPadel($usuario_id = null) {
@@ -681,7 +727,7 @@ class EsportistasController extends AppController {
     }
 
     public function busca_stats() {
-        
+
         $dados = $this->request->query;
         
         if ((!isset($dados['token']) || $dados['token'] == "") ||  (!isset($dados['email']) || $dados['email'] == "")) {
@@ -759,6 +805,40 @@ class EsportistasController extends AppController {
     
         return $dados_retornar;
     }
+
+    public function busca_perfis_esportista($usuario_id = null) {
+
+        $this->loadModel('Subcategoria');
+
+        $esportes = $this->Subcategoria->find('all', [
+            'conditions' => [
+                'NOT' => [
+                    //'Subcategoria.esporte_nome' => [null, $ignorar],
+                    'Subcategoria.cena_criacao_perfil' => null
+                ]
+            ],
+            'link' => []
+        ]);
+
+        $check_is_padelist = false;
+        $this->loadModel('UsuarioDadosPadel');
+        $check_is_padelist = $this->UsuarioDadosPadel->checkIsAthlete($usuario_id);
+
+        $esportes_retornar = array_map(function($esporte) use($check_is_padelist) {
+
+            if ( $check_is_padelist && $esporte['Subcategoria']['id'] == 7 ) {
+                $esporte['Subcategoria']['have_profile'] = true;
+            } else {
+                $esporte['Subcategoria']['have_profile'] = false;
+            }
+    
+            return $esporte['Subcategoria'];
+        },$esportes);
+
+        
+        return $esportes_retornar;
+    }
+
     
     /**
      * Calcula a posição do usuário no ranking

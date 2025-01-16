@@ -107,13 +107,25 @@ class ClienteServicoHorario extends AppModel {
                             'PromocaoServico.servico_id' => $servico_id,
                             'PromocaoDiaSemana.dia_semana' => $dia_semana,
                             'Promocao.finalizada' => 'N',
-                            'OR' => [
-                                ['Promocao.validade_ate_cancelar' => 'Y'],
+                            ['OR' => [
+                                [
+                                    'Promocao.validade_ate_cancelar' => 'Y'
+                                ],
                                 [
                                     'Promocao.validade_inicio <=' => $dia . ' ' . $inicio->format('H:i:s'),
                                     'Promocao.validade_fim >=' => $dia . ' ' . $inicio->format('H:i:s'),
                                 ]
-                            ],
+                            ]],
+                            ['OR' => [
+                                [
+                                    'Promocao.horario_inicio' => null,
+                                    'Promocao.horario_fim' => null
+                                ],
+                                [
+                                    'Promocao.horario_inicio <=' => $inicio->format('H:i:s'),
+                                    'Promocao.horario_fim >=' => $inicio->format('H:i:s')
+                                ]
+                            ]]
         
                         ],
                         'link' => [
@@ -124,7 +136,7 @@ class ClienteServicoHorario extends AppModel {
                         'order' => [
                             'Promocao.id DESC'
                         ]
-                    ]);                    
+                    ]);
       
                     $intervalos[] = [
                         'label' => $inicio->format('H:i') . ' - ' . $fim_intervalo->format('H:i'),
