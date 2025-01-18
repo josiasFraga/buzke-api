@@ -20,6 +20,7 @@ class UsuarioDadosPadel extends AppModel {
 				'Usuario.nome',
 				'Usuario.img',
 				'Usuario.usuario',
+				'Usuario.perfil_esportista_privado',
 				'UsuarioDadosPadel.*',
 				'ClienteCliente.sexo',
 				'ClienteCliente.data_nascimento'

@@ -272,3 +272,36 @@ INSERT INTO `buzke_v2`.`notificacoes_motivos` (`created`, `updated`, `titulo`, `
 INSERT INTO `buzke_v2`.`notificacoes_motivos` (`created`, `updated`, `titulo`, `nome`, `grupo`, `titulo_notificacao`, `msg_notificacao`) VALUES ('2025-01-08 09:55:56', '2025-01-08 09:55:58', 'Permissão Seguir', 'permissao_seguir', 'permissao_seguir', '{{seguidor_nome}} pediu pra seguir você', '{{seguidor_nome}} pediu pra seguir você');
 
 INSERT INTO `buzke_v2`.`notificacoes_motivos` (`created`, `updated`, `titulo`, `nome`, `grupo`, `titulo_notificacao`, `msg_notificacao`) VALUES ('2025-01-08 09:57:57', '2025-01-08 09:57:58', 'Novo Seguidor', 'novo_seguidor', 'novo_seguidor', '{{seguidor_nome}} está seguindo você', '{{seguidor_nome}} está seguindo você');
+
+
+ALTER TABLE `usuarios_dados_padel`
+	DROP COLUMN `privado`;
+
+ALTER TABLE `usuarios`
+	ADD COLUMN `perfil_esportista_privado` ENUM('Y','N') NOT NULL DEFAULT 'N' AFTER `ativo`;
+
+
+UPDATE usuarios_dados_padel AS udp
+INNER JOIN (
+    -- Aqui selecionamos a última localização de cada usuário
+    SELECT ul.usuario_id, ul.description
+    FROM usuarios_localizacoes ul
+    INNER JOIN (
+        SELECT usuario_id, MAX(created) AS max_created
+        FROM usuarios_localizacoes
+        GROUP BY usuario_id
+    ) AS ult
+    ON ul.usuario_id = ult.usuario_id
+       AND ul.created = ult.max_created
+) AS ultima
+ON udp.usuario_id = ultima.usuario_id
+SET udp.localidade = ultima.description;
+
+
+UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = 'SantAna do Livramento, RS, Brasil' WHERE localidade = 'Santana do Livramento - SantAna do Livramento, RS, Brasil'
+
+UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = 'SantAna do Livramento, RS, Brasil' WHERE localidade = "Santana do Livramento - Sant'Ana do Livramento, RS, Brasil"
+
+UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = 'SantAna do Livramento, RS, Brasil' WHERE localidade = "Sant'Ana do Livramento, RS, Brasil"
+
+UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = "Sant'Ana do Livramento, RS, Brasil" WHERE localidade = "SantAna do Livramento, RS, Brasil"

@@ -8,10 +8,7 @@ class EsportistasController extends AppController {
         $dados = $this->request->query;
 
         // Validação dos parâmetros obrigatórios
-        if (
-            (!isset($dados['token']) || $dados['token'] == "") ||  
-            (!isset($dados['email']) || $dados['email'] == "")
-        ) {
+        if ( empty($dados['token']) || empty($dados['email']) ) {
             throw new BadRequestException('Dados de usuário não informado!', 401);
         }
     
@@ -47,9 +44,9 @@ class EsportistasController extends AppController {
                 'Usuario.nome',
                 'Usuario.usuario',
                 'Usuario.img',
+                'Usuario.perfil_esportista_privado',
                 'UsuarioDadosPadel.lado',
                 'UsuarioDadosPadel.img',
-                'UsuarioDadosPadel.privado',
             ],
             'joins' => [
                 [
@@ -85,8 +82,8 @@ class EsportistasController extends AppController {
                     ],
                     [
                         'OR' => [
-                            ['UsuarioDadosPadel.privado' => 'N'],
-                            ['UsuarioDadosPadel.privado' => 'Y', 'Seguidor.id !=' => null]
+                            ['Usuario.perfil_esportista_privado' => 'N'],
+                            ['Usuario.perfil_esportista_privado' => 'Y', 'Seguidor.id !=' => null]
                         ]
                     ]
                 ]
@@ -106,7 +103,7 @@ class EsportistasController extends AppController {
                 'img' => $usuario['Usuario']['img'],
                 'lado' => $usuario['UsuarioDadosPadel']['lado'],
                 'img_padel' => $usuario['UsuarioDadosPadel']['img'],
-                'privado' => $usuario['UsuarioDadosPadel']['privado'],
+                'perfil_esportista_privado' => $usuario['Usuario']['perfil_esportista_privado'],
             ];
         }
     
@@ -116,6 +113,115 @@ class EsportistasController extends AppController {
             'body' => json_encode(['status' => 'ok', 'dados' => $dados_retornar])
         ));
 
+
+    }
+
+    public function sugestoes() {
+
+        $dados = $this->request->query;
+
+        // Validação dos parâmetros obrigatórios
+        if ( empty($dados['token']) || empty($dados['email']) ) {
+            throw new BadRequestException('Dados de usuário não informado!', 401);
+        }
+    
+        $token = $dados['token'];
+        $email = $dados['email'];
+        $order = isset($dados['offset']) ? "" : 'RAND()';
+        $offset = !empty($dados['offset']) ? $dados['offset'] : 0;
+        $limit = !empty($dados['limit']) ? $dados['limit'] : 10;
+    
+        // Verifica o token e obtém os dados do usuário autenticado
+        $dados_usuario = $this->verificaValidadeToken($token, $email);
+        if (!$dados_usuario) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+    
+        $usuario_id = $dados_usuario['Usuario']['id'];
+    
+        // Carrega os modelos necessários
+        $this->loadModel('Usuario');
+        $this->loadModel('Seguidor');
+        $this->loadModel('UsuarioDadosPadel');
+
+        $usuario_dados_padel = $this->UsuarioDadosPadel->findByUserId($usuario_id);
+        $localidades_usuario = [];
+
+        if ( !empty($usuario_dados_padel['UsuarioDadosPadel']) && !empty($usuario_dados_padel['UsuarioDadosPadel']['localidade']) ) {
+            $localidades_usuario[] = $usuario_dados_padel['UsuarioDadosPadel']['localidade'];
+        }
+    
+        // Realiza a busca conforme a lógica definida
+        $usuarios = $this->Usuario->find('all', [
+            'fields' => [
+                'Usuario.id',
+                'Usuario.nome',
+                'Usuario.usuario',
+                'Usuario.img',
+                'Usuario.perfil_esportista_privado',
+                'UsuarioDadosPadel.lado',
+                'UsuarioDadosPadel.img',
+            ],
+            'joins' => [
+                [
+                    'table' => 'usuarios_dados_padel',
+                    'alias' => 'UsuarioDadosPadel',
+                    'type' => 'LEFT',
+                    'conditions' => ['Usuario.id = UsuarioDadosPadel.usuario_id']
+                ],
+                [
+                    'table' => 'seguidores',
+                    'alias' => 'Seguidor',
+                    'type' => 'LEFT',
+                    'conditions' => [
+                        'Seguidor.usuario_seguido_id = Usuario.id',
+                        'Seguidor.usuario_seguidor_id' => $usuario_id,
+                        'Seguidor.deleted' => false
+                    ]
+                ],
+                [
+                    'table' => 'usuarios_bloqueados',
+                    'alias' => 'UsuarioBloqueado',
+                    'type' => 'LEFT',
+                    'conditions' => [
+                        'UsuarioBloqueado.usuario_bloqueador_id = Usuario.id',
+                        'UsuarioBloqueado.usuario_bloqueado_id' => $usuario_id
+                    ]
+                ]
+            ],
+            'conditions' => [
+                'NOT' => [
+                    'Usuario.id' => $usuario_id
+                ],
+                'Seguidor.id' => null,
+                'UsuarioBloqueado.id' => null,
+                'UsuarioDadosPadel.localidade' => $localidades_usuario
+            ],
+            'recursive' => -1, // Evita carregamento automático de associações
+            'limit' => $limit, // Limita o número de resultados para performance
+            'offset' => $offset,
+            'order' => $order
+        ]);
+    
+        // Estrutura os dados para resposta
+        $dados_retornar = [];
+        foreach ($usuarios as $usuario) {
+            $dados_retornar[] = [
+                'id' => $usuario['Usuario']['id'],
+                'nome' => $usuario['Usuario']['nome'],
+                'usuario' => $usuario['Usuario']['usuario'],
+                'img' => $usuario['Usuario']['img'],
+                'lado' => $usuario['UsuarioDadosPadel']['lado'],
+                'img_padel' => $usuario['UsuarioDadosPadel']['img'],
+                'perfil_esportista_privado' => $usuario['Usuario']['perfil_esportista_privado'],
+            ];
+        }
+    
+        // Retorna a resposta em formato JSON
+        return new CakeResponse(array(
+            'type' => 'json', 
+            'body' => json_encode(['status' => 'ok', 'dados' => $dados_retornar])
+        ));
 
     }
 
@@ -183,7 +289,8 @@ class EsportistasController extends AppController {
                 'Usuario.id',
                 'Usuario.nome',
                 'Usuario.usuario',
-                'Usuario.img'
+                'Usuario.img',
+                'Usuario.perfil_esportista_privado'
             ],
             'conditions' => [
                 'Usuario.id' => $usuario_id
@@ -213,7 +320,6 @@ class EsportistasController extends AppController {
                 'lado' => '',
                 'localidade' => '',
                 'categorias' => [],
-                'privado' => '',
                 'receber_convites' => 'Y',
                 'restringir_horarios_convites' => 'N',
                 'horarios_convites' => []
@@ -222,6 +328,7 @@ class EsportistasController extends AppController {
 
         $dados_retornar = $dados['UsuarioDadosPadel'];
         $dados_retornar['sexo'] = $dados['ClienteCliente']['sexo'];
+        $dados_retornar['perfil_esportista_privado'] = $dados['Usuario']['perfil_esportista_privado'];
         $dados_retornar['data_nascimento'] = $dados['ClienteCliente']['data_nascimento'];
         $dados_retornar['nome'] = $dados['Usuario']['nome'];
         $dados_retornar['_img'] = empty($dados_retornar['img']) ? $dados['Usuario']['img'] : $dados_retornar['img'];
@@ -314,9 +421,11 @@ class EsportistasController extends AppController {
         $this->loadModel('ClienteCliente');
         $this->loadModel('UsuarioPadelCategoria');
         $this->loadModel('ToProJogo');
+        $this->loadModel('Usuario');
     
         $dados_padelista_atualizar = [];
         $dados_cliente_cliente_atualizar = [];
+        $dados_usuario_atualizar = [];
 
         $categorias = isset($dados->categorias) ? $dados->categorias : [];
         $horarios_convites = !empty($dados->horarios_convites) ? $dados->horarios_convites : [];
@@ -333,8 +442,8 @@ class EsportistasController extends AppController {
             $dados_padelista_atualizar['lado'] = $dados->lado;
         }
 
-        if ( !empty($dados->privado) ) {
-            $dados_padelista_atualizar['privado'] = $dados->privado;
+        if ( !empty($dados->perfil_esportista_privado) ) {
+            $dados_usuario_atualizar['perfil_esportista_privado'] = $dados->perfil_esportista_privado;
         }
 
         if ( !empty($dados->dupla_fixa) ) {
@@ -430,6 +539,11 @@ class EsportistasController extends AppController {
         // Atualiza os dados da clientes_clientes
         if ( !empty($dados_cliente_cliente_atualizar) ) {
             $this->ClienteCliente->updateAll($dados_cliente_cliente_atualizar, ['usuario_id' => $usuario_id]);
+        }
+
+        // Atualiza os dados de usuário
+        if ( !empty($dados_usuario_atualizar) ) {
+            $this->Usuario->save(array_merge($dados_usuario_atualizar, ['id' => $usuario_id]));
         }
 
         // Atualiza as categorias do usuário
@@ -650,7 +764,7 @@ class EsportistasController extends AppController {
             if ( $dados_padel_usuario_convidante['UsuarioDadosPadel']['dupla_fixa'] !== $usuario_id && $acao == 2 ) {
                 $this->Notificacao->updateAll([
                     'acao_selecionada' => "'N'",
-                    'acao_selecionada_desc' => 'Recusada'
+                    'acao_selecionada_desc' => "'Recusado'"
                 ], [
                     'Notificacao.id' => $notificacoes_atualizar
                 ]);
@@ -659,7 +773,7 @@ class EsportistasController extends AppController {
             else if ( $dados_padel_usuario_convidante['UsuarioDadosPadel']['dupla_fixa'] !== $usuario_id && $acao == 1 ) {
                 $this->Notificacao->updateAll([
                     'acao_selecionada' => "'N'",
-                    'acao_selecionada_desc' => 'Expirada'
+                    'acao_selecionada_desc' => "'Expirada'"
                 ], [
                     'Notificacao.id' => $notificacoes_atualizar
                 ]);

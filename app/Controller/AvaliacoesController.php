@@ -242,6 +242,7 @@ class AvaliacoesController extends AppController {
         $servicos = $this->ClienteServico->find('all',[
             'fields' => [
                 'ClienteServico.*',
+                'ClienteServicoFoto.imagem',
                 'ClienteServicoAvaliacao.*',
                 'Cliente.nome',
                 'Cliente.logo',
@@ -255,7 +256,8 @@ class AvaliacoesController extends AppController {
                 'Cliente',
                 'ClienteServicoAvaliacao' => [
                     'Usuario'
-                ]
+                ],
+                'ClienteServicoFoto'
             ],
             'order' => [
                 'ClienteServicoAvaliacao.created'
