@@ -344,8 +344,6 @@ class EsportistasController extends AppController {
 
         $dados_retornar['horarios_convites'] = $this->ToProJogo->buscaDisponibilidadeUsuario([7], $usuario_id);
 
-        $dados_retornar['dupla_fixa'] = [];
-
         if ( !empty($dados_retornar['dupla_fixa']) ) {
 
             $this->loadModel('Usuario');
