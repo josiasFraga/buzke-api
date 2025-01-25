@@ -29,8 +29,6 @@ class ToProJogoController extends AppController {
 
         $this->loadModel('ClienteCliente');
 
-        $meus_ids_de_cliente = $this->ClienteCliente->buscaTodosDadosUsuarioComoCliente($dados_token['Usuario']['id'], true);
-
         $this->loadModel('ToProJogo');
         $to_pro_jogo = $this->ToProJogo->find('all',[
             'fields' => ['*'],
@@ -39,11 +37,7 @@ class ToProJogoController extends AppController {
             ],
             'contain' => ['ToProJogoEsporte' => ['Subcategoria'], 'UsuarioLocalizacao'],
             'conditions' => [
-                'ToProJogo.cliente_cliente_id' => $meus_ids_de_cliente,
-                'or' => [
-                    'ToProJogo.data_fim' => null,
-                    'ToProJogo.data_fim >=' => date('Y-m-d')
-                ]
+                'ToProJogo.usuario_id' => $dados_token['Usuario']['id']
             ],
         ]);
 

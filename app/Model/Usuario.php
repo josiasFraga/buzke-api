@@ -56,7 +56,10 @@ class Usuario extends AppModel {
             //'conditions' => ['Seguidores.deleted' => 0], // Filtra registros não deletados
             'fields' => '',
             'order' => ''
-        ]
+        ],
+		'ToProJogo' => [
+			'foreignKey' => 'usuario_id'
+        ],
     );
 
     public $belongsTo = array(

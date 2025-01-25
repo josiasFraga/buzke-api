@@ -14,9 +14,6 @@ class ClienteCliente extends AppModel {
 		'AgendamentoFixoCancelado' => array(
 			'foreignKey' => 'cliente_cliente_id'
 		),
-		'ToProJogo' => array(
-			'foreignKey' => 'cliente_cliente_id'
-		),
 		'AgendamentoConvite' => array(
 			'foreignKey' => 'cliente_cliente_id'
 		),

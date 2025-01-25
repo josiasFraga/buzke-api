@@ -5,8 +5,8 @@ class ToProJogo extends AppModel {
     public $name = 'ToProJogo';
 
 	public $belongsTo = array(
-		'ClienteCliente' => array(
-			'foreignKey' => 'cliente_cliente_id'
+		'Usuario' => array(
+			'foreignKey' => 'usuario_id'
 		),
 		'UsuarioLocalizacao' => array(
 			'foreignKey' => 'localizacao_id'
@@ -70,7 +70,7 @@ class ToProJogo extends AppModel {
 		$dados =  $this->find('all',[
 			'fields' => ['*'],
 			'conditions' => $conditions,
-			'group' => ['ToProJogo.cliente_cliente_id'],
+			'group' => ['ToProJogo.usuario_id'],
 			'link' => ['ToProJogoEsporte', 'UsuarioLocalizacao', 'ClienteCliente' => ['Usuario' => ['UsuarioDadosPadel']]],
 			'order' => ['ClienteCliente.nome'],
 		]);
@@ -90,11 +90,10 @@ class ToProJogo extends AppModel {
 			],
 			'conditions' => [
 				'ToProJogoEsporte.subcategoria_id' => $subcategorias,
-				'ClienteCliente.usuario_id' => $usuario_id,
+				'ToProJogo.usuario_id' => $usuario_id,
 			],
 			'link' => [
-				'ToProJogoEsporte',
-				'ClienteCliente'
+				'ToProJogoEsporte'
 			]
 		]);
 

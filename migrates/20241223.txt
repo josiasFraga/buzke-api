@@ -391,3 +391,50 @@ CREATE TABLE `desafios` (
 COLLATE='utf8mb4_general_ci'
 ENGINE=InnoDB
 ;
+
+
+ALTER TABLE `seguidores`
+	CHANGE COLUMN `created` `created` TIMESTAMP NOT NULL DEFAULT (NOW()) AFTER `id`;
+
+
+ALTER TABLE `usuarios_padel_categorias`
+	CHANGE COLUMN `created` `created` TIMESTAMP NOT NULL DEFAULT (NOW()) AFTER `id`;
+
+ALTER TABLE `usuarios_padel_categorias`
+CHANGE COLUMN `updated` `updated` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP() AFTER `created`;
+
+ALTER TABLE `to_pro_jogo`
+	CHANGE COLUMN `created` `created` TIMESTAMP NOT NULL DEFAULT (NOW()) AFTER `id`,
+	CHANGE COLUMN `updated` `updated` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP() AFTER `created`;
+
+DELETE FROM to_pro_jogo WHERE dia_semana IS NULL;
+
+ALTER TABLE `to_pro_jogo`
+	ADD COLUMN `usuario_id` INT NULL DEFAULT NULL AFTER `cliente_cliente_id`,
+	ADD CONSTRAINT `FK_to_pro_jogo_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE;
+
+UPDATE to_pro_jogo
+JOIN clientes_clientes ON clientes_clientes.id = to_pro_jogo.cliente_cliente_id
+SET to_pro_jogo.usuario_id = clientes_clientes.usuario_id;
+
+
+ALTER TABLE `to_pro_jogo`
+	DROP COLUMN `cliente_cliente_id`,
+	DROP COLUMN `localizacao_id`,
+	DROP COLUMN `data_inicio`,
+	DROP COLUMN `data_fim`,
+	DROP COLUMN `dia_mes`,
+	DROP FOREIGN KEY `FK_to_pro_jogo_clientes_clientes`,
+	DROP FOREIGN KEY `FK_to_pro_jogo_usuarios_localizacoes`;
+
+ALTER TABLE `estatisticas_padel`
+	CHANGE COLUMN `created` `created` TIMESTAMP NOT NULL DEFAULT (now()) AFTER `id`,
+	CHANGE COLUMN `modified` `modified` TIMESTAMP NULL AFTER `created`;
+
+ALTER TABLE `clientes`
+	CHANGE COLUMN `created` `created` TIMESTAMP NOT NULL DEFAULT (now()) AFTER `id`,
+	CHANGE COLUMN `updated` `updated` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP() AFTER `created`;
+
+
+ALTER TABLE `clientes`
+	CHANGE COLUMN `nacionalidade` `nacionalidade` ENUM('Brasil','Uruguai') NULL DEFAULT NULL COLLATE 'utf8mb3_general_ci' AFTER `tipo`;
