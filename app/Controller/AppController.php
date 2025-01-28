@@ -971,6 +971,23 @@ class AppController extends Controller {
         }
         return false;
     }
+    
+
+    public function protectAuthenticatedPost( $dados ) {
+
+        if ( empty($dados->token) || empty($dados->email) || !filter_var($dados->email, FILTER_VALIDATE_EMAIL) ) {
+            throw new BadRequestException('Dados de usuário não informados!', 401);
+        }
+    
+        $dados_usuario = $this->verificaValidadeToken($dados->token, $dados->email);
+    
+        if (!$dados_usuario) {
+            throw new BadRequestException('Usuário não logado!', 401);
+        }
+
+        return $dados_usuario;
+
+    }
 
 	public function sendNotification( 
         $arr_ids = array(),

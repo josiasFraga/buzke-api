@@ -438,3 +438,35 @@ ALTER TABLE `clientes`
 
 ALTER TABLE `clientes`
 	CHANGE COLUMN `nacionalidade` `nacionalidade` ENUM('Brasil','Uruguai') NULL DEFAULT NULL COLLATE 'utf8mb3_general_ci' AFTER `tipo`;
+
+
+ALTER TABLE `notificacoes_configuracoes_usuario`
+	CHANGE COLUMN `created` `created` TIMESTAMP NOT NULL DEFAULT (now()) AFTER `receber_aviso_jogos_padel_liberados`,
+	CHANGE COLUMN `updated` `updated` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP() AFTER `created`;
+
+ALTER TABLE `tokens`
+	CHANGE COLUMN `created` `created` DATETIME NOT NULL DEFAULT (now()) AFTER `usuario_id`,
+	CHANGE COLUMN `modified` `modified` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP() AFTER `created`;
+
+ALTER TABLE `notificacoes`
+	CHANGE COLUMN `created` `created` TIMESTAMP NOT NULL DEFAULT (now()) AFTER `id`,
+	CHANGE COLUMN `updated` `updated` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP() AFTER `created`;
+
+
+CREATE TABLE `cliente_servicos_subcategorias` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`created` TIMESTAMP NOT NULL DEFAULT (now()),
+	`modified` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	`cliente_servico_id` INT NOT NULL,
+	`subcategoria_id` INT NOT NULL,
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `FK_cliente_servicos_subcategorias_clientes_servicos` (`cliente_servico_id`) USING BTREE,
+	INDEX `FK_cliente_servicos_subcategorias_subcategorias` (`subcategoria_id`) USING BTREE,
+	CONSTRAINT `FK_cliente_servicos_subcategorias_clientes_servicos` FOREIGN KEY (`cliente_servico_id`) REFERENCES `clientes_servicos` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT `FK_cliente_servicos_subcategorias_subcategorias` FOREIGN KEY (`subcategoria_id`) REFERENCES `subcategorias` (`id`) ON UPDATE CASCADE ON DELETE RESTRICT
+)
+COLLATE='utf8mb4_general_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=259
+;
+

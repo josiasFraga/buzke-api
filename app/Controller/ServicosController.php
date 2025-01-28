@@ -138,31 +138,25 @@ class ServicosController extends AppController {
             $dados = json_decode($dados);
         }
 
-        if (!isset($dados->email) || $dados->email == '') {
-            throw new BadRequestException('E-mail não informado', 400);
-        }
-
-        if ( !filter_var($dados->email, FILTER_VALIDATE_EMAIL)) {
-            return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'E-mail inválido!'))));
-        }
-
-        if (!isset($dados->token) || $dados->token == '') {
-            throw new BadRequestException('Token não informado', 400);
-        }
-
-        $dados_token = $this->verificaValidadeToken($dados->token, $dados->email);
-        if ( !$dados_token ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
+        $dados_token = $this->protectAuthenticatedPost($dados);
         
         if ( !isset($dados->horarios) || !is_array($dados->horarios) || count($dados->horarios) == 0 ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Horários de atendimento não informados!'))));
+        }
+        
+        if ( $dados->tipo === 'Quadra' ) {
+            if ( !isset($dados->esportes) || !is_array($dados->esportes) || count($dados->esportes) == 0 ) {
+                return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Esportes não informados!'))));
+            }
+        } else {
+            $dados->esportes = [];
         }
 
         $this->loadModel('ClienteServico');
         $this->loadModel('ClienteServicoFoto');
         $this->loadModel('ClienteServicoHorario');
         $this->loadModel('ClienteServicoProfissional');
+        $this->loadModel('ClienteServicoSubcategoria');
 
         $dados_salvar = [
             'cliente_id' => $dados_token['Usuario']['cliente_id'],
@@ -325,6 +319,37 @@ class ServicosController extends AppController {
 
             $this->ClienteServicoHorario->saveMany($horarios_salvar);
 
+            // remove todas as subcategorias que não vieram no post
+            $this->ClienteServicoSubcategoria->deleteAll([
+                'ClienteServicoSubcategoria.cliente_servico_id' => $servico_id,
+                'not' => [
+                    'ClienteServicoSubcategoria.subcategoria_id' => $dados->esportes
+                ]
+            ]);
+
+            foreach( $dados->esportes as $key => $subcategoria ){
+    
+                $subcategoria_salvar = [
+                    "cliente_servico_id" => $servico_id,
+                    "subcategoria_id" => $subcategoria
+                ];
+
+                $checkIsCadastred = $this->ClienteServicoSubcategoria->find('count',[
+                    'conditions' => [
+                        'cliente_servico_id' => $servico_id,
+                        'subcategoria_id' => $subcategoria
+                    ],
+                    'link' => []
+                ]) > 0;
+    
+                // Se a subcategoria não estiver cadastrada, cadastra
+                if ( !$checkIsCadastred ) {
+                    $this->ClienteServicoSubcategoria->create();
+                    $this->ClienteServicoSubcategoria->save($subcategoria_salvar);
+                }
+    
+            }
+
             $dataSource->commit();
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'msg' => 'Serviço cadastrado/alterado com sucesso!'))));
     
@@ -360,6 +385,11 @@ class ServicosController extends AppController {
                         'id',
                         'imagem'
                     ]
+                ],
+                'ClienteServicoSubcategoria' => [
+                    'fields' => [
+                        'subcategoria_id'
+                    ],
                 ],
                 'ClienteServicoHorario' => [
                     'fields' => [
@@ -408,6 +438,17 @@ class ServicosController extends AppController {
                 $dados_servico['ClienteServicoHorario'][$key]['_valor_padrao'] = number_format($horario['valor_padrao'], 2, ',', '.');
                 $dados_servico['ClienteServicoHorario'][$key]['_valor_fixos'] = !empty($horario['valor_fixos']) ? number_format($horario['valor_fixos'], 2, ',', '.') : "";
             }
+
+        }
+
+        $dados_servico['esportes'] = [];
+        if ( !empty($dados_servico['ClienteServicoSubcategoria']) ) {
+
+            foreach( $dados_servico['ClienteServicoSubcategoria'] as $key => $subcategoria ){
+                $dados_servico['esportes'][] = (int)$subcategoria['subcategoria_id'];
+            }
+
+            unset($dados_servico['ClienteServicoSubcategoria']);
 
         }
         
