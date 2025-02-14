@@ -210,15 +210,15 @@ ALTER TABLE `usuarios_dados_padel`
 	ADD COLUMN `localidade` VARCHAR(180) NULL DEFAULT NULL AFTER `dupla_fixa_aprovado`;
 
 
-ALTER TABLE `buzke_hmlg_app`.`usuarios_dados_padel`
+ALTER TABLE `usuarios_dados_padel`
 ADD COLUMN `receber_convites` enum('Y','N') NULL DEFAULT 'Y';
 
-ALTER TABLE `buzke_hmlg_app`.`usuarios_dados_padel`
+ALTER TABLE `usuarios_dados_padel`
 CHANGE `receber_convites` `receber_convites` enum('Y','N') NOT NULL DEFAULT 'Y',
 ADD COLUMN `restringir_horarios_convites` enum('Y','N') NOT NULL DEFAULT 'N';
 
 
-ALTER TABLE `buzke_hmlg_app`.`to_pro_jogo`
+ALTER TABLE `to_pro_jogo`
 CHANGE `localizacao_id` `localizacao_id` int NULL;
 
 CREATE TABLE `seguidores` (
@@ -363,34 +363,50 @@ COLLATE='utf8mb4_general_ci'
 ENGINE=InnoDB
 ;
 
+CREATE TABLE IF NOT EXISTS `desafios` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created` timestamp NOT NULL DEFAULT (now()),
+  `modified` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `usuario_desafiado_id` int NOT NULL,
+  `usuario_desafiador_id` int NOT NULL,
+  `agendamento_id` int DEFAULT NULL,
+  `esporte_id` int NOT NULL,
+  `cliente_servico_id` int NOT NULL,
+  `status_desafiado` enum('Confirmado','Pendente','Recusado') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pendente',
+  `status_desafiador` enum('Confirmado','Pendente','Recusado') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pendente',
+  `data_sugerida` date NOT NULL,
+  `hora_sugerida` time NOT NULL,
+  `aposta` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FK_desafios_agendamentos` (`agendamento_id`),
+  KEY `FK_desafios_usuarios` (`usuario_desafiado_id`),
+  KEY `FK_desafios_usuarios_2` (`usuario_desafiador_id`),
+  KEY `FK_desafios_subcategorias` (`esporte_id`),
+  KEY `FK_desafios_clientes_servicos` (`cliente_servico_id`),
+  CONSTRAINT `FK_desafios_agendamentos` FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `FK_desafios_clientes_servicos` FOREIGN KEY (`cliente_servico_id`) REFERENCES `clientes_servicos` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `FK_desafios_subcategorias` FOREIGN KEY (`esporte_id`) REFERENCES `subcategorias` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `FK_desafios_usuarios` FOREIGN KEY (`usuario_desafiado_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `FK_desafios_usuarios_2` FOREIGN KEY (`usuario_desafiador_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `desafios` (
-	`id` INT NOT NULL AUTO_INCREMENT,
-	`created` TIMESTAMP NULL DEFAULT NULL,
-	`modified` INT NULL DEFAULT NULL,
-	`usuario_desafiado_id` INT NULL DEFAULT NULL,
-	`usuario_desafiador_id` INT NOT NULL,
-	`status_desafiado` ENUM('Confirmado','Pendente','Recusado') NOT NULL DEFAULT 'Pendente' COLLATE 'utf8mb4_general_ci',
-	`status_desafiador` ENUM('Confirmado','Pendente','Recusado') NOT NULL DEFAULT 'Pendente' COLLATE 'utf8mb4_general_ci',
-	`equipe_desafiada` INT NULL DEFAULT NULL,
-	`equipe_desafiante` INT NULL DEFAULT NULL,
-	`agendamento_id` INT NULL DEFAULT NULL,
-	`aposta` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci',
-	PRIMARY KEY (`id`) USING BTREE,
-	INDEX `FK_desafios_usuarios` (`usuario_desafiado_id`) USING BTREE,
-	INDEX `FK_desafios_usuarios_2` (`usuario_desafiador_id`) USING BTREE,
-	INDEX `FK_desafios_agendamentos` (`agendamento_id`) USING BTREE,
-	INDEX `FK_desafios_equipes` (`equipe_desafiada`) USING BTREE,
-	INDEX `FK_desafios_equipes_2` (`equipe_desafiante`) USING BTREE,
-	CONSTRAINT `FK_desafios_agendamentos` FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`) ON UPDATE CASCADE ON DELETE RESTRICT,
-	CONSTRAINT `FK_desafios_equipes` FOREIGN KEY (`equipe_desafiada`) REFERENCES `equipes` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
-	CONSTRAINT `FK_desafios_equipes_2` FOREIGN KEY (`equipe_desafiante`) REFERENCES `equipes` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
-	CONSTRAINT `FK_desafios_usuarios` FOREIGN KEY (`usuario_desafiado_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
-	CONSTRAINT `FK_desafios_usuarios_2` FOREIGN KEY (`usuario_desafiador_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
-)
-COLLATE='utf8mb4_general_ci'
-ENGINE=InnoDB
-;
+CREATE TABLE IF NOT EXISTS `desafio_padel` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `created` timestamp NOT NULL DEFAULT (now()),
+  `modified` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `desafio_id` int NOT NULL,
+  `desafiador_dupla_id` int DEFAULT NULL,
+  `desafiado_dupla_id` int DEFAULT NULL,
+  `desafiador_dupla_status` enum('Confirmado','Pendente','Recusado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pendente',
+  `desafiado_dupla_status` enum('Confirmado','Pendente','Recusado') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pendente',
+  PRIMARY KEY (`id`),
+  KEY `FK__desafios` (`desafio_id`),
+  KEY `FK_desafio_padel_usuarios` (`desafiador_dupla_id`),
+  KEY `FK_desafio_padel_usuarios_2` (`desafiado_dupla_id`),
+  CONSTRAINT `FK__desafios` FOREIGN KEY (`desafio_id`) REFERENCES `desafios` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `FK_desafio_padel_usuarios` FOREIGN KEY (`desafiador_dupla_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `FK_desafio_padel_usuarios_2` FOREIGN KEY (`desafiado_dupla_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
 ALTER TABLE `seguidores`
@@ -470,3 +486,82 @@ ENGINE=InnoDB
 AUTO_INCREMENT=259
 ;
 
+-- 31 January 2025 1:36:56 AM
+ALTER TABLE `clientes_servicos_horarios`
+CHANGE `created` `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+CHANGE `modified` `modified` timestamp NULL ON UPDATE CURRENT_TIMESTAMP;
+
+-- 31 January 2025 1:15:49 AM
+ALTER TABLE `tokens`
+CHANGE `created` `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+CHANGE `modified` `modified` datetime NULL ON UPDATE CURRENT_TIMESTAMP;
+
+-- 31 January 2025 1:07:12 AM
+ALTER TABLE `cliente_servico_fotos`
+CHANGE `created` `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+CHANGE `updated` `updated` timestamp NULL ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE `agendamentos`
+	CHANGE COLUMN `updated` `updated` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP() AFTER `created`;
+
+
+ALTER TABLE `agendamentos_fixos_cancelados`
+	CHANGE COLUMN `created` `created` TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP()) AFTER `id`;
+
+ALTER TABLE `clientes`
+	CHANGE COLUMN `pais` `pais` ENUM('Brasil','Uruguai') NULL DEFAULT NULL COLLATE 'utf8mb3_general_ci' AFTER `wp`;
+
+
+ALTER TABLE `desafios`
+	ADD COLUMN `duracao` TIME NOT NULL AFTER `hora_sugerida`;
+
+
+ALTER TABLE `desafios`
+  ADD INDEX `idx_desafios_data_sugerida` (`data_sugerida`),
+  ADD INDEX `idx_desafios_hora_sugerida` (`hora_sugerida`),
+  ADD INDEX `idx_desafios_duracao` (`duracao`);
+
+ALTER TABLE `desafios`
+  ADD INDEX `idx_desafios_usrdesafiado_data_hora` (
+    `usuario_desafiado_id`,
+    `data_sugerida`,
+    `hora_sugerida`
+  ),
+  ADD INDEX `idx_desafios_usrdesafiador_data_hora` (
+    `usuario_desafiador_id`,
+    `data_sugerida`,
+    `hora_sugerida`
+  );
+
+  ALTER TABLE `desafios`
+  ADD INDEX `idx_desafios_data_hora` (`data_sugerida`, `hora_sugerida`);
+
+ALTER TABLE `desafios`
+  ADD COLUMN `hora_sugerida_fim` TIME 
+  GENERATED ALWAYS AS (ADDTIME(`hora_sugerida`, `duracao`)) VIRTUAL;
+
+  
+  ALTER TABLE `desafios`
+  ADD INDEX `idx_desafios_hora_inicio_fim` (`hora_sugerida`, `hora_sugerida_fim`);
+
+
+ALTER TABLE `agendamentos`
+  ADD COLUMN `horario_fim` TIME 
+  GENERATED ALWAYS AS (ADDTIME(`horario`, `duracao`)) VIRTUAL;
+
+ALTER TABLE `agendamentos`
+  ADD COLUMN `horario_inicio` TIME 
+  GENERATED ALWAYS AS (TIME(`horario`)) VIRTUAL;
+
+ALTER TABLE `agendamentos`
+	ADD INDEX `horario_fim_horario_inicio` (`horario_fim`, `horario_inicio`);
+
+CREATE TABLE `typeorm_metadata` (
+  `type` varchar(255) NOT NULL,
+  `database` varchar(255) DEFAULT NULL,
+  `schema` varchar(255) DEFAULT NULL,
+  `table` varchar(255) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `value` text,
+  PRIMARY KEY (`type`, `database`, `schema`, `table`, `name`)
+);
