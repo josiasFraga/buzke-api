@@ -211,6 +211,7 @@ class NotificacoesController extends AppController {
         $dados_salvar['receber_aviso_jogos_padel_liberados'] = isset($dados->receber_aviso_jogos_padel_liberados) ? $dados->receber_aviso_jogos_padel_liberados : false;
         $dados_salvar['receber_avisos_novos_agendamentos'] = isset($dados->receber_avisos_novos_agendamentos) ? $dados->receber_avisos_novos_agendamentos : false;
         $dados_salvar['receber_convite_dupla_desafio'] = isset($dados->receber_convite_dupla_desafio) ? $dados->receber_convite_dupla_desafio : false;
+        $dados_salvar['receber_resultados_jogos'] = isset($dados->receber_resultados_jogos) ? $dados->receber_resultados_jogos : false;
 
         if ( !$this->NotificacaoConfiguracaoUsuario->save($dados_salvar) ) {
             return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'erro', 'msg' => 'Ocorreu um erro ao salvar as configurações de notificações.'))));
