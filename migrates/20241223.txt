@@ -139,7 +139,7 @@ ALTER TABLE `usuarios_dados_padel`
 
 
 ALTER TABLE `usuarios_dados_padel`
-	ADD COLUMN `dupla_fixa` INT NULL DEFAULT NULL AFTER `privado`,
+	ADD COLUMN `dupla_fixa` INT NULL DEFAULT NULL,
 	ADD COLUMN `dupla_fixa_aprovado` ENUM('Y','N') NULL DEFAULT NULL AFTER `dupla_fixa`,
 	ADD CONSTRAINT `FK_usuarios_dados_padel_usuarios_2` FOREIGN KEY (`dupla_fixa`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -207,7 +207,7 @@ ENGINE=InnoDB
 
 
 ALTER TABLE `usuarios_dados_padel`
-	ADD COLUMN `localidade` VARCHAR(180) NULL DEFAULT NULL AFTER `dupla_fixa_aprovado`;
+	ADD COLUMN `localidade` VARCHAR(180) NULL DEFAULT NULL;
 
 
 ALTER TABLE `usuarios_dados_padel`
@@ -298,13 +298,13 @@ ON udp.usuario_id = ultima.usuario_id
 SET udp.localidade = ultima.description;
 
 
-UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = 'SantAna do Livramento, RS, Brasil' WHERE localidade = 'Santana do Livramento - SantAna do Livramento, RS, Brasil'
+UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = 'SantAna do Livramento, RS, Brasil' WHERE localidade = 'Santana do Livramento - SantAna do Livramento, RS, Brasil';
 
-UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = 'SantAna do Livramento, RS, Brasil' WHERE localidade = "Santana do Livramento - Sant'Ana do Livramento, RS, Brasil"
+UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = 'SantAna do Livramento, RS, Brasil' WHERE localidade = "Santana do Livramento - Sant'Ana do Livramento, RS, Brasil";
 
-UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = 'SantAna do Livramento, RS, Brasil' WHERE localidade = "Sant'Ana do Livramento, RS, Brasil"
+UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = 'SantAna do Livramento, RS, Brasil' WHERE localidade = "Sant'Ana do Livramento, RS, Brasil";
 
-UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = "Sant'Ana do Livramento, RS, Brasil" WHERE localidade = "SantAna do Livramento, RS, Brasil"
+UPDATE usuarios_dados_padel SET usuarios_dados_padel.localidade = "Sant'Ana do Livramento, RS, Brasil" WHERE localidade = "SantAna do Livramento, RS, Brasil";
 
 
 CREATE TABLE `equipe_membros_cargos` (
@@ -313,24 +313,6 @@ CREATE TABLE `equipe_membros_cargos` (
 	`modified` TIMESTAMP NULL DEFAULT NULL,
 	`nome` VARCHAR(50) NOT NULL COLLATE 'utf8mb4_general_ci',
 	PRIMARY KEY (`id`) USING BTREE
-)
-COLLATE='utf8mb4_general_ci'
-ENGINE=InnoDB
-;
-
-
-CREATE TABLE `equipe_membros` (
-	`id` INT NOT NULL AUTO_INCREMENT,
-	`created` TIMESTAMP NULL DEFAULT NULL,
-	`modified` TIMESTAMP NULL DEFAULT NULL,
-	`equipe_id` INT NULL DEFAULT NULL,
-	`usuario_id` INT NOT NULL,
-	`cargo` INT NOT NULL,
-	PRIMARY KEY (`id`) USING BTREE,
-	INDEX `FK_equipe_membros_usuarios` (`usuario_id`) USING BTREE,
-	INDEX `FK_equipe_membros_equipes` (`equipe_id`) USING BTREE,
-	CONSTRAINT `FK_equipe_membros_equipes` FOREIGN KEY (`equipe_id`) REFERENCES `equipes` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
-	CONSTRAINT `FK_equipe_membros_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
 )
 COLLATE='utf8mb4_general_ci'
 ENGINE=InnoDB
@@ -358,6 +340,24 @@ CREATE TABLE `equipes` (
 	CONSTRAINT `FK_equipes_clientes` FOREIGN KEY (`casa`) REFERENCES `clientes` (`id`) ON UPDATE CASCADE ON DELETE SET NULL,
 	CONSTRAINT `FK_equipes_subcategorias` FOREIGN KEY (`esporte_id`) REFERENCES `subcategorias` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
 	CONSTRAINT `FK_equipes_usuarios` FOREIGN KEY (`criado_por_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+)
+COLLATE='utf8mb4_general_ci'
+ENGINE=InnoDB
+;
+
+
+CREATE TABLE `equipe_membros` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`created` TIMESTAMP NULL DEFAULT NULL,
+	`modified` TIMESTAMP NULL DEFAULT NULL,
+	`equipe_id` INT NULL DEFAULT NULL,
+	`usuario_id` INT NOT NULL,
+	`cargo` INT NOT NULL,
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `FK_equipe_membros_usuarios` (`usuario_id`) USING BTREE,
+	INDEX `FK_equipe_membros_equipes` (`equipe_id`) USING BTREE,
+	CONSTRAINT `FK_equipe_membros_equipes` FOREIGN KEY (`equipe_id`) REFERENCES `equipes` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT `FK_equipe_membros_usuarios` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
 )
 COLLATE='utf8mb4_general_ci'
 ENGINE=InnoDB
@@ -486,17 +486,17 @@ ENGINE=InnoDB
 AUTO_INCREMENT=259
 ;
 
--- 31 January 2025 1:36:56 AM
+
 ALTER TABLE `clientes_servicos_horarios`
 CHANGE `created` `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 CHANGE `modified` `modified` timestamp NULL ON UPDATE CURRENT_TIMESTAMP;
 
--- 31 January 2025 1:15:49 AM
+
 ALTER TABLE `tokens`
 CHANGE `created` `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 CHANGE `modified` `modified` datetime NULL ON UPDATE CURRENT_TIMESTAMP;
 
--- 31 January 2025 1:07:12 AM
+
 ALTER TABLE `cliente_servico_fotos`
 CHANGE `created` `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 CHANGE `updated` `updated` timestamp NULL ON UPDATE CURRENT_TIMESTAMP;
@@ -557,11 +557,12 @@ ALTER TABLE `agendamentos`
 	ADD INDEX `horario_fim_horario_inicio` (`horario_fim`, `horario_inicio`);
 
 CREATE TABLE `typeorm_metadata` (
-  `type` varchar(255) NOT NULL,
-  `database` varchar(255) DEFAULT NULL,
-  `schema` varchar(255) DEFAULT NULL,
-  `table` varchar(255) DEFAULT NULL,
-  `name` varchar(255) DEFAULT NULL,
-  `value` text,
+  `type` VARCHAR(128) NOT NULL,
+  `database` VARCHAR(128) NOT NULL DEFAULT '',
+  `schema` VARCHAR(128) NOT NULL DEFAULT '',
+  `table` VARCHAR(128) NOT NULL DEFAULT '',
+  `name` VARCHAR(128) NOT NULL DEFAULT '',
+  `value` TEXT,
   PRIMARY KEY (`type`, `database`, `schema`, `table`, `name`)
-);
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4;  -- or your preferred charset
