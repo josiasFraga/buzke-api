@@ -539,7 +539,7 @@ class UsuariosController extends AppController {
         $this->layout = 'ajax';
         $dados = $this->request->data['dados'];
 
-        //$this->log($dados, 'debug');
+        //$this->log(addslashes($dados), 'debug');
         //die();
 
         if ( is_array($dados) ) {
@@ -565,8 +565,9 @@ class UsuariosController extends AppController {
         if ( !$dados_token ) {
             throw new BadRequestException('Usuário não logado!', 401);
         }
+        
 
-        $dados_address = json_decode($dados->dados_address);
+        $dados_address = $dados->dados_address;
 
 
         $lat = isset($dados_address->lat) ? $dados_address->lat : null;
@@ -574,8 +575,8 @@ class UsuariosController extends AppController {
 
         $dados_salvar = [
             'token_id' => $dados_token['Token']['id'],
-            'location_data' => $dados->dados_address,
-            'description' => str_replace("'",'',$dados_address->description),
+            'location_data' => json_encode($dados->dados_address),
+            'description' => str_replace("'",'',$dados_address->location),
             'lat' => $lat,
             'lon' => $lon
         ];

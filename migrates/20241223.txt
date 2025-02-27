@@ -34,7 +34,7 @@ ALTER TABLE `usuarios`
 
 
 ALTER TABLE `clientes_clientes`
-	CHANGE COLUMN `img` `img` VARCHAR(200) NULL DEFAULT 'https://buzke-images.s3.sa-east-1.amazonaws.com/client/thumb_user.png' COLLATE 'utf8mb3_general_ci' AFTER `nacionalidade`;
+	CHANGE COLUMN `img` `img` VARCHAR(200) NULL DEFAULT 'https://buzke-images.s3.sa-east-1.amazonaws.com/clients/thumb_user.png' COLLATE 'utf8mb3_general_ci' AFTER `nacionalidade`;
 
 
 
