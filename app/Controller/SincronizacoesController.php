@@ -90,39 +90,6 @@ class SincronizacoesController extends AppController {
     
     }
 
-    public function getLast() {
-
-        $this->layout = 'ajax';
-        $dados = $this->request->query;
-        
-        $this->loadModel('SincronizacaoAgenda');
-
-        $token = $dados['token'];
-        $email = $dados['email'];
-    
-
-        $dado_usuario = $this->verificaValidadeToken($token, $email);
-        
-        if ( !$dado_usuario ) {
-            throw new BadRequestException('Usuário não logado!', 401);
-        }
-
-        $sincronizacao = $this->SincronizacaoAgenda->find('first',[
-            'fields' => [
-                'SincronizacaoAgenda.*'
-            ],
-            'conditions' => [
-                'SincronizacaoAgenda.usuario_id' => $dado_usuario['Usuario']['id']
-            ],
-            'order' => [
-                'SincronizacaoAgenda.created DESC'
-            ],
-            'link' => []
-        ]);
-
-        return new CakeResponse(array('type' => 'json', 'body' => json_encode(array('status' => 'ok', 'dados' => $sincronizacao))));
-    }
-
     public function buscaIdsSincronizadosCancelados() {
 
         $this->layout = 'ajax';
