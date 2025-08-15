@@ -703,7 +703,6 @@ class TorneiosController extends AppController {
             return true;
 
         $this->loadModel('Agendamento');
-        $this->loadModel('AgendamentoFixoCancelado');
 
         foreach( $ranges as $key => $range ){
 
@@ -714,35 +713,8 @@ class TorneiosController extends AppController {
                         $conditions = [
                             'Agendamento.cancelado' => 'N',
                             'Agendamento.servico_id' => $range['servico_id'],
-                            'or' => [
-                                [
-                                    'or' => [
-                                        'Agendamento.horario >=' => $this->datetimeBrEn($periodo['inicio']),
-                                        'ADDTIME(Agendamento.horario, Agendamento.duracao) >=' => $this->datetimeBrEn($periodo['inicio']),
-                                    ],
-                                    'Agendamento.horario <=' => $this->datetimeBrEn($periodo['fim']),
-                                    'Agendamento.dia_semana' => null,
-                                    'Agendamento.dia_mes' => null,
-                                ],
-                                [
-                                    'or' => [
-                                        'TIME(Agendamento.horario) >=' => date("H:i:s",strtotime($this->datetimeBrEn($periodo['inicio']))),
-                                        'TIME(ADDTIME(Agendamento.horario, Agendamento.duracao)) >=' => date("H:i:s",strtotime($this->datetimeBrEn($periodo['inicio']))),
-                                    ],
-                                    'TIME(Agendamento.horario) <=' => date("H:i:s",strtotime($this->datetimeBrEn($periodo['fim']))),
-                                    'Agendamento.dia_semana' => date('w',strtotime($this->datetimeBrEn($periodo['inicio']))),
-                                    'Agendamento.dia_mes' => null,
-                                ],
-                                [
-                                    'or' => [
-                                        'TIME(Agendamento.horario) >=' => date("H:i:s",strtotime($this->datetimeBrEn($periodo['inicio']))),
-                                        'TIME(ADDTIME(Agendamento.horario, Agendamento.duracao)) >=' => date("H:i:s",strtotime($this->datetimeBrEn($periodo['inicio']))),
-                                    ],
-                                    'TIME(Agendamento.horario) <=' => date("H:i:s",strtotime($this->datetimeBrEn($periodo['fim']))),
-                                    'Agendamento.dia_semana' => null,
-                                    'Agendamento.dia_mes' => (int)date('d',strtotime($this->datetimeBrEn($periodo['inicio']))),
-                                ]
-                            ]
+                            'Agendamento.horario >=' => $this->datetimeBrEn($periodo['inicio']),
+                            'Agendamento.horario <=' => $this->datetimeBrEn($periodo['fim']),
                         ];
         
                         $agendamentos = $this->Agendamento->find('all',[
@@ -759,14 +731,9 @@ class TorneiosController extends AppController {
                                 $horario = $data_horario.' '.$hora_horario;
                                 $agend['Agendamento']['horario'] = $horario;
 
-                                if ( $agend['Agendamento']['dia_semana'] == null && $agend['Agendamento']['dia_mes'] == null ) {
-                                    if ( $this->Agendamento->cancelSheduling($agend['Agendamento']['id']) ) {
-                                        $this->sendNotificationShedulingCanceled($agend);
-                                    }
-                                } else {
-                                    if ( $this->AgendamentoFixoCancelado->cancelSheduling($agend, $agend['Agendamento']['cliente_cliente_id']) ) {
-                                        $this->sendNotificationShedulingCanceled($agend);                                        
-                                    }
+                                if ( $this->Agendamento->cancelSheduling($agend['Agendamento']['id']) ) {
+                                //if (true) { // Simulating successful cancellation}
+                                    $this->sendNotificationShedulingCanceled($agend);
                                 }
 
                             } 
@@ -782,8 +749,8 @@ class TorneiosController extends AppController {
     private function sendNotificationShedulingCanceled($agendamento = []) {
         if ( count($agendamento) == 0 )
             return true;
-        
-        $this->avisaConvidadosCancelamento($agendamento, (object)['horario'=> $agendamento['Agendamento']['horario']] );
+
+        $this->avisaConvidadosCancelamento($agendamento['Agendamento']['horario'], $agendamento['Agendamento']['id']);
         if ( isset($agendamento['Usuario']) && isset($agendamento['Usuario']['id']) && $agendamento['Usuario'] != '' && $agendamento['Usuario'] != null ) {
             $this->enviaNotificacaoDeCancelamento('cliente', $agendamento );
         }

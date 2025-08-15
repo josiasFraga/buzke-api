@@ -1806,7 +1806,7 @@ class AppController extends Controller {
         $this->loadModel('AgendamentoConvite');
         $this->loadModel('Token');
         $convites = $this->AgendamentoConvite->getNotRecusedUsers($agendamento_id, '', $horario);
-
+    
         //se há convites, avisa os candidatos que o agendamento foi cancelado
         if ( count($convites) > 0 ) {
             foreach($convites as $key => $convite) {

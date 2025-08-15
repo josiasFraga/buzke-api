@@ -60,6 +60,9 @@ class Usuario extends AppModel {
 		'ToProJogo' => [
 			'foreignKey' => 'usuario_id'
         ],
+        'AgendamentoConvite' => [
+            'foreignKey' => 'usuario_id'
+        ],
     );
 
     public $belongsTo = array(
