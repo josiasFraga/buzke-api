@@ -732,7 +732,6 @@ class TorneiosController extends AppController {
                                 $agend['Agendamento']['horario'] = $horario;
 
                                 if ( $this->Agendamento->cancelSheduling($agend['Agendamento']['id']) ) {
-                                //if (true) { // Simulating successful cancellation}
                                     $this->sendNotificationShedulingCanceled($agend);
                                 }
 
