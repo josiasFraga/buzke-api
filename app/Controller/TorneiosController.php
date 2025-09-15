@@ -79,7 +79,8 @@ class TorneiosController extends AppController {
             $torneios[$key]['Torneio']['_periodo'] = 
                 'De '.date('d/m',strtotime($trn['Torneio']['inicio'])).
                 ' até '.date('d/m',strtotime($trn['Torneio']['fim']));
-            $torneios[$key]['Torneio']['img_thumb'] = $this->getThumbFromImage($trn['Torneio']['img']);
+            $torneios[$key]['Torneio']['img'] = "https://buzke-images.s3.sa-east-1.amazonaws.com/tournaments/" . $trn['Torneio']['img'];
+            $torneios[$key]['Torneio']['img_thumb'] = "https://buzke-images.s3.sa-east-1.amazonaws.com/tournaments/thumbs/" . $trn['Torneio']['img'];
             $torneios[$key]['Torneio']['_owner'] = $owner;
             $torneios[$key]['Torneio']['_old'] = ($trn['Torneio']['fim'] < date('Y-m-d'));
 
