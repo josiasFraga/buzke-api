@@ -79,8 +79,8 @@ class TorneiosController extends AppController {
             $torneios[$key]['Torneio']['_periodo'] = 
                 'De '.date('d/m',strtotime($trn['Torneio']['inicio'])).
                 ' até '.date('d/m',strtotime($trn['Torneio']['fim']));
-            $torneios[$key]['Torneio']['img'] = "https://buzke-images.s3.sa-east-1.amazonaws.com/tournaments/" . $trn['Torneio']['img'];
-            $torneios[$key]['Torneio']['img_thumb'] = "https://buzke-images.s3.sa-east-1.amazonaws.com/tournaments/thumbs/" . $trn['Torneio']['img'];
+            $torneios[$key]['Torneio']['img'] = $trn['Torneio']['img'];
+            $torneios[$key]['Torneio']['img_thumb'] = $trn['Torneio']['img'];
             $torneios[$key]['Torneio']['_owner'] = $owner;
             $torneios[$key]['Torneio']['_old'] = ($trn['Torneio']['fim'] < date('Y-m-d'));
 
@@ -170,7 +170,8 @@ class TorneiosController extends AppController {
             'De '.date('d/m',strtotime($dados['Torneio']['inicio'])).
             ' até '.date('d/m',strtotime($dados['Torneio']['fim']));
         $img = $dados['Torneio']['img'];
-        $dados['Torneio']['img_thumb'] = $this->getThumbFromImage($img);
+        $dados['Torneio']['img_thumb'] = $img;
+        $dados['Torneio']['img'] = $img;
         $dados['Torneio']['_owner'] = $owner;
         $dados['Torneio']['_periodo_inscricao'] = 
             'de '.
